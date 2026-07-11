@@ -220,31 +220,11 @@ struct KimiMenu: View {
 
                 Spacer()
 
-                Button(action: { NSWorkspace.shared.open(githubURL) }) {
-                    HStack(spacing: 6) {
-                        Image("github-icon")
-                            .renderingMode(.template)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 16, height: 16)
-
-                        Text("社区版")
-                            .font(.system(size: 13, weight: .medium))
-                    }
-                    .foregroundStyle(.kimiTextPrimary)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(Color.white.opacity(0.20), lineWidth: 1)
-                    )
-                }
-                .buttonStyle(.plain)
-                .cursor(.pointingHand)
+                CommunityButton(url: githubURL)
             }
 
             // 用量卡片
-            HStack(spacing: 12) {
+            HStack(spacing: 10) {
                 UsageCard(
                     title: "本周用量",
                     subtitle: nil,
@@ -253,6 +233,17 @@ struct KimiMenu: View {
                     color: .kimiBlue,
                     isLoading: model.isLoading
                 )
+
+                if let monthly = model.quota?.monthly {
+                    UsageCard(
+                        title: "本月用量",
+                        subtitle: nil,
+                        percentage: monthly.percentage,
+                        reset: monthly.timeUntilReset,
+                        color: .purple,
+                        isLoading: model.isLoading
+                    )
+                }
 
                 UsageCard(
                     title: "5小时用量",
@@ -325,7 +316,7 @@ struct KimiMenu: View {
             .clipShape(RoundedRectangle(cornerRadius: 14))
         }
         .padding(16)
-        .frame(width: 340)
+        .frame(width: 420)
         .background(Color.kimiPanelBackground)
         .popover(isPresented: $showSettings, arrowEdge: .bottom) {
             SettingsView()
@@ -635,6 +626,44 @@ struct LinkRow: View {
             .padding(.vertical, 4)
             .background(isHovered ? Color.kimiBlue.opacity(0.12) : Color.clear)
             .clipShape(RoundedRectangle(cornerRadius: 6))
+        }
+        .buttonStyle(.plain)
+        .cursor(.pointingHand)
+        .onHover { hovering in
+            isHovered = hovering
+        }
+    }
+}
+
+// MARK: - 社区版按钮
+
+struct CommunityButton: View {
+    let url: URL
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: { NSWorkspace.shared.open(url) }) {
+            HStack(spacing: 6) {
+                Image("github-icon")
+                    .renderingMode(.template)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 16, height: 16)
+
+                Text("社区版")
+                    .font(.system(size: 13, weight: .medium))
+            }
+            .foregroundStyle(isHovered ? .kimiTextPrimary : Color(white: 1.0, opacity: 0.65))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(isHovered ? Color.white.opacity(0.12) : Color.clear)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(isHovered ? Color.white.opacity(0.40) : Color.white.opacity(0.20), lineWidth: 1)
+            )
         }
         .buttonStyle(.plain)
         .cursor(.pointingHand)

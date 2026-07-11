@@ -18,6 +18,7 @@ struct QuotaDetail: Equatable {
 
 struct KimiQuota: Equatable {
     let weekly: QuotaDetail
+    let monthly: QuotaDetail?
     let fiveHour: QuotaDetail
 }
 
@@ -127,7 +128,21 @@ final class KimiQuotaService {
             )
         }
 
-        return KimiQuota(weekly: weekly, fiveHour: fiveHour)
+        // 尝试解析月用量：取 limits 中 duration 最大的那一条（通常大于 300 秒）
+        var monthly: QuotaDetail?
+        if let monthlyLimit = resp.limits?.filter({ $0.window.duration > 300 }).max(by: { $0.window.duration < $1.window.duration }) {
+            let detail = makeDetail(
+                limit: monthlyLimit.detail.limit,
+                used: monthlyLimit.detail.used,
+                remaining: monthlyLimit.detail.remaining,
+                resetTime: monthlyLimit.detail.resetTime
+            )
+            if detail.limit > 0 {
+                monthly = detail
+            }
+        }
+
+        return KimiQuota(weekly: weekly, monthly: monthly, fiveHour: fiveHour)
     }
 
     private func makeDetail(limit: String?, used: String?, remaining: String?, resetTime: String?) -> QuotaDetail {
