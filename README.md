@@ -27,7 +27,7 @@
 
 ```bash
 git clone https://github.com/xifandev/KimiBar.git
-cd kimibar
+cd KimiBar
 open KimiBar.xcodeproj
 ```
 
