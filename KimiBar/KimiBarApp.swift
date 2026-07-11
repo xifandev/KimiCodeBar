@@ -187,6 +187,7 @@ struct KimiMenu: View {
     @StateObject private var model = KimiBarModel.shared
     @State private var showSettings = false
     @State private var showUpdateAlert = false
+    @State private var isHoveredVersion = false
 
     private let consoleURL = URL(string: "https://www.kimi.com/code/console")!
     private let githubURL = URL(string: "https://github.com/xifandev/KimiCodeBar")!
@@ -264,7 +265,17 @@ struct KimiMenu: View {
 
                     Text(formatKimiVersion(model.kimiVersion))
                         .font(.system(size: 12, weight: .medium, design: .monospaced))
-                        .foregroundStyle(.kimiTextSecondary)
+                        .foregroundStyle(isHoveredVersion ? .kimiTextPrimary : .kimiTextSecondary)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(isHoveredVersion ? Color.white.opacity(0.08) : Color.clear)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .contentShape(Rectangle())
+                .onHover { isHoveredVersion = $0 }
+                .cursor(.pointingHand)
+                .onTapGesture {
+                    Task { await model.checkForKimiCLIUpdate() }
                 }
 
                 Spacer()
@@ -273,14 +284,30 @@ struct KimiMenu: View {
                     ProgressView()
                         .controlSize(.small)
                         .scaleEffect(0.7)
-                } else {
-                    Button(action: { Task { await model.checkForKimiCLIUpdate() } }) {
-                        Text("检查更新")
-                            .font(.system(size: 12, weight: .medium))
-                    }
-                    .controlSize(.small)
-                    .buttonStyle(.borderedProminent)
-                    .cursor(.pointingHand)
+                } else if model.pendingUpdateVersion != nil {
+                    Text("发现新版本")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.orange)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Color.orange.opacity(0.12))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(Color.orange.opacity(0.5), lineWidth: 1)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                } else if model.kimiVersion != "检测中…" {
+                    Text("当前最新版")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.kimiTextTertiary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Color.white.opacity(0.06))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
                 }
             }
             .padding(14)
