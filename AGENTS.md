@@ -54,3 +54,16 @@
   2. `macOS/KimiCodeBar.xcodeproj/project.pbxproj` 里的 `MARKETING_VERSION`
 - **GitHub Release tag** 建议用 `v{VERSION}` 格式，例如 `v1.0.0`，`normalizeVersion` 会自动提取出版本号。
 - 发版时创建 GitHub Release 并上传 `.app.zip` 或 `.dmg` 即可；App 内的「查看更新」会跳转到 `https://github.com/xifandev/KimiCodeBar/releases/`。
+
+## Release Notes 规范
+
+- **不要依赖 GitHub 自动生成的 Release Notes**。`softprops/action-gh-release` 的 `generate_release_notes: true` 会根据 commit/PR 标题自动拼凑，内容琐碎、重点不突出。
+- 每个版本发布前，在 `AGENTS.md` 中手动整理 **3~5 条核心更新点**，再由维护者复制到 GitHub Release 的 body 中。
+- 文案要求：一句话一条，不写细节堆砌，不写「修复了若干 bug」这类空话。
+
+### v1.0.0 核心更新
+
+- 菜单栏实时展示 Kimi Code 本周、5 小时用量及加油包余额。
+- 自动检测 Kimi CLI 与 App 自身新版本，支持弹窗提醒。
+- 设置面板支持配置 API Key、刷新间隔与明暗主题。
+- API Key 本地存储，所有请求直连 Kimi 官方 API，不上传第三方。
