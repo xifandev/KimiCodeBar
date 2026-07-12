@@ -1,4 +1,4 @@
-<h1 style="border-bottom: none; margin: 0 0 5px 0;">
+<h1 style="border-bottom: none; margin: 0">
   <img src="Assets/logo.gif" width="50" alt="KimiCodeBar Logo" style="vertical-align: middle; margin-right: 12px;">KimiCodeBar
 </h1>
 <p align="left">
