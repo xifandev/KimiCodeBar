@@ -3,9 +3,8 @@
   <h1>KimiCodeBar</h1>
   <p>
     <img src="https://img.shields.io/badge/Community-非官方-orange" alt="Community">
-    <a href="https://www.apple.com/macos"><img src="https://img.shields.io/badge/macOS-26+-333333?logo=apple&logoColor=white" alt="macOS"></a>
-    <a href="https://github.com/xifandev/KimiCodeBar/releases"><img src="https://img.shields.io/badge/version-0.0.0-333333" alt="Version"></a>
-    <a href="https://swift.org"><img src="https://img.shields.io/badge/Swift-6.0-F05138?logo=swift&logoColor=white" alt="Swift"></a>
+    <a href="https://www.apple.com/macos"><img src="https://img.shields.io/badge/macOS-333333?logo=apple&logoColor=white" alt="macOS"></a>
+    <a href="https://github.com/xifandev/KimiCodeBar/releases"><img src="https://img.shields.io/badge/version-1.0.0-333333" alt="Version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/github/license/xifandev/KimiCodeBar" alt="License"></a>
   </p>
 </div>
@@ -30,8 +29,8 @@
 
 ### 直接下载（推荐）
 
-1. 下载 Releases 中的最新版本（暂未发布，可自行编译）
-2. 双击 `KimiCodeBar.app` 即可运行
+1. 下载 Releases 中的最新版本
+2. 解压后将 `KimiCodeBar.app` 拖入「应用程序」文件夹，双击运行
 
 ### 自行编译
 

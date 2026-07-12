@@ -86,14 +86,14 @@ private func dynamicColor(light: NSColor, dark: NSColor) -> Color {
 extension ShapeStyle where Self == Color {
     static var kimiPanelBackground: Color {
         dynamicColor(
-            light: NSColor(red: 0.95, green: 0.95, blue: 0.97, alpha: 0.82),
+            light: NSColor(red: 0.95, green: 0.95, blue: 0.97, alpha: 0.78),
             dark: NSColor(red: 0.06, green: 0.08, blue: 0.13, alpha: 1.0)
         )
     }
 
     static var kimiCardBackground: Color {
         dynamicColor(
-            light: NSColor(white: 1.0, alpha: 0.62),
+            light: NSColor(white: 0.99, alpha: 0.88),
             dark: NSColor(red: 0.11, green: 0.14, blue: 0.21, alpha: 1.0)
         )
     }
@@ -284,7 +284,9 @@ struct KimiMenu: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var showSettings = false
     @State private var showUpdateAlert = false
-    @State private var isHoveredVersion = false
+    @State private var showAppUpdateAlert = false
+    @State private var showUpdateLog = false
+    @State private var isHoveredUpdateLog = false
 
     private let consoleURL = URL(string: "https://www.kimi.com/code/console")!
     private let githubURL = URL(string: "https://github.com/xifandev/KimiCodeBar")!
@@ -326,11 +328,20 @@ struct KimiMenu: View {
                     )
                 }
 
+                // 临时屏蔽测试：月度用量数据待验证
+                /*
                 CompactQuotaBar(
-                    title: "账号额度",
+                    title: "月度用量",
+                    badge: "测试",
                     used: model.quota?.totalQuota.used ?? 0,
                     limit: model.quota?.totalQuota.limit ?? 0,
                     color: .purple,
+                    isLoading: model.isLoading
+                )
+                */
+
+                BoosterWalletCard(
+                    wallet: model.quota?.boosterWallet,
                     isLoading: model.isLoading
                 )
             }
@@ -346,7 +357,7 @@ struct KimiMenu: View {
                 ActionButton(
                     title: "刷新",
                     icon: "arrow.clockwise",
-                    action: { model.refresh() },
+                    action: { model.refreshAll() },
                     disabled: model.key.isEmpty || model.isLoading
                 )
 
@@ -364,62 +375,75 @@ struct KimiMenu: View {
             }
 
             // 版本卡片
-            HStack(alignment: .center, spacing: 12) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("KimiCode Version")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(.kimiTextTertiary)
+            let canShowUpdateLog = model.kimiVersion != "检测中…" && model.kimiVersion != "未检测到"
 
+            HStack(alignment: .center, spacing: 10) {
+                Text("KimiCode CLI")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.kimiTextTertiary)
+
+                HStack(spacing: 6) {
                     Text(formatKimiVersion(model.kimiVersion))
                         .font(.system(size: 12, weight: .medium, design: .monospaced))
-                        .foregroundStyle(isHoveredVersion ? .kimiTextPrimary : .kimiTextSecondary)
-                }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(isHoveredVersion ? Color.kimiTextPrimary.opacity(0.08) : Color.clear)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-                .contentShape(Rectangle())
-                .onHover { isHoveredVersion = $0 }
-                .cursor(.pointingHand)
-                .onTapGesture {
-                    Task { await model.checkForKimiCLIUpdate() }
+                        .foregroundStyle(.kimiTextSecondary)
+
+                    if canShowUpdateLog {
+                        if model.pendingUpdateVersion != nil {
+                            Text("发现新版本")
+                                .font(.system(size: 9, weight: .medium))
+                                .foregroundStyle(.orange)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 1)
+                                .background(Color.orange.opacity(0.12))
+                                .clipShape(RoundedRectangle(cornerRadius: 4))
+                        } else {
+                            Text("当前最新")
+                                .font(.system(size: 9, weight: .medium))
+                                .foregroundStyle(.kimiTextTertiary)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 1)
+                                .background(Color.kimiTextPrimary.opacity(0.08))
+                                .clipShape(RoundedRectangle(cornerRadius: 4))
+                        }
+                    }
+
+                    if model.isCheckingUpdate {
+                        ProgressView()
+                            .controlSize(.small)
+                            .scaleEffect(0.6)
+                    }
                 }
 
                 Spacer()
 
-                if model.isCheckingUpdate {
-                    ProgressView()
-                        .controlSize(.small)
-                        .scaleEffect(0.7)
-                } else if model.pendingUpdateVersion != nil {
-                    Text("发现新版本")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.orange)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(Color.orange.opacity(0.12))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 6)
-                                .stroke(Color.orange.opacity(0.5), lineWidth: 1)
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                } else if model.kimiVersion != "检测中…" {
-                    Text("当前最新版")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.kimiTextTertiary)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(Color.kimiTextPrimary.opacity(0.06))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 6)
-                                .stroke(Color.kimiTextPrimary.opacity(0.15), lineWidth: 1)
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                if canShowUpdateLog {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(isHoveredUpdateLog ? .kimiTextSecondary : .kimiTextTertiary)
                 }
             }
-            .padding(14)
-            .background(Color.kimiCardBackground)
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.kimiCardBackground)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.kimiTextPrimary.opacity(canShowUpdateLog && isHoveredUpdateLog ? 0.06 : 0))
+                    )
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .contentShape(Rectangle())
+            .onHover { isHoveredUpdateLog = $0 }
+            .cursor(canShowUpdateLog ? .pointingHand : .arrow)
+            .onTapGesture {
+                if canShowUpdateLog {
+                    showUpdateLog = true
+                }
+            }
+            .popover(isPresented: $showUpdateLog, arrowEdge: .bottom) {
+                UpdateLogView()
+            }
         }
         .padding(16)
         .frame(width: 340)
@@ -450,12 +474,38 @@ struct KimiMenu: View {
                 }
             )
         }
+        .popover(isPresented: $showAppUpdateAlert, arrowEdge: .bottom) {
+            AppUpdateAlertView(
+                currentVersion: appVersion(),
+                newVersion: model.pendingAppUpdateVersion ?? "新版",
+                onIgnore: {
+                    showAppUpdateAlert = false
+                    model.ignoreAppUpdate()
+                },
+                onViewUpdate: {
+                    showAppUpdateAlert = false
+                    NSWorkspace.shared.open(URL(string: "https://github.com/xifandev/KimiCodeBar/releases/")!)
+                    model.pendingAppUpdateVersion = nil
+                }
+            )
+        }
         .onAppear {
             Task { await model.loadKimiVersion() }
+            Task { await model.checkForAppUpdate() }
             if model.key.isEmpty {
                 showSettings = true
             } else if model.pendingUpdateVersion != nil {
                 showUpdateAlert = true
+            }
+        }
+        .onChange(of: model.pendingAppUpdateVersion) { _, newValue in
+            if newValue != nil && model.pendingUpdateVersion == nil && !showSettings {
+                showAppUpdateAlert = true
+            }
+        }
+        .onChange(of: showUpdateAlert) { _, isShowing in
+            if !isShowing && model.pendingAppUpdateVersion != nil && !showSettings {
+                showAppUpdateAlert = true
             }
         }
     }
@@ -500,6 +550,7 @@ struct KimiMenu: View {
         }
         return version
     }
+
 }
 
 // MARK: - 用量卡片
@@ -583,6 +634,7 @@ struct UsageCard: View {
 
 struct CompactQuotaBar: View {
     let title: String
+    let badge: String?
     let used: Int
     let limit: Int
     let color: Color
@@ -596,6 +648,16 @@ struct CompactQuotaBar: View {
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.kimiTextPrimary)
                 .frame(width: 56, alignment: .leading)
+
+            if let badge = badge, !badge.isEmpty {
+                Text(badge)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.kimiTextTertiary)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.kimiTextPrimary.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+            }
 
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
@@ -625,6 +687,119 @@ struct CompactQuotaBar: View {
         .padding(.vertical, 10)
         .background(Color.kimiCardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+}
+
+// MARK: - 加油包卡片
+
+struct BoosterWalletCard: View {
+    let wallet: BoosterWallet?
+    let isLoading: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Text("加油包余额")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.kimiTextPrimary)
+
+                if let wallet = wallet {
+                    Text(wallet.isEnabled ? "已启用" : "未启用")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(wallet.isEnabled ? .green : .kimiTextTertiary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background((wallet.isEnabled ? Color.green : Color.kimiTextTertiary).opacity(0.12))
+                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                }
+
+                Spacer()
+            }
+
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                balanceView
+
+                Spacer()
+
+                if let wallet = wallet, !isLoading {
+                    HStack(spacing: 4) {
+                        Text("本月消费")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.kimiTextSecondary)
+
+                        Text(formatCurrency(wallet.monthlyUsedYuan, currency: wallet.currency))
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.kimiTextPrimary)
+                            .monospacedDigit()
+
+                        Text("/")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.kimiTextSecondary)
+
+                        Text(limitText(for: wallet))
+                            .font(.system(size: 11))
+                            .foregroundStyle(.kimiTextSecondary)
+                            .monospacedDigit()
+                    }
+                    .transition(.opacity.animation(.easeInOut(duration: 0.25)))
+                }
+            }
+            .frame(height: 28)
+            .animation(.easeInOut(duration: 0.2), value: isLoading)
+
+            if let wallet = wallet {
+                GeometryReader { proxy in
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .frame(height: 3)
+                            .foregroundStyle(Color.kimiTextPrimary.opacity(0.10))
+
+                        let progress = wallet.monthlyChargeLimitYuan > 0
+                            ? min(wallet.monthlyUsedYuan / wallet.monthlyChargeLimitYuan, 1.0)
+                            : 0
+                        Capsule()
+                            .frame(width: proxy.size.width * CGFloat(progress), height: 3)
+                            .foregroundStyle(wallet.isEnabled ? Color.orange : .kimiTextTertiary)
+                    }
+                }
+                .frame(height: 3)
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.kimiCardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    @ViewBuilder
+    private var balanceView: some View {
+        ZStack(alignment: .leading) {
+            if !isLoading, let wallet = wallet {
+                Text(formatCurrency(wallet.balanceYuan, currency: wallet.currency))
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .foregroundStyle(wallet.isEnabled ? .kimiTextPrimary : .kimiTextTertiary)
+                    .monospacedDigit()
+                    .transition(.opacity.animation(.easeInOut(duration: 0.25)))
+            }
+
+            if isLoading {
+                LoadingRing()
+                    .frame(width: 20, height: 20)
+                    .transition(.opacity.animation(.easeInOut(duration: 0.15)))
+            } else if wallet == nil {
+                Text("--")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(.kimiTextTertiary)
+                    .transition(.opacity.animation(.easeInOut(duration: 0.25)))
+            }
+        }
+    }
+
+    private func limitText(for wallet: BoosterWallet) -> String {
+        if wallet.monthlyChargeLimitCents <= 0 {
+            return "无限制"
+        }
+        return formatCurrency(wallet.monthlyChargeLimitYuan, currency: wallet.currency)
     }
 }
 
@@ -820,6 +995,73 @@ func parseChineseChangelog(_ text: String) -> (version: String, notes: String)? 
     return (ver, formatted.joined(separator: "\n"))
 }
 
+func fetchChineseChangelogEntries(maxCount: Int = 10) async -> [(version: String, notes: String)] {
+    let url = URL(string: "https://moonshotai.github.io/kimi-code/zh/release-notes/changelog.md")!
+    var request = URLRequest(url: url)
+    request.setValue("KimiCodeBar/1.0", forHTTPHeaderField: "User-Agent")
+    request.timeoutInterval = 20
+
+    do {
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            return []
+        }
+        guard let text = String(data: data, encoding: .utf8) else { return [] }
+        return parseChineseChangelogEntries(text, maxCount: maxCount)
+    } catch {
+        return []
+    }
+}
+
+func parseChineseChangelogEntries(_ text: String, maxCount: Int = 10) -> [(version: String, notes: String)] {
+    let lines = text.components(separatedBy: .newlines)
+
+    // 收集所有 ## 版本标题的位置和版本号
+    var headings: [(index: Int, version: String)] = []
+    for (i, line) in lines.enumerated() {
+        let trimmed = line.trimmingCharacters(in: .whitespaces)
+        guard trimmed.hasPrefix("## ") else { continue }
+
+        let content = String(trimmed.dropFirst(3))
+        let version: String
+        if let parenRange = content.range(of: "（") {
+            version = String(content[..<parenRange.lowerBound]).trimmingCharacters(in: .whitespaces)
+        } else {
+            version = content
+        }
+        headings.append((i, version))
+    }
+
+    var entries: [(version: String, notes: String)] = []
+    for (idx, heading) in headings.enumerated() {
+        let start = heading.index
+        let end = idx + 1 < headings.count ? headings[idx + 1].index : lines.count
+        let sectionLines = Array(lines[start..<end])
+
+        var formatted: [String] = []
+        for line in sectionLines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            guard !trimmed.isEmpty else { continue }
+
+            if trimmed.hasPrefix("## ") {
+                continue // 跳过版本标题
+            } else if trimmed.hasPrefix("### ") {
+                continue // 跳过分类大标题
+            } else if trimmed.hasPrefix("* ") {
+                formatted.append("• " + String(trimmed.dropFirst(2)))
+            } else {
+                formatted.append(trimmed)
+            }
+        }
+
+        let notes = formatted.joined(separator: "\n")
+        entries.append((heading.version, notes))
+        if entries.count >= maxCount { break }
+    }
+
+    return entries
+}
+
 func normalizeVersion(_ version: String) -> String {
     let trimmed = version.trimmingCharacters(in: .whitespacesAndNewlines)
 
@@ -852,6 +1094,54 @@ func compareVersions(_ lhs: String, _ rhs: String) -> ComparisonResult {
         if l > r { return .orderedDescending }
     }
     return .orderedSame
+}
+
+private func appVersion() -> String {
+    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
+}
+
+private func formatCurrency(_ yuan: Double, currency: String) -> String {
+    let symbol: String
+    switch currency.uppercased() {
+    case "CNY": symbol = "¥"
+    case "USD": symbol = "$"
+    case "EUR": symbol = "€"
+    default: symbol = currency.uppercased()
+    }
+    let formatter = NumberFormatter()
+    formatter.numberStyle = .decimal
+    formatter.minimumFractionDigits = 0
+    formatter.maximumFractionDigits = 2
+    let amount = formatter.string(from: NSNumber(value: yuan)) ?? String(format: "%.2f", yuan)
+    return "\(symbol)\(amount)"
+}
+
+// MARK: - GitHub Release 检查
+
+struct GitHubRelease: Decodable {
+    let tagName: String
+
+    enum CodingKeys: String, CodingKey {
+        case tagName = "tag_name"
+    }
+}
+
+func fetchLatestGitHubRelease(owner: String, repo: String) async -> String? {
+    let url = URL(string: "https://api.github.com/repos/\(owner)/\(repo)/releases/latest")!
+    var request = URLRequest(url: url)
+    request.setValue("KimiCodeBar/1.0", forHTTPHeaderField: "User-Agent")
+    request.timeoutInterval = 20
+
+    do {
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            return nil
+        }
+        let release = try JSONDecoder().decode(GitHubRelease.self, from: data)
+        return normalizeVersion(release.tagName)
+    } catch {
+        return nil
+    }
 }
 
 // MARK: - 更新弹窗
@@ -938,6 +1228,164 @@ struct UpdateAlertView: View {
                 }
             }
         )
+    }
+}
+
+// MARK: - App 自身更新提示
+
+struct AppUpdateAlertView: View {
+    let currentVersion: String
+    let newVersion: String
+    let onIgnore: () -> Void
+    let onViewUpdate: () -> Void
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // 标题栏
+            Text("发现新版本")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.kimiTextPrimary)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.horizontal, 24)
+                .padding(.top, 20)
+                .padding(.bottom, 16)
+
+            // 内容
+            Text("KimiCodeBar \(newVersion) 已发布，您现在的版本是 \(currentVersion)。")
+                .font(.system(size: 13))
+                .foregroundStyle(.kimiTextSecondary)
+                .padding(.horizontal, 24)
+
+            Spacer(minLength: 24)
+
+            // 底部按钮
+            HStack(spacing: 12) {
+                Button(action: onIgnore) {
+                    Text("忽略本次更新")
+                        .frame(minWidth: 80)
+                }
+                .buttonStyle(KimiButtonStyle(isProminent: false))
+                .cursor(.pointingHand)
+
+                Spacer()
+
+                Button(action: onViewUpdate) {
+                    Text("查看更新")
+                        .frame(minWidth: 80)
+                }
+                .buttonStyle(KimiButtonStyle(isProminent: true))
+                .cursor(.pointingHand)
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 20)
+        }
+        .frame(width: 360)
+        .background(
+            ZStack {
+                Color.kimiPanelBackground
+                if colorScheme == .light {
+                    Color.clear.background(.ultraThinMaterial)
+                }
+            }
+        )
+    }
+}
+
+// MARK: - 更新日志气泡
+
+struct UpdateLogView: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dismiss) private var dismiss
+    @State private var entries: [(version: String, notes: String)] = []
+    @State private var isLoading = true
+    @State private var isHoveredCloseButton = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // 顶部标题
+            HStack(spacing: 12) {
+                Text("近期更新日志")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(.kimiTextPrimary)
+
+                Spacer()
+
+                Button(action: { dismiss() }) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(isHoveredCloseButton ? .kimiTextPrimary : .kimiTextSecondary)
+                        .frame(width: 24, height: 24)
+                        .background(isHoveredCloseButton ? Color.kimiTextPrimary.opacity(0.14) : Color.kimiTextPrimary.opacity(0.08))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .cursor(.pointingHand)
+                .onHover { isHoveredCloseButton = $0 }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
+
+            // 优雅分割线
+            Divider()
+                .background(Color.kimiTextPrimary.opacity(0.10))
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+
+            if isLoading {
+                ProgressView()
+                    .controlSize(.small)
+                    .frame(maxWidth: .infinity, minHeight: 180)
+            } else if entries.isEmpty {
+                Text("暂无更新记录。")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.kimiTextSecondary)
+                    .frame(maxWidth: .infinity, minHeight: 120)
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        ForEach(entries.indices, id: \.self) { index in
+                            let entry = entries[index]
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(entry.version)
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(.kimiTextPrimary)
+
+                                Text(entry.notes)
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.kimiTextSecondary)
+                                    .lineSpacing(3)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 16)
+                }
+                .frame(maxHeight: 320)
+            }
+
+            Spacer(minLength: 16)
+        }
+        .frame(width: 320)
+        .background(
+            ZStack {
+                Color.kimiPanelBackground
+                if colorScheme == .light {
+                    Color.clear.background(.ultraThinMaterial)
+                }
+            }
+        )
+        .onAppear {
+            load()
+        }
+    }
+
+    private func load() {
+        Task {
+            entries = await fetchChineseChangelogEntries(maxCount: 10)
+            isLoading = false
+        }
     }
 }
 
@@ -1091,7 +1539,7 @@ struct SettingsView: View {
 
             // 刷新与检查设置
             VStack(alignment: .leading, spacing: 12) {
-                Text("刷新与检查设置")
+                Text("间隔设置")
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(.kimiTextSecondary)
 
@@ -1352,6 +1800,7 @@ final class KimiCodeBarModel: ObservableObject {
     @AppStorage("kimiApiKey") var key = ""
     @AppStorage("quotaRefreshInterval") var quotaRefreshInterval: Double = 5
     @AppStorage("updateCheckInterval") var updateCheckInterval: Double = 30
+    @AppStorage("ignoredAppUpdateVersion") var ignoredAppUpdateVersion: String = ""
 
     @Published var text = "-- · --"
     @Published var quota: KimiQuota?
@@ -1363,6 +1812,8 @@ final class KimiCodeBarModel: ObservableObject {
     @Published var pendingUpdateVersion: String?
     @Published var pendingReleaseNotes: String?
     @Published var updateErrorMessage: String?
+
+    @Published var pendingAppUpdateVersion: String?
 
     private let service = KimiCodeBarQuotaService()
     private var timer: Timer?
@@ -1436,6 +1887,14 @@ final class KimiCodeBarModel: ObservableObject {
         }
     }
 
+    func refreshAll() {
+        refresh()
+        Task {
+            await checkForKimiCLIUpdate()
+            await checkForAppUpdate()
+        }
+    }
+
     func loadKimiVersion() async {
         let version = await detectKimiCLIVersion()
         await MainActor.run {
@@ -1482,6 +1941,26 @@ final class KimiCodeBarModel: ObservableObject {
                 }
             }
         }
+    }
+
+    func checkForAppUpdate() async {
+        guard let latest = await fetchLatestGitHubRelease(owner: "xifandev", repo: "KimiCodeBar") else { return }
+
+        let current = normalizeVersion(appVersion())
+
+        guard compareVersions(current, latest) == .orderedAscending else { return }
+        guard latest != ignoredAppUpdateVersion else { return }
+
+        await MainActor.run {
+            pendingAppUpdateVersion = latest
+        }
+    }
+
+    func ignoreAppUpdate() {
+        if let version = pendingAppUpdateVersion {
+            ignoredAppUpdateVersion = version
+        }
+        pendingAppUpdateVersion = nil
     }
 
     private func sendUpdateNotification(version: String) {

@@ -16,11 +16,26 @@ struct QuotaDetail: Equatable {
     let percentage: Int
 }
 
+struct BoosterWallet: Equatable {
+    let status: String
+    let isEnabled: Bool
+    let currency: String
+    let monthlyChargeLimitCents: Int
+    let monthlyUsedCents: Int
+    let topupLimitCents: Int
+
+    var monthlyChargeLimitYuan: Double { Double(monthlyChargeLimitCents) / 100.0 }
+    var monthlyUsedYuan: Double { Double(monthlyUsedCents) / 100.0 }
+    var topupLimitYuan: Double { Double(topupLimitCents) / 100.0 }
+    var balanceYuan: Double { max(0, monthlyChargeLimitYuan - monthlyUsedYuan) }
+}
+
 struct KimiQuota: Equatable {
     let weekly: QuotaDetail
     let fiveHour: QuotaDetail
     let totalQuota: QuotaDetail
     let membershipLevel: String?
+    let boosterWallet: BoosterWallet?
 }
 
 final class KimiCodeBarQuotaService {
@@ -114,10 +129,21 @@ final class KimiCodeBarQuotaService {
                 }
                 let membership: Membership?
             }
+            struct BoosterWallet: Codable {
+                struct Money: Codable {
+                    let currency: String?
+                    let priceInCents: String?
+                }
+                let status: String?
+                let monthlyChargeLimit: Money?
+                let monthlyUsed: Money?
+                let topupLimit: Money?
+            }
             let usage: Usage?
             let limits: [Limit]?
             let totalQuota: TotalQuota?
             let user: User?
+            let boosterWallet: BoosterWallet?
         }
 
         guard let resp = try? JSONDecoder().decode(Response.self, from: data) else {
@@ -150,11 +176,30 @@ final class KimiCodeBarQuotaService {
 
         let membershipLevel = resp.user?.membership?.level
 
+        let boosterWallet: BoosterWallet? = {
+            guard let raw = resp.boosterWallet else { return nil }
+            let status = raw.status ?? "STATUS_UNKNOWN"
+            let isEnabled = status.uppercased() == "STATUS_ENABLED"
+            let currency = raw.monthlyChargeLimit?.currency
+                ?? raw.monthlyUsed?.currency
+                ?? raw.topupLimit?.currency
+                ?? "CNY"
+            return BoosterWallet(
+                status: status,
+                isEnabled: isEnabled,
+                currency: currency,
+                monthlyChargeLimitCents: Int(raw.monthlyChargeLimit?.priceInCents ?? "0") ?? 0,
+                monthlyUsedCents: Int(raw.monthlyUsed?.priceInCents ?? "0") ?? 0,
+                topupLimitCents: Int(raw.topupLimit?.priceInCents ?? "0") ?? 0
+            )
+        }()
+
         return KimiQuota(
             weekly: weekly,
             fiveHour: fiveHour,
             totalQuota: totalQuota,
-            membershipLevel: membershipLevel
+            membershipLevel: membershipLevel,
+            boosterWallet: boosterWallet
         )
     }
 
