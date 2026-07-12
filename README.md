@@ -1,5 +1,5 @@
-<h1 align="center" style="border-bottom: none; margin: 0">
-  <img src="Assets/logo.gif" width="55" alt="KimiCodeBar Logo" align="absmiddle">&nbsp;KimiCodeBar
+<h1 align="left" style="border-bottom: none; margin: 0">
+  <img src="Assets/logo.gif" width="55" alt="KimiCodeBar Logo" align="absmiddle">&nbsp;&nbsp;KimiCodeBar
 </h1>
 <p align="left">
   <a href="https://github.com/xifandev/KimiCodeBar/releases"><img src="https://img.shields.io/badge/version-1.0.1-333333" alt="Version"></a>
@@ -12,9 +12,9 @@
 
 #
 
-### 安装使用
+#### 下载安装：<a href="https://github.com/xifandev/KimiCodeBar/releases">GitHub Releases</a>
 
-#### GitHub Releases：https://github.com/xifandev/KimiCodeBar/releases
+#### 欢迎提交：<a href="https://github.com/xifandev/KimiCodeBar/issues">Issues</a> 反馈问题或建议
 
 #
 
@@ -38,7 +38,7 @@
 
 ### 🔒 隐私安全
 
-数据仅本地存储，API只与Kimi官方通信，代码全部开源。
+数据仅本地存储，所有 API 只与 Kimi 官方通信，代码全部开源。
 
 #
 
