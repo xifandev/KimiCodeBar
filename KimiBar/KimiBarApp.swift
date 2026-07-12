@@ -37,7 +37,10 @@ final class ThemeManager: ObservableObject {
         get { storedTheme }
         set {
             storedTheme = newValue
-            objectWillChange.send()
+            // 延迟发布，避免在 view update 期间触发 SwiftUI 警告
+            DispatchQueue.main.async {
+                self.objectWillChange.send()
+            }
         }
     }
 }
