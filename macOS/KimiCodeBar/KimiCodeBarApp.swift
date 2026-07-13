@@ -2102,9 +2102,16 @@ final class SettingsWindowManager {
             backing: .buffered,
             defer: false
         )
-        window.title = "设置"
+        window.title = "KimiCode Bar 设置"
         window.minSize = NSSize(width: 720, height: 480)
         window.collectionBehavior = [.managed, .moveToActiveSpace]
+        window.titlebarAppearsTransparent = true
+        window.backgroundColor = NSColor(name: nil, dynamicProvider: { appearance in
+            let isDark = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            return isDark
+                ? NSColor(red: 0.06, green: 0.08, blue: 0.13, alpha: 1.0)
+                : NSColor(red: 0.95, green: 0.95, blue: 0.97, alpha: 0.78)
+        })
         window.center()
         window.contentView = NSHostingView(rootView: SettingsRootView())
         window.isReleasedWhenClosed = false
@@ -2144,20 +2151,23 @@ struct SettingsRootView: View {
     var body: some View {
         HSplitView {
             VStack(alignment: .leading, spacing: 0) {
-                Text("设置")
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(.primary)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 16)
-                    .padding(.bottom, 10)
-
-                List(SettingsPane.allCases, selection: $selectedPane) { pane in
-                    Label(pane.title, systemImage: pane.icon)
-                        .tag(pane)
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(SettingsPane.allCases) { pane in
+                        SettingsSidebarItem(
+                            pane: pane,
+                            isSelected: selectedPane == pane
+                        ) {
+                            selectedPane = pane
+                        }
+                    }
                 }
-                .listStyle(.sidebar)
+                .padding(.horizontal, 12)
+                .padding(.top, 16)
+
+                Spacer()
             }
-            .frame(minWidth: 160, idealWidth: 160, maxWidth: 220)
+            .frame(minWidth: 180, idealWidth: 200, maxWidth: 220)
+            .background(Color.kimiPanelBackground)
 
             switch selectedPane {
             case .basic:
@@ -2166,6 +2176,132 @@ struct SettingsRootView: View {
                 AboutSettingsView()
             }
         }
+    }
+}
+
+struct SettingsSidebarItem: View {
+    let pane: SettingsPane
+    let isSelected: Bool
+    let action: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: pane.icon)
+                .font(.system(size: 15, weight: .regular))
+                .frame(width: 22, alignment: .center)
+                .foregroundStyle(isSelected ? .white : .kimiTextPrimary)
+
+            Text(pane.title)
+                .font(.system(size: 14, weight: isSelected ? .medium : .regular))
+                .foregroundStyle(isSelected ? .white : .kimiTextPrimary)
+
+            Spacer()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(backgroundColor)
+        )
+        .contentShape(Rectangle())
+        .cursor(.pointingHand)
+        .onHover { isHovered = $0 }
+        .onTapGesture(perform: action)
+    }
+
+    private var backgroundColor: Color {
+        if isSelected {
+            return .kimiBlue
+        } else if isHovered {
+            return Color.kimiTextPrimary.opacity(0.08)
+        } else {
+            return Color.clear
+        }
+    }
+}
+
+// MARK: - 设置卡片组件
+
+struct SettingsCard<Content: View>: View {
+    let title: String?
+    let footerText: String?
+    let content: Content
+
+    init(title: String? = nil, footerText: String? = nil, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.footerText = footerText
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if let title {
+                Text(title)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.kimiTextPrimary)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 14)
+                    .padding(.bottom, 10)
+            }
+
+            content
+
+            if let footerText {
+                Text(footerText)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.kimiTextSecondary)
+                    .lineSpacing(2)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 2)
+                    .padding(.bottom, 14)
+            }
+        }
+        .background(Color.kimiCardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+}
+
+struct SettingsCardRow<Trailing: View>: View {
+    let title: String
+    let subtitle: String?
+    @ViewBuilder let trailing: () -> Trailing
+
+    init(title: String, subtitle: String? = nil, @ViewBuilder trailing: @escaping () -> Trailing) {
+        self.title = title
+        self.subtitle = subtitle
+        self.trailing = trailing
+    }
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 16) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(.kimiTextPrimary)
+
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.kimiTextSecondary)
+                }
+            }
+
+            Spacer()
+
+            trailing()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 13)
+    }
+}
+
+struct SettingsCardDivider: View {
+    var body: some View {
+        Divider()
+            .background(Color.kimiTextPrimary.opacity(0.08))
+            .padding(.leading, 16)
     }
 }
 
@@ -2191,31 +2327,29 @@ struct BasicSettingsView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 20) {
-                Form {
-                    Section {
-                        HStack {
-                            Picker("", selection: $themeManager.theme) {
-                                ForEach(AppTheme.allCases) { theme in
-                                    Text(theme.displayName).tag(theme)
-                                }
+            VStack(alignment: .leading, spacing: 20) {
+                Text("基本设置")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(.kimiTextPrimary)
+
+                // 外观
+                SettingsCard(title: "外观") {
+                    SettingsCardRow(title: "主题") {
+                        Picker("", selection: $themeManager.theme) {
+                            ForEach(AppTheme.allCases) { theme in
+                                Text(theme.displayName).tag(theme)
                             }
-                            .pickerStyle(.segmented)
-                            .labelsHidden()
-
-                            Spacer()
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    } header: {
-                        Text("外观")
-                    } footer: {
-                        Text("更改外观后，菜单栏图标与面板会跟随系统或强制使用指定主题。")
-                            .font(.system(size: 11))
-                            .foregroundStyle(.secondary)
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
+                        .frame(width: 180)
                     }
+                }
 
-                    Section {
-                        HStack(spacing: 10) {
+                // API Key
+                SettingsCard(title: "API Key") {
+                    VStack(alignment: .leading, spacing: 0) {
+                        HStack(spacing: 12) {
                             if isEditingKey {
                                 SecureField("sk-kimi-...", text: $editingKey)
                                     .textFieldStyle(.roundedBorder)
@@ -2255,29 +2389,41 @@ struct BasicSettingsView: View {
                             .disabled(isEditingKey && editingKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                             .cursor(isEditingKey && editingKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .arrow : .pointingHand)
                         }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 13)
 
                         if let error = model.errorMessage {
+                            SettingsCardDivider()
                             ErrorMessageView(message: error)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 12)
                         }
 
-                        LinkRow(
-                            title: "去控制台获取 API Key",
-                            icon: "arrow.up.right",
-                            url: URL(string: "https://www.kimi.com/code/console")!
-                        )
-                        .padding(.top, 4)
-                    } header: {
-                        Text("API Key")
+                        SettingsCardDivider()
+                        SettingsCardRow(
+                            title: "获取 API Key",
+                            subtitle: "前往 Kimi 控制台创建并复制 API Key。"
+                        ) {
+                            LinkRow(
+                                title: "去控制台",
+                                icon: "arrow.up.right",
+                                url: URL(string: "https://www.kimi.com/code/console")!
+                            )
+                        }
                     }
+                }
 
-                    Section {
-                        Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 12) {
-                            GridRow {
-                                Text("额度刷新间隔")
-
+                // 自动刷新
+                SettingsCard(
+                    title: "自动刷新",
+                    footerText: "设置越短，数据越及时，但会增加网络和系统负担。"
+                ) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        SettingsCardRow(title: "额度刷新间隔") {
+                            HStack(spacing: 6) {
                                 TextField("", text: $quotaIntervalText)
                                     .textFieldStyle(.roundedBorder)
-                                    .frame(width: 70)
+                                    .frame(width: 60)
                                     .focused($focusedField, equals: .quotaInterval)
                                     .onChange(of: quotaIntervalText) { _, newValue in
                                         let filtered = newValue.filter { $0.isNumber }
@@ -2288,15 +2434,16 @@ struct BasicSettingsView: View {
 
                                 Text("分钟")
                                     .font(.system(size: 12))
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(.kimiTextSecondary)
                             }
+                        }
 
-                            GridRow {
-                                Text("检查更新间隔")
-
+                        SettingsCardDivider()
+                        SettingsCardRow(title: "检查更新间隔") {
+                            HStack(spacing: 6) {
                                 TextField("", text: $updateIntervalText)
                                     .textFieldStyle(.roundedBorder)
-                                    .frame(width: 70)
+                                    .frame(width: 60)
                                     .focused($focusedField, equals: .updateInterval)
                                     .onChange(of: updateIntervalText) { _, newValue in
                                         let filtered = newValue.filter { $0.isNumber }
@@ -2307,19 +2454,16 @@ struct BasicSettingsView: View {
 
                                 Text("分钟")
                                     .font(.system(size: 12))
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(.kimiTextSecondary)
                             }
                         }
-                    } header: {
-                        Text("自动刷新")
-                    } footer: {
-                        Text("设置越短，数据越及时，但会增加网络和系统负担。")
-                            .font(.system(size: 11))
-                            .foregroundStyle(.secondary)
                     }
+                }
 
-                    Section {
-                        HStack {
+                // 菜单栏样式
+                SettingsCard(title: "菜单栏样式") {
+                    VStack(alignment: .leading, spacing: 0) {
+                        SettingsCardRow(title: "显示样式") {
                             Picker("", selection: $model.menuBarDisplayScheme) {
                                 ForEach(MenuBarDisplayScheme.allCases) { scheme in
                                     Text(scheme.displayName).tag(scheme)
@@ -2327,15 +2471,11 @@ struct BasicSettingsView: View {
                             }
                             .pickerStyle(.segmented)
                             .labelsHidden()
-
-                            Spacer()
+                            .frame(width: 180)
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
 
-                        HStack(spacing: 12) {
-                            Text("实时预览")
-                                .font(.system(size: 13))
-
+                        SettingsCardDivider()
+                        SettingsCardRow(title: "实时预览") {
                             if let quota = model.quota {
                                 Image(nsImage: MenuBarTextRenderer.image(
                                     scheme: model.menuBarDisplayScheme,
@@ -2352,14 +2492,15 @@ struct BasicSettingsView: View {
                                     .foregroundStyle(.secondary)
                             }
                         }
-                    } header: {
-                        Text("菜单栏样式")
                     }
                 }
-                .formStyle(.grouped)
             }
-            .padding()
+            .padding(.horizontal, 24)
+            .padding(.top, 44)
+            .padding(.bottom, 16)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .background(Color.kimiPanelBackground)
         .onAppear {
             editingKey = model.key
             isEditingKey = model.key.isEmpty
@@ -2420,45 +2561,54 @@ struct AboutSettingsView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 20) {
-                VStack(spacing: 16) {
-                    AnimatedKimiCodeLogo(width: 64, isAnimating: true)
+            VStack(alignment: .leading, spacing: 20) {
+                Text("关于")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(.kimiTextPrimary)
 
-                    Text("KimiCodeBar")
-                        .font(.system(size: 22, weight: .bold))
+                SettingsCard {
+                    VStack(spacing: 16) {
+                        AnimatedKimiCodeLogo(width: 64, isAnimating: true)
 
-                    Text("版本 \(appVersion())")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(.secondary)
+                        Text("KimiCodeBar")
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundStyle(.kimiTextPrimary)
 
-                    if model.kimiVersion != "检测中…" && model.kimiVersion != "未检测到" {
-                        Text("KimiCode CLI \(formatKimiVersion(model.kimiVersion))")
-                            .font(.system(size: 12))
+                        Text("版本 \(appVersion())")
+                            .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(.secondary)
-                    }
 
-                    HStack(spacing: 12) {
-                        LinkRow(
-                            title: "GitHub",
-                            imageName: "github-icon",
-                            imageSize: 16,
-                            url: URL(string: "https://github.com/xifandev/KimiCodeBar")!
-                        )
-                        LinkRow(
-                            title: "反馈问题",
-                            icon: "exclamationmark.bubble",
-                            url: URL(string: "https://github.com/xifandev/KimiCodeBar/issues")!
-                        )
+                        if model.kimiVersion != "检测中…" && model.kimiVersion != "未检测到" {
+                            Text("KimiCode CLI \(formatKimiVersion(model.kimiVersion))")
+                                .font(.system(size: 12))
+                                .foregroundStyle(.secondary)
+                        }
+
+                        HStack(spacing: 12) {
+                            LinkRow(
+                                title: "GitHub",
+                                imageName: "github-icon",
+                                imageSize: 16,
+                                url: URL(string: "https://github.com/xifandev/KimiCodeBar")!
+                            )
+                            LinkRow(
+                                title: "反馈问题",
+                                icon: "exclamationmark.bubble",
+                                url: URL(string: "https://github.com/xifandev/KimiCodeBar/issues")!
+                            )
+                        }
+                        .padding(.top, 8)
                     }
-                    .padding(.top, 8)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 24)
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 24)
-                .background(Color.kimiCardBackground)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
             }
-            .padding()
+            .padding(.horizontal, 24)
+            .padding(.top, 44)
+            .padding(.bottom, 16)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .background(Color.kimiPanelBackground)
     }
 }
 
