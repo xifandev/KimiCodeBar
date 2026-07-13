@@ -1065,7 +1065,7 @@ struct BoosterWalletCard: View {
     }
  }
 
-// MARK: - Kimi 本地服务卡片
+// MARK: - Kimi Web 卡片
 
 struct KimiServerCard: View {
     let state: KimiServerState
@@ -1074,7 +1074,6 @@ struct KimiServerCard: View {
     let onRestart: () -> Void
     let onUpgradeAndRestart: () -> Void
 
-    @State private var isHoveredCard = false
     @State private var isHoveredOpenWeb = false
     @State private var isHoveredRestart = false
     @State private var isHoveredUpgrade = false
@@ -1107,90 +1106,70 @@ struct KimiServerCard: View {
         if isLoading || state.status == .unknown {
             return "检测中…"
         }
-        let version = formatKimiVersion(state.version)
         switch state.status {
         case .running:
-            return "v\(version) · 127.0.0.1:\(state.port) · \(state.connections) 个连接"
+            return "127.0.0.1:\(state.port) · \(state.connections) 个连接"
         case .stopped, .error:
-            return "v\(version) · 127.0.0.1:\(state.port) · 点击启动或打开 Web UI"
+            return "127.0.0.1:\(state.port) · 已停止"
         case .unknown:
             return "检测中…"
         }
     }
 
     var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "server.rack")
-                .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(statusColor)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Text("Kimi Web")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.kimiTextPrimary)
 
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
-                    Text("Kimi 本地服务")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(.kimiTextPrimary)
+                Text(statusText)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(statusColor)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(statusColor.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
 
-                    Text(statusText)
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(statusColor)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(statusColor.opacity(0.12))
-                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                Spacer()
+            }
 
-                    Spacer()
-                }
-
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
                 Text(detailText)
-                    .font(.system(size: 11))
+                    .font(.system(size: 13))
                     .foregroundStyle(.kimiTextSecondary)
                     .lineLimit(1)
-            }
 
-            Spacer(minLength: 8)
+                Spacer()
 
-            HStack(spacing: 4) {
-                serverIconButton(
-                    icon: "globe",
-                    isHovered: $isHoveredOpenWeb,
-                    action: onOpenWeb,
-                    disabled: isLoading
-                )
+                HStack(spacing: 4) {
+                    serverIconButton(
+                        icon: "globe",
+                        isHovered: $isHoveredOpenWeb,
+                        action: onOpenWeb,
+                        disabled: isLoading
+                    )
 
-                serverIconButton(
-                    icon: "arrow.clockwise",
-                    isHovered: $isHoveredRestart,
-                    action: onRestart,
-                    disabled: isLoading
-                )
+                    serverIconButton(
+                        icon: "arrow.clockwise",
+                        isHovered: $isHoveredRestart,
+                        action: onRestart,
+                        disabled: isLoading
+                    )
 
-                serverIconButton(
-                    icon: "arrow.up.arrow.down",
-                    isHovered: $isHoveredUpgrade,
-                    action: onUpgradeAndRestart,
-                    disabled: isLoading
-                )
+                    serverIconButton(
+                        icon: "arrow.up.arrow.down",
+                        isHovered: $isHoveredUpgrade,
+                        action: onUpgradeAndRestart,
+                        disabled: isLoading
+                    )
+                }
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.kimiCardBackground)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.kimiTextPrimary.opacity(isHoveredCard ? 0.06 : 0))
-                )
-        )
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.kimiCardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 12))
-        .contentShape(Rectangle())
-        .cursor(isLoading ? .arrow : .pointingHand)
-        .onHover { isHoveredCard = $0 }
-        .onTapGesture {
-            if !isLoading {
-                onOpenWeb()
-            }
-        }
     }
 
     private func serverIconButton(
