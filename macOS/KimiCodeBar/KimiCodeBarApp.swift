@@ -1106,11 +1106,12 @@ struct KimiServerCard: View {
         if isLoading || state.status == .unknown {
             return "检测中…"
         }
+        let version = formatKimiVersion(state.version)
         switch state.status {
         case .running:
-            return "127.0.0.1:\(state.port) · \(state.connections) 个连接"
+            return "v\(version) · 127.0.0.1:\(state.port) · \(state.connections) 个连接"
         case .stopped, .error:
-            return "127.0.0.1:\(state.port) · 已停止"
+            return "v\(version) · 127.0.0.1:\(state.port) · 已停止"
         case .unknown:
             return "检测中…"
         }
