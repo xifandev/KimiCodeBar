@@ -44,6 +44,7 @@ final class ThemeManager: ObservableObject {
     @Published var theme: AppTheme {
         didSet {
             UserDefaults.standard.set(theme.rawValue, forKey: "appTheme")
+            NSApplication.shared.appearance = theme.nsAppearance
         }
     }
 
@@ -65,9 +66,6 @@ struct KimiCodeBarApp: App {
     var body: some Scene {
         MenuBarExtra {
             KimiMenu()
-                .onChange(of: themeManager.theme) { _, newTheme in
-                    NSApplication.shared.appearance = newTheme.nsAppearance
-                }
         } label: {
             KimiLabel()
         }
