@@ -624,11 +624,6 @@ struct KimiMenu: View {
                         }
                     }
 
-                    if model.isCheckingUpdate {
-                        ProgressView()
-                            .controlSize(.small)
-                            .scaleEffect(0.6)
-                    }
                 }
 
                 Spacer()
