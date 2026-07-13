@@ -1161,8 +1161,8 @@ struct KimiServerCard: View {
                     }
                     .frame(width: 130)
                     .padding(.vertical, 10)
-                    .foregroundStyle(.white)
-                    .background(isHoveredOpenWeb ? Color.kimiBlue.opacity(0.85) : Color.kimiBlue)
+                    .foregroundStyle(isLoading || !isRunning ? .kimiTextTertiary : (isHoveredOpenWeb ? .kimiTextPrimary : .kimiTextSecondary))
+                    .background(isHoveredOpenWeb && !(isLoading || !isRunning) ? Color.kimiTextPrimary.opacity(0.10) : Color.kimiTextPrimary.opacity(0.06))
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
                 .buttonStyle(.plain)
