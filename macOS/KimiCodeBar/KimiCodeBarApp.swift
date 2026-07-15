@@ -837,6 +837,11 @@ struct KimiMenu: View {
                 await model.checkForKimiCLIUpdate()
                 await model.checkForAppUpdate()
 
+                // 版本已追平（例如刚在外部更新完 CLI），关闭基于过期状态弹出的更新提示
+                if model.pendingUpdateVersion == nil {
+                    showUpdateAlert = false
+                }
+
                 if model.pendingAppUpdateVersion != nil && model.pendingUpdateVersion == nil {
                     showAppUpdateAlert = true
                 }
@@ -855,6 +860,11 @@ struct KimiMenu: View {
                     await model.loadKimiVersion()
                     await model.checkForKimiCLIUpdate()
                     await model.checkForAppUpdate()
+
+                    // 版本已追平（例如刚在外部更新完 CLI），关闭基于过期状态弹出的更新提示
+                    if model.pendingUpdateVersion == nil {
+                        showUpdateAlert = false
+                    }
 
                     if model.pendingAppUpdateVersion != nil && model.pendingUpdateVersion == nil {
                         showAppUpdateAlert = true
@@ -3186,14 +3196,16 @@ final class KimiCodeBarModel: ObservableObject {
                     sendUpdateNotification(version: latest)
                 }
             } else {
-                // 本地已经是最新版，清空延迟记录
+                // 本地已经是最新版，清空待更新状态和延迟记录
+                pendingUpdateVersion = nil
                 snoozedKimiUpdateUntil = 0
             }
         }
     }
 
     func checkCachedKimiUpdate() {
-        guard !cachedKimiLatestVersion.isEmpty else { return }
+        guard !cachedKimiLatestVersion.isEmpty,
+              kimiVersion != "未检测到", kimiVersion != "检测中…" else { return }
 
         let currentNormalized = normalizeVersion(kimiVersion)
         let cachedNormalized = normalizeVersion(cachedKimiLatestVersion)
@@ -3212,7 +3224,8 @@ final class KimiCodeBarModel: ObservableObject {
                 snoozedKimiUpdateUntil = 0
             }
         } else {
-            // 本地已经是最新版，清空延迟记录
+            // 本地已经是最新版，清空待更新状态和延迟记录
+            pendingUpdateVersion = nil
             snoozedKimiUpdateUntil = 0
         }
     }
