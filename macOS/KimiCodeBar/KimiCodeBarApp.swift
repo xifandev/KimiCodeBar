@@ -839,6 +839,11 @@ struct KimiMenu: View {
         .padding(16)
         .frame(width: 340)
         .background(Color.kimiPanelBackground)
+        .overlay {
+            if !model.hasCredential {
+                LoginOverlayView(isMenuVisible: isMenuVisible)
+            }
+        }
         .background(WindowVisibilityDetector(isVisible: $isMenuVisible))
         .onChange(of: isMenuVisible) { _, isVisible in
             if isVisible {
@@ -880,9 +885,7 @@ struct KimiMenu: View {
         }
         .onAppear {
             model.checkCachedKimiUpdate()
-            if !model.hasCredential {
-                SettingsWindowManager.shared.show()
-            } else if model.pendingUpdateVersion != nil {
+            if model.pendingUpdateVersion != nil {
                 showUpdateAlert = true
             }
 
@@ -904,9 +907,7 @@ struct KimiMenu: View {
         .onChange(of: isMenuVisible) { _, visible in
             if visible {
                 model.checkCachedKimiUpdate()
-                if !model.hasCredential {
-                    SettingsWindowManager.shared.show()
-                } else if model.pendingUpdateVersion != nil {
+                if model.pendingUpdateVersion != nil {
                     showUpdateAlert = true
                 }
 
@@ -976,6 +977,107 @@ private func formatKimiVersion(_ version: String) -> String {
         return String(last)
     }
     return version
+}
+
+// MARK: - 未登录遮罩
+
+/// 未登录时覆盖在菜单面板上的半透明遮罩，引导用户一键授权登录。
+struct LoginOverlayView: View {
+    let isMenuVisible: Bool
+
+    @StateObject private var model = KimiCodeBarModel.shared
+    @State private var isHoveredLogin = false
+    @State private var isHoveredSettings = false
+    @State private var isHoveredCancel = false
+
+    var body: some View {
+        ZStack {
+            Color.kimiPanelBackground.opacity(0.94)
+
+            VStack(spacing: 16) {
+                AnimatedKimiCodeLogo(width: 52, isAnimating: isMenuVisible)
+
+                if model.oauthLoginInProgress {
+                    authorizingContent
+                } else {
+                    loginContent
+                }
+            }
+            .padding(24)
+        }
+    }
+
+    // MARK: 未登录
+
+    private var loginContent: some View {
+        VStack(spacing: 16) {
+            Text("登录后查看 Kimi 用量")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(.kimiTextPrimary)
+
+            Button(action: {
+                model.loginMethod = .oauth
+                model.startOAuthLogin()
+            }) {
+                Text("Kimi 登录")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(minWidth: 140)
+                    .padding(.vertical, 10)
+                    .background(isHoveredLogin ? Color.kimiBlue.opacity(0.85) : Color.kimiBlue)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+            .buttonStyle(.plain)
+            .cursor(.pointingHand)
+            .onHover { isHoveredLogin = $0 }
+
+            Button(action: { SettingsWindowManager.shared.show() }) {
+                Text("其他登录方式")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(isHoveredSettings ? .kimiTextPrimary : .kimiTextSecondary)
+            }
+            .buttonStyle(.plain)
+            .cursor(.pointingHand)
+            .onHover { isHoveredSettings = $0 }
+        }
+    }
+
+    // MARK: 授权中
+
+    private var authorizingContent: some View {
+        VStack(spacing: 14) {
+            VStack(spacing: 6) {
+                HStack(spacing: 8) {
+                    LoadingRing()
+                        .frame(width: 14, height: 14)
+
+                    Text("等待浏览器授权…")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(.kimiTextPrimary)
+                }
+
+                if let auth = model.oauthDeviceAuth {
+                    Text("授权码 \(auth.userCode)")
+                        .font(.system(size: 12, weight: .medium, design: .monospaced))
+                        .foregroundStyle(.kimiTextSecondary)
+                        .textSelection(.enabled)
+                }
+            }
+
+            Button(action: { model.cancelOAuthLogin() }) {
+                Text("取消")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(isHoveredCancel ? .kimiTextPrimary : .kimiTextSecondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 5)
+                    .background(isHoveredCancel ? Color.kimiTextPrimary.opacity(0.14) : Color.kimiTextPrimary.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
+            .buttonStyle(.plain)
+            .cursor(.pointingHand)
+            .onHover { isHoveredCancel = $0 }
+        }
+    }
 }
 
 // MARK: - 用量卡片
@@ -2599,6 +2701,60 @@ enum APISettingField: Hashable {
     case updateInterval
 }
 
+// MARK: - 登录方式选择卡片
+
+/// 卡片式单选：图标 + 标题 + 副标题，选中态蓝色描边 + 对勾。
+struct LoginMethodCard: View {
+    let method: LoginMethod
+    let isSelected: Bool
+    let action: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: method.iconName)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(isSelected ? .kimiBlue : .kimiTextSecondary)
+                    .frame(width: 24, alignment: .center)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(method.displayName)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.kimiTextPrimary)
+
+                    Text(method.subtitle)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.kimiTextSecondary)
+                }
+
+                Spacer(minLength: 4)
+
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(isSelected ? .kimiBlue : .kimiTextTertiary)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(isSelected
+                          ? Color.kimiBlue.opacity(0.10)
+                          : (isHovered ? Color.kimiTextPrimary.opacity(0.06) : Color.kimiTextPrimary.opacity(0.03)))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(isSelected ? Color.kimiBlue.opacity(0.6) : Color.kimiTextPrimary.opacity(0.08), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .cursor(.pointingHand)
+        .onHover { isHovered = $0 }
+    }
+}
+
 // MARK: - OAuth 授权登录区域
 
 /// 基本设置中「授权登录」方式对应的凭证管理区域。
@@ -2617,8 +2773,8 @@ struct OAuthLoginSection: View {
         VStack(alignment: .leading, spacing: 0) {
             if model.oauthLoginInProgress, let auth = model.oauthDeviceAuth {
                 authorizingContent(auth)
-            } else if let token = model.oauthToken {
-                authorizedContent(token)
+            } else if model.oauthToken != nil {
+                authorizedContent
             } else {
                 loginContent
             }
@@ -2648,15 +2804,9 @@ struct OAuthLoginSection: View {
                 .foregroundStyle(.kimiTextTertiary)
                 .frame(width: 32, height: 32)
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text("未授权")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.kimiTextPrimary)
-
-                Text("通过浏览器跳转 Kimi 账号完成授权")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.kimiTextSecondary)
-            }
+            Text("未授权")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(.kimiTextPrimary)
 
             Spacer()
 
@@ -2786,22 +2936,16 @@ struct OAuthLoginSection: View {
 
     // MARK: 已授权
 
-    private func authorizedContent(_ token: KimiOAuthToken) -> some View {
+    private var authorizedContent: some View {
         HStack(spacing: 12) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 22, weight: .regular))
                 .foregroundStyle(.green)
                 .frame(width: 32, height: 32)
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text("已授权 Kimi 账号")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.kimiTextPrimary)
-
-                Text("凭证有效期至 \(oauthExpiryText(token))，到期自动续期")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.kimiTextSecondary)
-            }
+            Text("已授权 Kimi 账号")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(.kimiTextPrimary)
 
             Spacer()
 
@@ -2820,12 +2964,6 @@ struct OAuthLoginSection: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 13)
-    }
-
-    private func oauthExpiryText(_ token: KimiOAuthToken) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MM-dd HH:mm"
-        return formatter.string(from: token.expiresAtDate)
     }
 }
 
@@ -2924,26 +3062,20 @@ struct BasicSettingsView: View {
                     .foregroundStyle(.kimiTextPrimary)
 
                 // 登录方式（默认授权登录，与 KimiCode CLI 共享凭证）
-                SettingsCard(
-                    title: "登录方式",
-                    footerText: model.loginMethod == .oauth
-                        ? "授权登录通过浏览器跳转 Kimi 账号完成认证，凭证与 KimiCode CLI 共享，过期自动续期。"
-                        : nil
-                ) {
+                SettingsCard(title: "登录方式") {
                     VStack(alignment: .leading, spacing: 0) {
-                        SettingsCardRow(
-                            title: "认证方式",
-                            subtitle: "选择 KimiCodeBar 查询用量时使用的登录方式"
-                        ) {
-                            Picker("", selection: $model.loginMethod) {
-                                ForEach(LoginMethod.allCases) { method in
-                                    Text(method.displayName).tag(method)
+                        HStack(spacing: 10) {
+                            ForEach(LoginMethod.allCases) { method in
+                                LoginMethodCard(
+                                    method: method,
+                                    isSelected: model.loginMethod == method
+                                ) {
+                                    model.loginMethod = method
                                 }
                             }
-                            .pickerStyle(.segmented)
-                            .labelsHidden()
-                            .frame(width: 200)
                         }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 13)
 
                         SettingsCardDivider()
 
@@ -3742,6 +3874,20 @@ enum LoginMethod: String, CaseIterable, Identifiable {
         case .token: return "Token 登录"
         }
     }
+
+    var subtitle: String {
+        switch self {
+        case .oauth: return "浏览器一键授权"
+        case .token: return "手动填写 API Key"
+        }
+    }
+
+    var iconName: String {
+        switch self {
+        case .oauth: return "person.badge.key"
+        case .token: return "key"
+        }
+    }
 }
 
 // MARK: - 本地服务状态
@@ -3877,7 +4023,7 @@ final class KimiCodeBarModel: ObservableObject {
                 await MainActor.run {
                     self.isLoading = false
                     self.quota = nil
-                    self.text = "未配置"
+                    self.text = "未登录"
                 }
                 return
             }
@@ -4017,7 +4163,7 @@ final class KimiCodeBarModel: ObservableObject {
         oauthToken = nil
         KimiOAuthService.clearToken()
         quota = nil
-        text = "未配置"
+        text = "未登录"
         errorMessage = nil
     }
 
