@@ -12,9 +12,9 @@ enum ArchiveThreshold: String, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .oneDay: return "一天以后"
-        case .oneWeek: return "一周以后"
-        case .oneMonth: return "一个月以后"
+        case .oneDay: return LanguageManager.tr("一天以后")
+        case .oneWeek: return LanguageManager.tr("一周以后")
+        case .oneMonth: return LanguageManager.tr("一个月以后")
         }
     }
 
@@ -188,7 +188,7 @@ final class KimiArchiveManager: ObservableObject {
                 }
             }
         } catch {
-            errorMessage = "无法读取会话目录：\(error.localizedDescription)"
+            errorMessage = LanguageManager.tr("无法读取会话目录：%@", arguments: [error.localizedDescription])
         }
 
         sessions.sort { $0.updatedAt > $1.updatedAt }
@@ -306,13 +306,15 @@ final class KimiArchiveManager: ObservableObject {
     nonisolated static func relativeTimeString(from date: Date) -> String {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .full
-        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.locale = Locale(identifier: LanguageManager.resolvedLanguage == .zhHans ? "zh_CN" : "en_US")
         return formatter.localizedString(for: date, relativeTo: Date())
     }
 
     nonisolated static func archiveTimeDescription(for session: KimiSession) -> String {
         let relative = relativeTimeString(from: session.updatedAt)
-        return session.isArchived ? "归档于 \(relative)" : "更新于 \(relative)"
+        return session.isArchived
+            ? LanguageManager.tr("归档于 %@", arguments: [relative])
+            : LanguageManager.tr("更新于 %@", arguments: [relative])
     }
 
     nonisolated static func parseISODate(_ string: String?) -> Date? {

@@ -15,17 +15,17 @@ enum AppTheme: String, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .system: return "跟随系统"
-        case .dark: return "月之暗面"
-        case .light: return "月之亮面"
+        case .system: return LanguageManager.tr("跟随系统")
+        case .dark: return LanguageManager.tr("月之暗面")
+        case .light: return LanguageManager.tr("月之亮面")
         }
     }
 
     var subtitle: String {
         switch self {
-        case .system: return "自动切换明暗"
-        case .dark: return "深色外观"
-        case .light: return "浅色外观"
+        case .system: return LanguageManager.tr("自动切换明暗")
+        case .dark: return LanguageManager.tr("深色外观")
+        case .light: return LanguageManager.tr("浅色外观")
         }
     }
 
@@ -175,6 +175,7 @@ extension ShapeStyle where Self == Color {
 
 struct KimiLabel: View {
     @StateObject private var model = KimiCodeBarModel.shared
+    @StateObject private var languageManager = LanguageManager.shared
 
     var body: some View {
         if let quota = model.quota {
@@ -216,10 +217,10 @@ enum MenuBarDisplayScheme: String, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .compact: return "默认样式"
-        case .kPrefix: return "K 前缀"
-        case .singleLine: return "单行"
-        case .kimiPrefix: return "Kimi 前缀"
+        case .compact: return LanguageManager.tr("默认样式")
+        case .kPrefix: return LanguageManager.tr("K 前缀")
+        case .singleLine: return LanguageManager.tr("单行")
+        case .kimiPrefix: return LanguageManager.tr("Kimi 前缀")
         }
     }
 }
@@ -632,6 +633,7 @@ final class KimiCodeLogoLayerView: NSView {
 
 struct KimiMenu: View {
     @StateObject private var model = KimiCodeBarModel.shared
+    @StateObject private var languageManager = LanguageManager.shared
     @Environment(\.colorScheme) private var colorScheme
     @State private var showUpdateAlert = false
     @State private var showAppUpdateAlert = false
@@ -665,7 +667,7 @@ struct KimiMenu: View {
             VStack(spacing: 12) {
                 HStack(spacing: 12) {
                     UsageCard(
-                        title: "本周用量",
+                        title: languageManager.tr("本周用量"),
                         subtitle: nil,
                         percentage: model.quota?.weekly.percentage ?? 0,
                         reset: model.quota?.weekly.timeUntilReset ?? "--",
@@ -674,7 +676,7 @@ struct KimiMenu: View {
                     )
 
                     UsageCard(
-                        title: "5小时用量",
+                        title: languageManager.tr("5小时用量"),
                         subtitle: nil,
                         percentage: model.quota?.fiveHour.percentage ?? 0,
                         reset: model.quota?.fiveHour.timeUntilReset ?? "--",
@@ -740,7 +742,7 @@ struct KimiMenu: View {
             // 操作按钮卡片
             HStack(spacing: 8) {
                 ActionButton(
-                    title: "控制台",
+                    title: languageManager.tr("控制台"),
                     textIcon: "KIMI",
                     action: {
                         dismissMenuBarPanel()
@@ -749,28 +751,28 @@ struct KimiMenu: View {
                 )
 
                 ActionButton(
-                    title: "刷新",
+                    title: languageManager.tr("刷新"),
                     icon: "arrow.clockwise",
                     action: { model.refreshAll() },
                     disabled: !model.hasCredential || model.isLoading
                 )
 
                 ActionButton(
-                    title: "设置",
+                    title: languageManager.tr("设置"),
                     icon: "gearshape",
                     action: { SettingsWindowManager.shared.show() }
                 )
                 .keyboardShortcut(",", modifiers: .command)
 
                 ActionButton(
-                    title: "退出",
+                    title: languageManager.tr("退出"),
                     icon: "power",
                     action: { NSApplication.shared.terminate(nil) }
                 )
             }
 
             // 版本卡片
-            let canShowUpdateLog = model.kimiVersion != "检测中…" && model.kimiVersion != "未检测到"
+            let canShowUpdateLog = model.kimiVersion != languageManager.tr("检测中…") && model.kimiVersion != languageManager.tr("未检测到")
 
             HStack(alignment: .center, spacing: 10) {
                 Text("KimiCode CLI")
@@ -784,7 +786,7 @@ struct KimiMenu: View {
 
                     if canShowUpdateLog {
                         if model.pendingUpdateVersion != nil || model.hasCachedKimiUpdate {
-                            Text("发现新版本")
+                            LText("发现新版本")
                                 .font(.system(size: 9, weight: .medium))
                                 .foregroundStyle(.orange)
                                 .padding(.horizontal, 5)
@@ -792,7 +794,7 @@ struct KimiMenu: View {
                                 .background(Color.orange.opacity(0.12))
                                 .clipShape(RoundedRectangle(cornerRadius: 4))
                         } else if model.updateErrorMessage != nil && !model.updateErrorMessage!.isEmpty {
-                            Text("检查更新失败")
+                            LText("检查更新失败")
                                 .font(.system(size: 9, weight: .medium))
                                 .foregroundStyle(isHoveredUpdateError ? .red.opacity(0.9) : .red)
                                 .padding(.horizontal, 5)
@@ -809,7 +811,7 @@ struct KimiMenu: View {
                                     UpdateErrorPopoverView(errorMessage: model.updateErrorMessage ?? "")
                                 }
                         } else {
-                            Text("当前最新")
+                            LText("当前最新")
                                 .font(.system(size: 9, weight: .medium))
                                 .foregroundStyle(.kimiTextTertiary)
                                 .padding(.horizontal, 5)
@@ -874,7 +876,7 @@ struct KimiMenu: View {
         .popover(isPresented: $showUpdateAlert, arrowEdge: .trailing) {
             UpdateAlertView(
                 currentVersion: formatKimiVersion(model.kimiVersion),
-                newVersion: model.pendingUpdateVersion ?? "新版",
+                newVersion: model.pendingUpdateVersion ?? languageManager.tr("新版"),
                 onDismiss: {
                     showUpdateAlert = false
                     model.pendingUpdateVersion = nil
@@ -891,7 +893,7 @@ struct KimiMenu: View {
         .popover(isPresented: $showAppUpdateAlert, arrowEdge: .trailing) {
             AppUpdateAlertView(
                 currentVersion: appVersion(),
-                newVersion: model.pendingAppUpdateVersion ?? "新版",
+                newVersion: model.pendingAppUpdateVersion ?? languageManager.tr("新版"),
                 onIgnore: {
                     showAppUpdateAlert = false
                     model.ignoreAppUpdate()
@@ -979,20 +981,20 @@ struct KimiMenu: View {
 
     private func formatMembershipLevel(_ level: String) -> String {
         switch level.uppercased() {
-        case "LEVEL_FREE": return "免费版"
-        case "LEVEL_BASIC": return "基础版"
-        case "LEVEL_INTERMEDIATE": return "进阶版"
-        case "LEVEL_ADVANCED": return "高级版"
+        case "LEVEL_FREE": return LanguageManager.tr("免费版")
+        case "LEVEL_BASIC": return LanguageManager.tr("基础版")
+        case "LEVEL_INTERMEDIATE": return LanguageManager.tr("进阶版")
+        case "LEVEL_ADVANCED": return LanguageManager.tr("高级版")
         default:
             let trimmed = level.uppercased().replacingOccurrences(of: "LEVEL_", with: "")
-            return trimmed.isEmpty ? "未知" : trimmed
+            return trimmed.isEmpty ? LanguageManager.tr("未知") : trimmed
         }
     }
 
 }
 
 private func formatKimiVersion(_ version: String) -> String {
-    guard version != "未检测到" else { return "未检测到" }
+    guard version != LanguageManager.tr("未检测到") else { return LanguageManager.tr("未检测到") }
     let trimmed = version.trimmingCharacters(in: .whitespacesAndNewlines)
     let components = trimmed.split(separator: " ", omittingEmptySubsequences: true)
     if let last = components.last {
@@ -1033,7 +1035,7 @@ struct LoginOverlayView: View {
 
     private var loginContent: some View {
         VStack(spacing: 16) {
-            Text("登录后查看 Kimi 用量")
+            LText("登录后查看 Kimi 用量")
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(.kimiTextPrimary)
 
@@ -1041,7 +1043,7 @@ struct LoginOverlayView: View {
                 model.loginMethod = .oauth
                 model.startOAuthLogin()
             }) {
-                Text("Kimi 登录")
+                LText("Kimi 登录")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(.white)
                     .frame(minWidth: 140)
@@ -1054,7 +1056,7 @@ struct LoginOverlayView: View {
             .onHover { isHoveredLogin = $0 }
 
             Button(action: { SettingsWindowManager.shared.show() }) {
-                Text("其他登录方式")
+                LText("其他登录方式")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(isHoveredSettings ? .kimiTextPrimary : .kimiTextSecondary)
             }
@@ -1073,13 +1075,13 @@ struct LoginOverlayView: View {
                     LoadingRing()
                         .frame(width: 14, height: 14)
 
-                    Text("等待浏览器授权…")
+                    LText("等待浏览器授权…")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(.kimiTextPrimary)
                 }
 
                 if let auth = model.oauthDeviceAuth {
-                    Text("授权码 \(auth.userCode)")
+                    LText("授权码 %@", auth.userCode)
                         .font(.system(size: 12, weight: .medium, design: .monospaced))
                         .foregroundStyle(.kimiTextSecondary)
                         .textSelection(.enabled)
@@ -1087,7 +1089,7 @@ struct LoginOverlayView: View {
             }
 
             Button(action: { model.cancelOAuthLogin() }) {
-                Text("取消")
+                LText("取消")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(isHoveredCancel ? .kimiTextPrimary : .kimiTextSecondary)
                     .padding(.horizontal, 12)
@@ -1248,12 +1250,12 @@ struct BoosterWalletCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
-                Text("加油包余额")
+                LText("加油包余额")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(.kimiTextPrimary)
 
                 if let wallet = wallet {
-                    Text(wallet.isEnabled ? "已启用" : "未启用")
+                    LText(wallet.isEnabled ? "已启用" : "未启用")
                         .font(.system(size: 10, weight: .medium))
                         .foregroundStyle(wallet.isEnabled ? .green : .kimiTextTertiary)
                         .padding(.horizontal, 6)
@@ -1272,7 +1274,7 @@ struct BoosterWalletCard: View {
 
                 if let wallet = wallet, !isLoading {
                     HStack(spacing: 4) {
-                        Text("本月消费")
+                        LText("本月消费")
                             .font(.system(size: 11))
                             .foregroundStyle(.kimiTextSecondary)
 
@@ -1346,7 +1348,7 @@ struct BoosterWalletCard: View {
 
     private func limitText(for wallet: BoosterWallet) -> String {
         if wallet.monthlyChargeLimitCents <= 0 {
-            return "无限制"
+            return LanguageManager.tr("无限制")
         }
         return formatCurrency(wallet.monthlyChargeLimitYuan, currency: wallet.currency)
     }
@@ -1369,7 +1371,7 @@ struct KimiServerRestartHint: View {
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(.orange)
 
-            Text("Kimi Web 运行版本 \(formatKimiVersion(runningVersion)) 低于已安装版本 \(formatKimiVersion(installedVersion))，建议重启服务。")
+            LText("Kimi Web 运行版本 %1$@ 低于已安装版本 %2$@，建议重启服务。", formatKimiVersion(runningVersion), formatKimiVersion(installedVersion))
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.kimiTextPrimary)
                 .lineLimit(nil)
@@ -1378,7 +1380,7 @@ struct KimiServerRestartHint: View {
             Spacer(minLength: 8)
 
             Button(action: onRestart) {
-                Text("立即重启")
+                LText("立即重启")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(isHoveredRestart ? .white : .white)
                     .padding(.horizontal, 10)
@@ -1419,6 +1421,7 @@ struct KimiServerCard: View {
     let onStop: () -> Void
     let onRestart: () -> Void
 
+    @StateObject private var languageManager = LanguageManager.shared
     @State private var isHoveredOpenWeb = false
     @State private var isHoveredToggle = false
     @State private var isHoveredRestart = false
@@ -1441,18 +1444,18 @@ struct KimiServerCard: View {
     private var statusText: String {
         switch state.status {
         case .running:
-            return "运行中"
+            return languageManager.tr("运行中")
         case .stopped:
-            return "已停止"
+            return languageManager.tr("已停止")
         case .error:
-            return "异常"
+            return languageManager.tr("异常")
         case .unknown:
-            return "检测中"
+            return languageManager.tr("检测中")
         }
     }
 
     private var toggleTitle: String {
-        state.status == .running ? "停止" : "启动"
+        state.status == .running ? languageManager.tr("停止") : languageManager.tr("启动")
     }
 
     private var isRunning: Bool {
@@ -1476,7 +1479,7 @@ struct KimiServerCard: View {
 
                 Spacer()
 
-                if !state.version.isEmpty && state.version != "未检测到" && state.version != "检测中…" {
+                if !state.version.isEmpty && state.version != languageManager.tr("未检测到") && state.version != languageManager.tr("检测中…") {
                     Text(formatKimiVersion(state.version))
                         .font(.system(size: 12, weight: .medium, design: .monospaced))
                         .foregroundStyle(.kimiTextSecondary)
@@ -1489,7 +1492,7 @@ struct KimiServerCard: View {
                         Image(systemName: "globe")
                             .font(.system(size: 13, weight: .medium))
 
-                        Text("打开")
+                        LText("打开")
                             .font(.system(size: 13, weight: .medium))
                     }
                     .frame(width: 130)
@@ -1512,7 +1515,7 @@ struct KimiServerCard: View {
                 )
 
                 serverActionButton(
-                    title: "重启",
+                    title: languageManager.tr("重启"),
                     isHovered: $isHoveredRestart,
                     isLoading: operation == .restarting,
                     action: onRestart,
@@ -1672,7 +1675,7 @@ struct CommunityButton: View {
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 16, height: 16)
 
-                Text("社区版")
+                LText("社区版")
                     .font(.system(size: 13, weight: .medium))
             }
             .foregroundStyle(isHovered ? .kimiTextPrimary : .kimiTextSecondary)
@@ -1728,17 +1731,17 @@ func fetchLatestKimiVersion() async -> (version: String?, error: String?) {
         let (data, response) = try await URLSession.shared.data(for: fullRequest)
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
-            return (nil, "版本接口返回异常状态码：\(statusCode)")
+            return (nil, LanguageManager.tr("版本接口返回异常状态码：%@", arguments: ["\(statusCode)"]))
         }
         guard let text = String(data: data, encoding: .utf8) else {
-            return (nil, "版本接口返回内容无法解析")
+            return (nil, LanguageManager.tr("版本接口返回内容无法解析"))
         }
         guard let version = parseChineseChangelog(text)?.version else {
-            return (nil, "版本接口返回内容中未找到版本号")
+            return (nil, LanguageManager.tr("版本接口返回内容中未找到版本号"))
         }
         return (version, nil)
     } catch {
-        return (nil, "版本接口请求失败：\(error.localizedDescription)")
+        return (nil, LanguageManager.tr("版本接口请求失败：%@", arguments: [error.localizedDescription]))
     }
 }
 
@@ -1752,17 +1755,17 @@ func fetchLatestChineseChangelog() async -> (value: (version: String, notes: Str
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
-            return (nil, "日志接口返回异常状态码：\(statusCode)")
+            return (nil, LanguageManager.tr("日志接口返回异常状态码：%@", arguments: ["\(statusCode)"]))
         }
         guard let text = String(data: data, encoding: .utf8) else {
-            return (nil, "日志接口返回内容无法解析")
+            return (nil, LanguageManager.tr("日志接口返回内容无法解析"))
         }
         guard let result = parseChineseChangelog(text) else {
-            return (nil, "日志接口返回内容中未找到版本信息")
+            return (nil, LanguageManager.tr("日志接口返回内容中未找到版本信息"))
         }
         return (result, nil)
     } catch {
-        return (nil, "日志接口请求失败：\(error.localizedDescription)")
+        return (nil, LanguageManager.tr("日志接口请求失败：%@", arguments: [error.localizedDescription]))
     }
 }
 
@@ -1961,14 +1964,14 @@ func fetchLatestGitHubRelease(owner: String, repo: String) async -> (version: St
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
-            return (nil, "GitHub Release 接口返回异常状态码：\(statusCode)")
+            return (nil, LanguageManager.tr("GitHub Release 接口返回异常状态码：%@", arguments: ["\(statusCode)"]))
         }
         let release = try JSONDecoder().decode(GitHubRelease.self, from: data)
         return (normalizeVersion(release.tagName), nil)
     } catch let decodingError as DecodingError {
-        return (nil, "GitHub Release 接口返回数据解析失败：\(decodingError.localizedDescription)")
+        return (nil, LanguageManager.tr("GitHub Release 接口返回数据解析失败：%@", arguments: [decodingError.localizedDescription]))
     } catch {
-        return (nil, "GitHub Release 接口请求失败：\(error.localizedDescription)")
+        return (nil, LanguageManager.tr("GitHub Release 接口请求失败：%@", arguments: [error.localizedDescription]))
     }
 }
 
@@ -1985,7 +1988,7 @@ struct UpdateAlertView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // 标题栏
-            Text("新版本的 KimiCode 已经发布")
+            LText("新版本的 KimiCode 已经发布")
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(.kimiTextPrimary)
                 .frame(maxWidth: .infinity, alignment: .center)
@@ -1995,7 +1998,7 @@ struct UpdateAlertView: View {
 
             // 内容
             VStack(alignment: .leading, spacing: 12) {
-                Text("KimiCode \(newVersion) 可供下载，您现在的版本是 \(currentVersion)。要现在下载吗？")
+                LText("KimiCode %1$@ 可供下载，您现在的版本是 %2$@。要现在下载吗？", newVersion, currentVersion)
                     .font(.system(size: 13))
                     .foregroundStyle(.kimiTextSecondary)
 
@@ -2004,7 +2007,7 @@ struct UpdateAlertView: View {
                         .font(.system(size: 18, weight: .bold))
                         .foregroundStyle(.kimiTextPrimary)
 
-                    Text("更新内容")
+                    LText("更新内容")
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(.kimiTextPrimary)
 
@@ -2014,7 +2017,7 @@ struct UpdateAlertView: View {
                                 ProgressView()
                                     .controlSize(.small)
                                     .scaleEffect(0.7)
-                                Text("正在加载更新内容…")
+                                LText("正在加载更新内容…")
                                     .font(.system(size: 12))
                                     .foregroundStyle(.kimiTextSecondary)
                             }
@@ -2042,7 +2045,7 @@ struct UpdateAlertView: View {
             // 底部按钮
             HStack(spacing: 12) {
                 Button(action: onDismiss) {
-                    Text("稍后再说")
+                    LText("稍后再说")
                         .frame(minWidth: 80)
                 }
                 .buttonStyle(.bordered)
@@ -2051,7 +2054,7 @@ struct UpdateAlertView: View {
                 Spacer()
 
                 Button(action: onInstall) {
-                    Text("安装更新")
+                    LText("安装更新")
                         .frame(minWidth: 80)
                 }
                 .buttonStyle(.borderedProminent)
@@ -2083,7 +2086,7 @@ struct AppUpdateAlertView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // 标题栏
-            Text("发现新版本")
+            LText("发现新版本")
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(.kimiTextPrimary)
                 .frame(maxWidth: .infinity, alignment: .center)
@@ -2092,7 +2095,7 @@ struct AppUpdateAlertView: View {
                 .padding(.bottom, 16)
 
             // 内容
-            Text("KimiCodeBar \(newVersion) 已发布，您现在的版本是 \(currentVersion)。")
+            LText("KimiCodeBar %1$@ 已发布，您现在的版本是 %2$@。", newVersion, currentVersion)
                 .font(.system(size: 13))
                 .foregroundStyle(.kimiTextSecondary)
                 .padding(.horizontal, 24)
@@ -2102,7 +2105,7 @@ struct AppUpdateAlertView: View {
             // 底部按钮
             HStack(spacing: 12) {
                 Button(action: onIgnore) {
-                    Text("忽略本次更新")
+                    LText("忽略本次更新")
                         .frame(minWidth: 80)
                 }
                 .buttonStyle(.bordered)
@@ -2111,7 +2114,7 @@ struct AppUpdateAlertView: View {
                 Spacer()
 
                 Button(action: onViewUpdate) {
-                    Text("查看更新")
+                    LText("查看更新")
                         .frame(minWidth: 80)
                 }
                 .buttonStyle(.borderedProminent)
@@ -2139,7 +2142,7 @@ struct UpdateLogView: View {
         VStack(alignment: .leading, spacing: 0) {
             // 顶部标题
             HStack(spacing: 12) {
-                Text("近期更新日志")
+                LText("近期更新日志")
                     .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(.kimiTextPrimary)
 
@@ -2171,7 +2174,7 @@ struct UpdateLogView: View {
                     .controlSize(.small)
                     .frame(maxWidth: .infinity, minHeight: 180)
             } else if entries.isEmpty {
-                Text("暂无更新记录。")
+                LText("暂无更新记录。")
                     .font(.system(size: 12))
                     .foregroundStyle(.kimiTextSecondary)
                     .frame(maxWidth: .infinity, minHeight: 120)
@@ -2230,7 +2233,7 @@ struct UpdateErrorPopoverView: View {
         VStack(alignment: .leading, spacing: 0) {
             // 顶部标题
             HStack(spacing: 12) {
-                Text("检查更新失败")
+                LText("检查更新失败")
                     .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(.kimiTextPrimary)
 
@@ -2278,7 +2281,7 @@ struct UpdateErrorPopoverView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "doc.on.doc")
                             .font(.system(size: 10))
-                        Text("复制错误信息")
+                        LText("复制错误信息")
                             .font(.system(size: 12, weight: .medium))
                     }
                     .foregroundStyle(isHoveredCopyButton ? .kimiTextPrimary : .kimiTextSecondary)
@@ -2292,10 +2295,10 @@ struct UpdateErrorPopoverView: View {
                 .onHover { isHoveredCopyButton = $0 }
 
                 Button(action: {
-                    let body = "## 检查更新接口错误反馈\n\n错误信息：\n```\n\(errorMessage)\n```\n\n请补充以下信息：\n- 当前 KimiCodeBar 版本：\(appVersion())\n- 当前网络环境：\n- 问题描述：\n"
+                    let body = LanguageManager.tr("## 检查更新接口错误反馈\n\n错误信息：\n```\n%1$@\n```\n\n请补充以下信息：\n- 当前 KimiCodeBar 版本：%2$@\n- 当前网络环境：\n- 问题描述：\n", arguments: [errorMessage, appVersion()])
                     var components = URLComponents(string: "https://github.com/xifandev/KimiCodeBar/issues/new")!
                     components.queryItems = [
-                        URLQueryItem(name: "title", value: "检查更新接口错误反馈"),
+                        URLQueryItem(name: "title", value: LanguageManager.tr("检查更新接口错误反馈")),
                         URLQueryItem(name: "body", value: body)
                     ]
                     if let url = components.url {
@@ -2306,7 +2309,7 @@ struct UpdateErrorPopoverView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "exclamationmark.bubble")
                             .font(.system(size: 10))
-                        Text("去 GitHub 反馈")
+                        LText("去 GitHub 反馈")
                             .font(.system(size: 12, weight: .medium))
                     }
                     .foregroundStyle(isHoveredIssueButton ? .kimiTextPrimary : .kimiTextSecondary)
@@ -2365,7 +2368,7 @@ final class SettingsWindowManager {
             backing: .buffered,
             defer: false
         )
-        window.title = "KimiCode Bar 设置"
+        window.title = LanguageManager.tr("KimiCode Bar 设置")
         window.minSize = NSSize(width: 800, height: 520)
         window.collectionBehavior = [.managed, .moveToActiveSpace]
         window.titlebarAppearsTransparent = true
@@ -2382,6 +2385,11 @@ final class SettingsWindowManager {
 
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    /// 语言切换后刷新设置窗口标题
+    func refreshTitle() {
+        window?.title = LanguageManager.tr("KimiCode Bar 设置")
     }
 }
 
@@ -2552,10 +2560,10 @@ enum SettingsPane: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .basic: return "基本设置"
-        case .archive: return "自动归档"
-        case .skills: return "技能管理"
-        case .about: return "关于"
+        case .basic: return LanguageManager.tr("基本设置")
+        case .archive: return LanguageManager.tr("自动归档")
+        case .skills: return LanguageManager.tr("技能管理")
+        case .about: return LanguageManager.tr("关于")
         }
     }
 
@@ -2570,6 +2578,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
 }
 
 struct SettingsRootView: View {
+    @StateObject private var languageManager = LanguageManager.shared
     @State private var selectedPane: SettingsPane = .basic
 
     var body: some View {
@@ -2603,6 +2612,9 @@ struct SettingsRootView: View {
             case .about:
                 AboutSettingsView()
             }
+        }
+        .onChange(of: languageManager.language) { _ in
+            SettingsWindowManager.shared.refreshTitle()
         }
     }
 }
@@ -2852,7 +2864,7 @@ struct OAuthLoginSection: View {
                 .foregroundStyle(.kimiTextTertiary)
                 .frame(width: 32, height: 32)
 
-            Text("未授权")
+            LText("未授权")
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(.kimiTextPrimary)
 
@@ -2860,7 +2872,7 @@ struct OAuthLoginSection: View {
 
             Button(action: { model.startOAuthLogin() }) {
                 ZStack {
-                    Text("去授权")
+                    LText("去授权")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(.white)
                         .opacity(model.oauthLoginInProgress ? 0 : 1)
@@ -2895,14 +2907,14 @@ struct OAuthLoginSection: View {
                 LoadingRing()
                     .frame(width: 16, height: 16)
 
-                Text("等待浏览器授权…")
+                LText("等待浏览器授权…")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(.kimiTextPrimary)
 
                 Spacer()
 
                 Button(action: { model.cancelOAuthLogin() }) {
-                    Text("取消")
+                    LText("取消")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(isHoveredCancel ? .kimiTextPrimary : .kimiTextSecondary)
                         .padding(.horizontal, 10)
@@ -2922,7 +2934,7 @@ struct OAuthLoginSection: View {
             // 授权码行
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("授权码")
+                    LText("授权码")
                         .font(.system(size: 12))
                         .foregroundStyle(.kimiTextSecondary)
 
@@ -2945,7 +2957,7 @@ struct OAuthLoginSection: View {
                     HStack(spacing: 4) {
                         Image(systemName: isCodeCopied ? "checkmark" : "doc.on.doc")
                             .font(.system(size: 11, weight: .medium))
-                        Text(isCodeCopied ? "已复制" : "复制")
+                        LText(isCodeCopied ? "已复制" : "复制")
                             .font(.system(size: 12, weight: .medium))
                     }
                     .foregroundStyle(isHoveredCopyCode ? .kimiTextPrimary : .kimiTextSecondary)
@@ -2963,7 +2975,7 @@ struct OAuthLoginSection: View {
                         HStack(spacing: 4) {
                             Image(systemName: "safari")
                                 .font(.system(size: 11, weight: .medium))
-                            Text("打开授权页")
+                            LText("打开授权页")
                                 .font(.system(size: 12, weight: .medium))
                         }
                         .foregroundStyle(isHoveredReopen ? .white : .white.opacity(0.9))
@@ -2991,14 +3003,14 @@ struct OAuthLoginSection: View {
                 .foregroundStyle(.green)
                 .frame(width: 32, height: 32)
 
-            Text("已授权 Kimi 账号")
+            LText("已授权 Kimi 账号")
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(.kimiTextPrimary)
 
             Spacer()
 
             Button(action: { model.logoutOAuth() }) {
-                Text("退出登录")
+                LText("退出登录")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(isHoveredLogout ? .red.opacity(0.9) : .red)
                     .padding(.horizontal, 10)
@@ -3021,6 +3033,7 @@ struct BasicSettingsView: View {
     @StateObject private var themeManager = ThemeManager.shared
     @StateObject private var model = KimiCodeBarModel.shared
     @StateObject private var launchAtLoginManager = LaunchAtLoginManager.shared
+    @StateObject private var languageManager = LanguageManager.shared
 
     @State private var editingKey = ""
     @State private var isEditingKey = false
@@ -3071,7 +3084,7 @@ struct BasicSettingsView: View {
                         focusedField = .apiKey
                     }
                 }) {
-                    Text(isEditingKey ? "保存" : "修改")
+                    LText(isEditingKey ? "保存" : "修改")
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.kimiBlue)
@@ -3090,11 +3103,11 @@ struct BasicSettingsView: View {
 
             SettingsCardDivider()
             SettingsCardRow(
-                title: "获取 API Key",
-                subtitle: "前往 Kimi 控制台创建并复制 API Key。"
+                title: languageManager.tr("获取 API Key"),
+                subtitle: languageManager.tr("前往 Kimi 控制台创建并复制 API Key。")
             ) {
                 LinkRow(
-                    title: "去控制台",
+                    title: languageManager.tr("去控制台"),
                     icon: "arrow.up.right",
                     url: URL(string: "https://www.kimi.com/code/console")!
                 )
@@ -3105,12 +3118,12 @@ struct BasicSettingsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                Text("基本设置")
+                LText("基本设置")
                     .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(.kimiTextPrimary)
 
                 // 登录方式（默认授权登录，凭证独立存储，不影响 KimiCode CLI）
-                SettingsCard(title: "登录方式") {
+                SettingsCard(title: languageManager.tr("登录方式")) {
                     VStack(alignment: .leading, spacing: 0) {
                         HStack(spacing: 10) {
                             ForEach(LoginMethod.allCases) { method in
@@ -3138,7 +3151,7 @@ struct BasicSettingsView: View {
                 }
 
                 // 外观主题
-                SettingsCard(title: "外观主题") {
+                SettingsCard(title: languageManager.tr("外观主题")) {
                     HStack(spacing: 10) {
                         ForEach(AppTheme.allCases) { theme in
                             SettingsOptionCard(
@@ -3155,11 +3168,29 @@ struct BasicSettingsView: View {
                     .padding(.vertical, 13)
                 }
 
+                // 语言
+                SettingsCard(title: languageManager.tr("语言")) {
+                    HStack(spacing: 10) {
+                        ForEach(AppLanguage.allCases) { language in
+                            SettingsOptionCard(
+                                title: language.displayName,
+                                subtitle: language.subtitle,
+                                iconName: language.iconName,
+                                isSelected: languageManager.language == language
+                            ) {
+                                languageManager.language = language
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 13)
+                }
+
                 // 启动
                 SettingsCard {
                     SettingsCardRow(
-                        title: "开机自动启动",
-                        subtitle: "登录 macOS 后自动启动 KimiCodeBar"
+                        title: languageManager.tr("开机自动启动"),
+                        subtitle: languageManager.tr("登录 macOS 后自动启动 KimiCodeBar")
                     ) {
                         Toggle("", isOn: launchAtLoginBinding)
                             .labelsHidden()
@@ -3170,11 +3201,11 @@ struct BasicSettingsView: View {
 
                 // 自动刷新
                 SettingsCard(
-                    title: "自动刷新",
-                    footerText: "设置越短，数据越及时，但会增加网络和系统负担。"
+                    title: languageManager.tr("自动刷新"),
+                    footerText: languageManager.tr("设置越短，数据越及时，但会增加网络和系统负担。")
                 ) {
                     VStack(alignment: .leading, spacing: 0) {
-                        SettingsCardRow(title: "额度刷新间隔") {
+                        SettingsCardRow(title: languageManager.tr("额度刷新间隔")) {
                             HStack(spacing: 6) {
                                 TextField("", text: $quotaIntervalText)
                                     .textFieldStyle(.roundedBorder)
@@ -3187,14 +3218,14 @@ struct BasicSettingsView: View {
                                         }
                                     }
 
-                                Text("分钟")
+                                LText("分钟")
                                     .font(.system(size: 12))
                                     .foregroundStyle(.kimiTextSecondary)
                             }
                         }
 
                         SettingsCardDivider()
-                        SettingsCardRow(title: "检查更新间隔") {
+                        SettingsCardRow(title: languageManager.tr("检查更新间隔")) {
                             HStack(spacing: 6) {
                                 TextField("", text: $updateIntervalText)
                                     .textFieldStyle(.roundedBorder)
@@ -3207,7 +3238,7 @@ struct BasicSettingsView: View {
                                         }
                                     }
 
-                                Text("分钟")
+                                LText("分钟")
                                     .font(.system(size: 12))
                                     .foregroundStyle(.kimiTextSecondary)
                             }
@@ -3216,9 +3247,9 @@ struct BasicSettingsView: View {
                 }
 
                 // 菜单栏样式
-                SettingsCard(title: "菜单栏样式") {
+                SettingsCard(title: languageManager.tr("菜单栏样式")) {
                     VStack(alignment: .leading, spacing: 0) {
-                        SettingsCardRow(title: "显示样式") {
+                        SettingsCardRow(title: languageManager.tr("显示样式")) {
                             Picker("", selection: $model.menuBarDisplayScheme) {
                                 ForEach(MenuBarDisplayScheme.allCases) { scheme in
                                     Text(scheme.displayName).tag(scheme)
@@ -3230,7 +3261,7 @@ struct BasicSettingsView: View {
                         }
 
                         SettingsCardDivider()
-                        SettingsCardRow(title: "实时预览") {
+                        SettingsCardRow(title: languageManager.tr("实时预览")) {
                             if let quota = model.quota {
                                 Image(nsImage: MenuBarTextRenderer.image(
                                     scheme: model.menuBarDisplayScheme,
@@ -3292,7 +3323,7 @@ struct BasicSettingsView: View {
     private func saveKey() {
         let trimmed = editingKey.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.hasPrefix("sk-kimi-") else {
-            model.errorMessage = "API Key 格式错误，应以 sk-kimi- 开头"
+            model.errorMessage = LanguageManager.tr("API Key 格式错误，应以 sk-kimi- 开头")
             return
         }
         editingKey = trimmed
@@ -3314,11 +3345,12 @@ struct BasicSettingsView: View {
 
 struct AboutSettingsView: View {
     @StateObject private var model = KimiCodeBarModel.shared
+    @StateObject private var languageManager = LanguageManager.shared
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                Text("关于")
+                LText("关于")
                     .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(.kimiTextPrimary)
 
@@ -3330,15 +3362,15 @@ struct AboutSettingsView: View {
                     FeatureHighlightCard(
                         icon: "sparkles",
                         iconColor: .kimiBlue,
-                        title: "量身定制",
-                        description: "为 Kimi Code 量身设计的用量监控小工具，在菜单栏轻量化运行，限额一目了然。"
+                        title: languageManager.tr("量身定制"),
+                        description: languageManager.tr("为 Kimi Code 量身设计的用量监控小工具，在菜单栏轻量化运行，限额一目了然。")
                     )
 
                     FeatureHighlightCard(
                         icon: "lock.shield",
                         iconColor: .green,
-                        title: "隐私安全",
-                        description: "数据仅本地存储，所有 API 只与 Kimi 官方通信，代码全部开源可审计。"
+                        title: languageManager.tr("隐私安全"),
+                        description: languageManager.tr("数据仅本地存储，所有 API 只与 Kimi 官方通信，代码全部开源可审计。")
                     )
                 }
 
@@ -3351,11 +3383,11 @@ struct AboutSettingsView: View {
                             .font(.system(size: 22, weight: .bold))
                             .foregroundStyle(.kimiTextPrimary)
 
-                        Text("版本 \(appVersion())")
+                        LText("版本 %@", appVersion())
                             .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(.secondary)
 
-                        if model.kimiVersion != "检测中…" && model.kimiVersion != "未检测到" {
+                        if model.kimiVersion != languageManager.tr("检测中…") && model.kimiVersion != languageManager.tr("未检测到") {
                             Text("KimiCode CLI \(formatKimiVersion(model.kimiVersion))")
                                 .font(.system(size: 12))
                                 .foregroundStyle(.secondary)
@@ -3369,7 +3401,7 @@ struct AboutSettingsView: View {
                                 url: URL(string: "https://github.com/xifandev/KimiCodeBar")!
                             )
                             LinkRow(
-                                title: "反馈问题",
+                                title: languageManager.tr("反馈问题"),
                                 icon: "exclamationmark.bubble",
                                 url: URL(string: "https://github.com/xifandev/KimiCodeBar/issues")!
                             )
@@ -3404,7 +3436,7 @@ struct SkillsSettingsView: View {
             // 左侧技能列表
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 8) {
-                    Text("技能管理")
+                    LText("技能管理")
                         .font(.system(size: 22, weight: .bold))
                         .foregroundStyle(.kimiTextPrimary)
 
@@ -3428,7 +3460,7 @@ struct SkillsSettingsView: View {
                         ProgressView()
                             .controlSize(.small)
                             .scaleEffect(0.8)
-                        Text("正在加载技能…")
+                        LText("正在加载技能…")
                             .font(.system(size: 12))
                             .foregroundStyle(.kimiTextSecondary)
                     }
@@ -3448,10 +3480,10 @@ struct SkillsSettingsView: View {
                         }
 
                         VStack(spacing: 4) {
-                            Text("暂无已安装技能")
+                            LText("暂无已安装技能")
                                 .font(.system(size: 13, weight: .medium))
                                 .foregroundStyle(.kimiTextSecondary)
-                            Text("技能包通常位于 ~/.kimi-code/skills/")
+                            LText("技能包通常位于 ~/.kimi-code/skills/")
                                 .font(.system(size: 11))
                                 .foregroundStyle(.kimiTextTertiary)
                         }
@@ -3492,7 +3524,7 @@ struct SkillsSettingsView: View {
                         ProgressView()
                             .controlSize(.small)
                             .scaleEffect(0.8)
-                        Text("正在加载内容…")
+                        LText("正在加载内容…")
                             .font(.system(size: 12))
                             .foregroundStyle(.kimiTextSecondary)
                     }
@@ -3511,7 +3543,7 @@ struct SkillsSettingsView: View {
                                 .foregroundStyle(.kimiTextTertiary)
                         }
 
-                        Text("选择左侧技能以预览内容")
+                        LText("选择左侧技能以预览内容")
                             .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(.kimiTextSecondary)
                     }
@@ -3571,7 +3603,7 @@ struct SkillsSettingsView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
                     .buttonStyle(.plain)
-                    .help("在 Finder 中显示")
+                    .help(Text(LanguageManager.tr("在 Finder 中显示")))
                     .cursor(.pointingHand)
                     .onHover { isHoveredFinder = $0 }
                     .fixedSize()
@@ -3759,7 +3791,7 @@ struct GitHubCommunityCard: View {
 
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 8) {
-                        Text("社区开源版")
+                        LText("社区开源版")
                             .font(.system(size: 17, weight: .bold))
                             .foregroundStyle(.white)
 
@@ -3772,7 +3804,7 @@ struct GitHubCommunityCard: View {
                             .clipShape(RoundedRectangle(cornerRadius: 5))
                     }
 
-                    Text("KimiCodeBar 完全开源，代码公开透明。欢迎 Star、提交 Issue 或参与共建，让这款工具变得更好。")
+                    LText("KimiCodeBar 完全开源，代码公开透明。欢迎 Star、提交 Issue 或参与共建，让这款工具变得更好。")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(.white.opacity(0.85))
                         .lineSpacing(3)
@@ -3794,7 +3826,7 @@ struct GitHubCommunityCard: View {
                             .aspectRatio(contentMode: .fit)
                             .frame(width: 14, height: 14)
 
-                        Text("查看仓库")
+                        LText("查看仓库")
                             .font(.system(size: 12, weight: .semibold))
                     }
                     .foregroundStyle(isHoveredRepo ? Color.kimiBlue : .white)
@@ -3812,7 +3844,7 @@ struct GitHubCommunityCard: View {
                         Image(systemName: "exclamationmark.bubble")
                             .font(.system(size: 13, weight: .semibold))
 
-                        Text("提交反馈")
+                        LText("提交反馈")
                             .font(.system(size: 12, weight: .semibold))
                     }
                     .foregroundStyle(.white)
@@ -3958,7 +3990,7 @@ struct ErrorMessageView: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(isHoveredCopy ? .kimiTextPrimary : .kimiTextSecondary)
-            .help("复制错误信息")
+            .help(Text(LanguageManager.tr("复制错误信息")))
             .cursor(.pointingHand)
             .onHover { isHoveredCopy = $0 }
             .padding(.top, 2)
@@ -3997,15 +4029,15 @@ enum LoginMethod: String, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .oauth: return "授权登录"
-        case .token: return "Token 登录"
+        case .oauth: return LanguageManager.tr("授权登录")
+        case .token: return LanguageManager.tr("Token 登录")
         }
     }
 
     var subtitle: String {
         switch self {
-        case .oauth: return "浏览器一键授权"
-        case .token: return "手动填写 API Key"
+        case .oauth: return LanguageManager.tr("浏览器一键授权")
+        case .token: return LanguageManager.tr("手动填写 API Key")
         }
     }
 
@@ -4068,7 +4100,7 @@ final class KimiCodeBarModel: ObservableObject {
     @Published var oauthLoginInProgress = false
     @Published var oauthLoginError: String?
 
-    @Published var kimiVersion: String = "检测中…"
+    @Published var kimiVersion: String = LanguageManager.tr("检测中…")
     @Published var isCheckingUpdate: Bool = false
     @Published var pendingUpdateVersion: String?
     @Published var pendingReleaseNotes: String?
@@ -4079,17 +4111,17 @@ final class KimiCodeBarModel: ObservableObject {
     @Published var kimiServerState = KimiServerState()
 
     var hasCachedKimiUpdate: Bool {
-        guard !cachedKimiLatestVersion.isEmpty, kimiVersion != "未检测到", kimiVersion != "检测中…" else { return false }
+        guard !cachedKimiLatestVersion.isEmpty, kimiVersion != LanguageManager.tr("未检测到"), kimiVersion != LanguageManager.tr("检测中…") else { return false }
         return compareVersions(normalizeVersion(kimiVersion), normalizeVersion(cachedKimiLatestVersion)) == .orderedAscending
     }
 
     var kimiServerNeedsRestart: Bool {
         guard kimiServerState.status == .running,
               !kimiServerState.version.isEmpty,
-              kimiServerState.version != "未检测到",
+              kimiServerState.version != LanguageManager.tr("未检测到"),
               !kimiVersion.isEmpty,
-              kimiVersion != "未检测到",
-              kimiVersion != "检测中…"
+              kimiVersion != LanguageManager.tr("未检测到"),
+              kimiVersion != LanguageManager.tr("检测中…")
         else { return false }
         return compareVersions(normalizeVersion(kimiServerState.version), normalizeVersion(kimiVersion)) == .orderedAscending
     }
@@ -4150,7 +4182,7 @@ final class KimiCodeBarModel: ObservableObject {
                 await MainActor.run {
                     self.isLoading = false
                     self.quota = nil
-                    self.text = "未登录"
+                    self.text = LanguageManager.tr("未登录")
                 }
                 return
             }
@@ -4168,7 +4200,7 @@ final class KimiCodeBarModel: ObservableObject {
                 switch result {
                 case .success(let quota):
                     self.quota = quota
-                    self.text = "周 \(quota.weekly.percentage)% · 5h \(quota.fiveHour.percentage)%"
+                    self.text = LanguageManager.tr("周 %1$d%% · 5h %2$d%%", arguments: [quota.weekly.percentage, quota.fiveHour.percentage])
                     self.errorMessage = nil
                 case .failure(let error):
                     if self.quota == nil {
@@ -4290,32 +4322,32 @@ final class KimiCodeBarModel: ObservableObject {
         oauthToken = nil
         KimiOAuthService.clearToken()
         quota = nil
-        text = "未登录"
+        text = LanguageManager.tr("未登录")
         errorMessage = nil
     }
 
     private func oauthErrorDescription(_ error: KimiOAuthError) -> String {
         switch error {
         case .invalidURL:
-            return "授权请求地址无效"
+            return LanguageManager.tr("授权请求地址无效")
         case .networkError(let msg):
-            return "网络错误：\(msg)"
+            return LanguageManager.tr("网络错误：%@", arguments: [msg])
         case .httpError(let code, let msg):
-            return "授权服务返回错误（\(code)）：\(msg)"
+            return LanguageManager.tr("授权服务返回错误（%1$@）：%2$@", arguments: ["\(code)", msg])
         case .invalidResponse:
-            return "无法解析授权服务返回数据"
+            return LanguageManager.tr("无法解析授权服务返回数据")
         case .authorizationPending, .slowDown:
-            return "等待授权中"
+            return LanguageManager.tr("等待授权中")
         case .expiredToken:
-            return "授权码已过期，请重新发起授权"
+            return LanguageManager.tr("授权码已过期，请重新发起授权")
         case .accessDenied:
-            return "授权被拒绝"
+            return LanguageManager.tr("授权被拒绝")
         case .unauthorized:
-            return "授权已失效，请重新登录"
+            return LanguageManager.tr("授权已失效，请重新登录")
         case .cancelled:
-            return "已取消授权"
+            return LanguageManager.tr("已取消授权")
         case .timeout:
-            return "授权超时，请重新发起授权"
+            return LanguageManager.tr("授权超时，请重新发起授权")
         }
     }
 
@@ -4409,10 +4441,10 @@ final class KimiCodeBarModel: ObservableObject {
                 connections: lines.count
             )
         } else {
-            let errorMsg = psResult.output.isEmpty ? "服务未运行" : psResult.output
+            let errorMsg = psResult.output.isEmpty ? LanguageManager.tr("服务未运行") : psResult.output
             return KimiServerState(
                 status: .stopped,
-                version: "未检测到",
+                version: LanguageManager.tr("未检测到"),
                 port: 58627,
                 connections: 0
             )
@@ -4421,7 +4453,7 @@ final class KimiCodeBarModel: ObservableObject {
 
     private func detectKimiServerVersion(port: Int = 58627) async -> String {
         guard let url = URL(string: "http://127.0.0.1:\(port)/api/v1/meta") else {
-            return "未检测到"
+            return LanguageManager.tr("未检测到")
         }
 
         struct MetaResponse: Decodable {
@@ -4435,13 +4467,13 @@ final class KimiCodeBarModel: ObservableObject {
         do {
             let (data, response) = try await URLSession.shared.data(from: url)
             guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-                return "未检测到"
+                return LanguageManager.tr("未检测到")
             }
             let meta = try JSONDecoder().decode(MetaResponse.self, from: data)
             let version = meta.data.server_version.trimmingCharacters(in: .whitespacesAndNewlines)
-            return version.isEmpty ? "未检测到" : version
+            return version.isEmpty ? LanguageManager.tr("未检测到") : version
         } catch {
-            return "未检测到"
+            return LanguageManager.tr("未检测到")
         }
     }
 
@@ -4464,7 +4496,7 @@ final class KimiCodeBarModel: ObservableObject {
             kimiVersion = current
         }
 
-        guard current != "未检测到" else {
+        guard current != LanguageManager.tr("未检测到") else {
             await MainActor.run {
                 isCheckingUpdate = false
             }
@@ -4510,7 +4542,7 @@ final class KimiCodeBarModel: ObservableObject {
 
     func checkCachedKimiUpdate() {
         guard !cachedKimiLatestVersion.isEmpty,
-              kimiVersion != "未检测到", kimiVersion != "检测中…" else { return }
+              kimiVersion != LanguageManager.tr("未检测到"), kimiVersion != LanguageManager.tr("检测中…") else { return }
 
         let currentNormalized = normalizeVersion(kimiVersion)
         let cachedNormalized = normalizeVersion(cachedKimiLatestVersion)
@@ -4570,8 +4602,8 @@ final class KimiCodeBarModel: ObservableObject {
 
     private func sendUpdateNotification(version: String) {
         let content = UNMutableNotificationContent()
-        content.title = "KimiCode 有新版本"
-        content.body = "KimiCode \(version) 已发布，点击更新。"
+        content.title = LanguageManager.tr("KimiCode 有新版本")
+        content.body = LanguageManager.tr("KimiCode %@ 已发布，点击更新。", arguments: [version])
         content.sound = .default
 
         let request = UNNotificationRequest(
@@ -4585,7 +4617,7 @@ final class KimiCodeBarModel: ObservableObject {
     private func detectKimiCLIVersion() async -> String {
         let result = await runKimiCommand(arguments: ["--version"])
         let output = result.output.trimmingCharacters(in: .whitespacesAndNewlines)
-        return output.isEmpty || output.contains("No such file") ? "未检测到" : output
+        return output.isEmpty || output.contains("No such file") ? LanguageManager.tr("未检测到") : output
     }
 
     private func runKimiCommand(arguments: [String]) async -> (output: String, exitCode: Int32) {
@@ -4637,15 +4669,15 @@ final class KimiCodeBarModel: ObservableObject {
     private func errorDescription(_ error: QuotaError) -> String {
         switch error {
         case .invalidKeyFormat:
-            return "API Key 格式错误，应以 sk-kimi- 开头"
+            return LanguageManager.tr("API Key 格式错误，应以 sk-kimi- 开头")
         case .invalidURL:
-            return "请求地址无效"
+            return LanguageManager.tr("请求地址无效")
         case .networkError(let msg):
-            return "网络错误：\(msg)"
+            return LanguageManager.tr("网络错误：%@", arguments: [msg])
         case .httpError(let code, let msg):
-            return "Kimi API 返回错误（\(code)）：\(msg)"
+            return LanguageManager.tr("Kimi API 返回错误（%1$@）：%2$@", arguments: ["\(code)", msg])
         case .invalidResponse:
-            return "无法解析 API 返回数据"
+            return LanguageManager.tr("无法解析 API 返回数据")
         }
     }
 }

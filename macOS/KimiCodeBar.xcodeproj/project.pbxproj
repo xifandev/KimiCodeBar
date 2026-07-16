@@ -10,6 +10,8 @@
 		0C489D06D649421680AD66D7 /* KimiCodeBarApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EF9AB1130A844A89CE0075C /* KimiCodeBarApp.swift */; };
 		2ACCAAC36EA5468998428B73 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 510792D7AE86479585E4504C /* Assets.xcassets */; };
 		5495A4989471440499609844857244DC /* KimiArchiveManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3B0FB687D9C4B9EB604A1EDB57506EC /* KimiArchiveManager.swift */; };
+		7A11B22C33D44E55F660123A /* LanguageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A11B22C33D44E55F660123B /* LanguageManager.swift */; };
+		7A11B22C33D44E55F660123C /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 7A11B22C33D44E55F660123D /* Localizable.xcstrings */; };
 		71B3F9A2C4D84E5B0F1A6C8D /* KimiOAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E4D2C7B1A5F48E3B6D09A21 /* KimiOAuthService.swift */; };
 		C3C950D6204C47819C0011560E684C68 /* ArchiveSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D072D603E59C42A791F3136E0477FE56 /* ArchiveSettingsView.swift */; };
 		FFAC0CE5E70E4F17AAD3B902 /* KimiCodeBarQuotaService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02F47923DD8C405BB3237AE1 /* KimiCodeBarQuotaService.swift */; };
@@ -21,6 +23,8 @@
 		D072D603E59C42A791F3136E0477FE56 /* ArchiveSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchiveSettingsView.swift; sourceTree = "<group>"; };
 		E3B0FB687D9C4B9EB604A1EDB57506EC /* KimiArchiveManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KimiArchiveManager.swift; sourceTree = "<group>"; };
 		510792D7AE86479585E4504C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		7A11B22C33D44E55F660123B /* LanguageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageManager.swift; sourceTree = "<group>"; };
+		7A11B22C33D44E55F660123D /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		7D9C37304A73482ABB4CDE4D /* KimiCodeBar.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = KimiCodeBar.entitlements; sourceTree = "<group>"; };
 		9E4D2C7B1A5F48E3B6D09A21 /* KimiOAuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KimiOAuthService.swift; sourceTree = "<group>"; };
 		D44CECE74D174CC298CE6FE7 /* KimiCodeBar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KimiCodeBar.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -62,7 +66,9 @@
 				9E4D2C7B1A5F48E3B6D09A21 /* KimiOAuthService.swift */,
 				E3B0FB687D9C4B9EB604A1EDB57506EC /* KimiArchiveManager.swift */,
 				D072D603E59C42A791F3136E0477FE56 /* ArchiveSettingsView.swift */,
+				7A11B22C33D44E55F660123B /* LanguageManager.swift */,
 				510792D7AE86479585E4504C /* Assets.xcassets */,
+				7A11B22C33D44E55F660123D /* Localizable.xcstrings */,
 				7D9C37304A73482ABB4CDE4D /* KimiCodeBar.entitlements */,
 				EA0ACF1E9B564B769FE86518 /* Info.plist */,
 			);
@@ -129,6 +135,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				2ACCAAC36EA5468998428B73 /* Assets.xcassets in Resources */,
+				7A11B22C33D44E55F660123C /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -144,6 +151,7 @@
 				71B3F9A2C4D84E5B0F1A6C8D /* KimiOAuthService.swift in Sources */,
 				5495A4989471440499609844857244DC /* KimiArchiveManager.swift in Sources */,
 				C3C950D6204C47819C0011560E684C68 /* ArchiveSettingsView.swift in Sources */,
+				7A11B22C33D44E55F660123A /* LanguageManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

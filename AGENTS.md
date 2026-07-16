@@ -32,6 +32,18 @@
 - [ ] 是否在 `.onHover` 中改变背景/前景色？
 - [ ] 禁用状态下是否移除了手型光标并降低视觉权重？
 
+## 本地化规范（中 / 英双语）
+
+App 支持应用内语言切换（跟随系统 / 中文 / English），机制见 `macOS/KimiCodeBar/LanguageManager.swift`：
+
+- **中文字面量即本地化 key**，英文翻译维护在 `macOS/KimiCodeBar/Localizable.xcstrings`（String Catalog，编译进 `en.lproj`）。查不到译文时回退中文，界面不会出空白。
+- 新增用户可见文案时：
+  - `Text("中文")` 一律写成 `LText("中文")`（自观察包装，语言切换自动重渲染）。
+  - String 类型场景（组件 title 参数、枚举 displayName 等）用 `languageManager.tr("中文")`（View 内需有 `@StateObject private var languageManager = LanguageManager.shared`）或静态 `LanguageManager.tr("中文")`。
+  - 插值用 `%@`（多个用 `%1$@`/`%2$@`），字面量 `%` 写 `%%`。
+  - 同时在 `Localizable.xcstrings` 补上 `en` 翻译，术语与已有条目保持一致（如 加油包 Booster Pack、归档 Archive）。
+- 品牌名（Kimi / KimiCodeBar / Kimi Web）、菜单栏图形样式的 `7D`/`5H` 标注不做本地化。
+
 ## 版本号管理
 
 - App 版本读取 `macOS/KimiCodeBar/Info.plist` 的 `CFBundleShortVersionString`，代码中通过 `Bundle.main.infoDictionary?["CFBundleShortVersionString"]` 读取。

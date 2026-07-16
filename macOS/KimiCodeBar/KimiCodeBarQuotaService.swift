@@ -83,7 +83,7 @@ final class KimiCodeBarQuotaService {
         let result = await fetchQuota(token: token)
         switch result {
         case .success(let quota):
-            return "周\(quota.weekly.percentage)% 5h \(quota.fiveHour.percentage)%"
+            return LanguageManager.tr("周%1$d%% 5h %2$d%%", arguments: [quota.weekly.percentage, quota.fiveHour.percentage])
         case .failure:
             return "--"
         }
@@ -233,26 +233,26 @@ final class KimiCodeBarQuotaService {
 
 extension QuotaDetail {
     var timeUntilReset: String {
-        guard let resetTime = resetTime else { return "未知" }
+        guard let resetTime = resetTime else { return LanguageManager.tr("未知") }
         let now = Date()
         if resetTime <= now {
-            return "即将重置"
+            return LanguageManager.tr("即将重置")
         }
         let components = Calendar.current.dateComponents([.day, .hour, .minute], from: now, to: resetTime)
         if let day = components.day, day > 0 {
-            return "\(day)天\(components.hour ?? 0)小时后重置"
+            return LanguageManager.tr("%1$d天%2$d小时后重置", arguments: [day, components.hour ?? 0])
         }
         if let hour = components.hour, hour > 0 {
-            return "\(hour)小时\(components.minute ?? 0)分钟后重置"
+            return LanguageManager.tr("%1$d小时%2$d分钟后重置", arguments: [hour, components.minute ?? 0])
         }
         if let minute = components.minute, minute > 0 {
-            return "\(minute)分钟后重置"
+            return LanguageManager.tr("%d分钟后重置", arguments: [minute])
         }
-        return "即将重置"
+        return LanguageManager.tr("即将重置")
     }
 
     var resetTimeText: String {
-        guard let resetTime = resetTime else { return "未知" }
+        guard let resetTime = resetTime else { return LanguageManager.tr("未知") }
         let f = DateFormatter()
         f.dateFormat = "MM-dd HH:mm"
         return f.string(from: resetTime)

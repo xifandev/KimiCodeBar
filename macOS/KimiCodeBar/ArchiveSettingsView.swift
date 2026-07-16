@@ -12,10 +12,10 @@ private enum SessionFilter: String, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .all: return "全部"
-        case .archived: return "已归档"
-        case .unarchived: return "未归档"
-        case .eligible: return "待归档"
+        case .all: return LanguageManager.tr("全部")
+        case .archived: return LanguageManager.tr("已归档")
+        case .unarchived: return LanguageManager.tr("未归档")
+        case .eligible: return LanguageManager.tr("待归档")
         }
     }
 }
@@ -32,6 +32,7 @@ private struct WorkspaceGroup: Identifiable {
 
 struct ArchiveSettingsView: View {
     @StateObject private var manager = KimiArchiveManager.shared
+    @StateObject private var languageManager = LanguageManager.shared
     @State private var filter: SessionFilter = .all
     @State private var showArchiveResult = false
     @State private var archiveResultCount = 0
@@ -72,29 +73,29 @@ struct ArchiveSettingsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                Text("自动归档")
+                LText("自动归档")
                     .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(.kimiTextPrimary)
 
                 // 统计
                 SettingsCard {
                     HStack(spacing: 10) {
-                        StatBadge(count: totalCount, label: "总对话", color: .kimiBlue)
-                        StatBadge(count: archivedCount, label: "已归档", color: .green)
-                        StatBadge(count: unarchivedCount, label: "未归档", color: .orange)
-                        StatBadge(count: eligibleCount, label: "待归档", color: .red)
+                        StatBadge(count: totalCount, label: languageManager.tr("总对话"), color: .kimiBlue)
+                        StatBadge(count: archivedCount, label: languageManager.tr("已归档"), color: .green)
+                        StatBadge(count: unarchivedCount, label: languageManager.tr("未归档"), color: .orange)
+                        StatBadge(count: eligibleCount, label: languageManager.tr("待归档"), color: .red)
                     }
                     .padding(16)
                 }
 
                 // 自动归档设置
                 SettingsCard(
-                    footerText: "开启后，KimiCodeBar 会每小时检查一次，将超过保留期限且未归档的会话自动标记为归档。"
+                    footerText: languageManager.tr("开启后，KimiCodeBar 会每小时检查一次，将超过保留期限且未归档的会话自动标记为归档。")
                 ) {
                     VStack(alignment: .leading, spacing: 0) {
                         SettingsCardRow(
-                            title: "启用自动归档",
-                            subtitle: "超过保留期限的会话将被自动归档"
+                            title: languageManager.tr("启用自动归档"),
+                            subtitle: languageManager.tr("超过保留期限的会话将被自动归档")
                         ) {
                             Toggle("", isOn: $manager.autoArchiveEnabled)
                                 .labelsHidden()
@@ -104,8 +105,8 @@ struct ArchiveSettingsView: View {
                         SettingsCardDivider()
 
                         SettingsCardRow(
-                            title: "归档期限",
-                            subtitle: "超过该时间未更新的会话会被归档"
+                            title: languageManager.tr("归档期限"),
+                            subtitle: languageManager.tr("超过该时间未更新的会话会被归档")
                         ) {
                             Picker("", selection: $manager.autoArchiveThreshold) {
                                 ForEach(ArchiveThreshold.allCases) { threshold in
@@ -125,7 +126,7 @@ struct ArchiveSettingsView: View {
                     VStack(alignment: .leading, spacing: 0) {
                         HStack(spacing: 12) {
                             ArchiveActionButton(
-                                title: "立即扫描",
+                                title: languageManager.tr("立即扫描"),
                                 icon: "magnifyingglass",
                                 disabled: manager.isScanning
                             ) {
@@ -133,7 +134,7 @@ struct ArchiveSettingsView: View {
                             }
 
                             ArchiveActionButton(
-                                title: eligibleCount > 0 ? "立即归档 \(eligibleCount) 个会话" : "暂无符合条件的会话",
+                                title: eligibleCount > 0 ? languageManager.tr("立即归档 %d 个会话", eligibleCount) : languageManager.tr("暂无符合条件的会话"),
                                 icon: "archivebox",
                                 disabled: eligibleCount == 0 || manager.isScanning
                             ) {
@@ -155,7 +156,7 @@ struct ArchiveSettingsView: View {
                         if let date = manager.lastAutoArchiveDate {
                             SettingsCardDivider()
                             HStack {
-                                Text("上次自动归档：\(KimiArchiveManager.relativeTimeString(from: date))，共 \(manager.lastAutoArchiveCount) 个会话")
+                                LText("上次自动归档：%1$@，共 %2$d 个会话", KimiArchiveManager.relativeTimeString(from: date), manager.lastAutoArchiveCount)
                                     .font(.system(size: 12))
                                     .foregroundStyle(.kimiTextSecondary)
 
@@ -167,7 +168,7 @@ struct ArchiveSettingsView: View {
                 }
 
                 // 会话列表
-                SettingsCard(title: "会话列表") {
+                SettingsCard(title: languageManager.tr("会话列表")) {
                     VStack(alignment: .leading, spacing: 0) {
                         Picker("", selection: $filter) {
                             ForEach(SessionFilter.allCases) { filter in
@@ -187,7 +188,7 @@ struct ArchiveSettingsView: View {
                                 .controlSize(.small)
                                 .frame(maxWidth: .infinity, minHeight: 120)
                         } else if groupedSessions.isEmpty {
-                            Text("没有符合条件的会话")
+                            LText("没有符合条件的会话")
                                 .font(.system(size: 13))
                                 .foregroundStyle(.kimiTextSecondary)
                                 .frame(maxWidth: .infinity, minHeight: 120)
@@ -233,10 +234,10 @@ struct ArchiveSettingsView: View {
         .onChange(of: manager.autoArchiveThreshold) { _, _ in
             manager.restartTimer()
         }
-        .alert("归档完成", isPresented: $showArchiveResult) {
-            Button("确定", role: .cancel) {}
+        .alert(Text(LanguageManager.tr("归档完成")), isPresented: $showArchiveResult) {
+            Button(languageManager.tr("确定"), role: .cancel) {}
         } message: {
-            Text("已成功归档 \(archiveResultCount) 个会话。")
+            Text(LanguageManager.tr("已成功归档 %d 个会话。", arguments: [archiveResultCount]))
         }
     }
 }
@@ -339,7 +340,7 @@ private struct UnarchiveButton: View {
 
     var body: some View {
         Button(action: action) {
-            Text("取消归档")
+            LText("取消归档")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(isHovered ? .kimiTextPrimary : .kimiTextSecondary)
                 .padding(.horizontal, 10)
@@ -361,6 +362,8 @@ private struct SessionRow: View {
     let isEligible: Bool
     let onUnarchive: () -> Void
 
+    @StateObject private var languageManager = LanguageManager.shared
+
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
@@ -379,9 +382,9 @@ private struct SessionRow: View {
             if session.isArchived {
                 UnarchiveButton(action: onUnarchive)
             } else if isEligible {
-                StatusTag(text: "待归档", color: .red)
+                StatusTag(text: languageManager.tr("待归档"), color: .red)
             } else {
-                StatusTag(text: "未归档", color: .orange)
+                StatusTag(text: languageManager.tr("未归档"), color: .orange)
             }
         }
         .padding(.horizontal, 16)
