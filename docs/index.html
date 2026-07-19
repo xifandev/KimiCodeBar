@@ -218,6 +218,16 @@
 
   .hero .sub b { color: var(--text); font-weight: 600; }
 
+  .hero-tag {
+    margin-top: 24px;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: .3px;
+  }
+
+  .hero-tag + h1 { margin-top: 16px; }
+
   .cta-row {
     margin-top: 36px;
     display: flex;
@@ -402,6 +412,16 @@
     transform: translateY(-4px);
     border-color: rgba(45, 117, 246, .45);
     background: var(--card-hover);
+  }
+
+  .card-highlight {
+    border-color: rgba(45, 117, 246, .35);
+    background: rgba(45, 117, 246, .06);
+  }
+
+  .card-highlight:hover {
+    border-color: rgba(45, 117, 246, .55);
+    background: rgba(45, 117, 246, .09);
   }
 
   .card .icon {
@@ -612,6 +632,8 @@
     --track: rgba(255, 255, 255, .10);
     --btn: rgba(255, 255, 255, .06);
     --btn-h: rgba(255, 255, 255, .10);
+    --act-bg: rgba(255, 255, 255, .10);
+    --act-border: rgba(255, 255, 255, .14);
     --overlay: rgba(255, 255, 255, .06);
     --line: rgba(255, 255, 255, .20);
     --line-h: rgba(255, 255, 255, .40);
@@ -643,6 +665,8 @@
     --track: rgba(0, 0, 0, .10);
     --btn: rgba(0, 0, 0, .05);
     --btn-h: rgba(0, 0, 0, .09);
+    --act-bg: rgba(0, 0, 0, .07);
+    --act-border: rgba(0, 0, 0, .11);
     --overlay: rgba(0, 0, 0, .05);
     --line: rgba(0, 0, 0, .18);
     --line-h: rgba(0, 0, 0, .38);
@@ -860,14 +884,15 @@
     gap: 4px;
     padding: 10px 0;
     border-radius: 10px;
-    background: var(--btn);
+    background: var(--act-bg);
+    border: 1px solid var(--act-border);
     color: var(--p2);
     font-size: 13px;
     font-weight: 500;
     transition: color .15s, background .15s;
   }
 
-  .kp-btn:hover { background: var(--btn-h); color: var(--p1); }
+  .kp-btn:hover { background: var(--btn-h); color: var(--p2); }
 
   .kp-btn.wide { flex: none; width: 42%; }
 
@@ -893,16 +918,18 @@
     gap: 6px;
     padding: 12px 0;
     border-radius: 10px;
-    background: var(--btn);
+    background: var(--act-bg);
+    border: 1px solid var(--act-border);
     color: var(--p2);
     font-size: 11px;
     font-weight: 500;
-    cursor: pointer;
     transition: color .15s, background .15s;
     text-decoration: none;
   }
 
-  .kp-act:hover { background: var(--btn-h); color: var(--p1); }
+  button.kp-act { cursor: default; }
+
+  .kp-act:hover { background: var(--btn-h); color: var(--p2); }
 
   .kp-act .kp-kimi {
     font-size: 14px;
@@ -989,7 +1016,7 @@
 
   .kp-scale { transform-origin: top right; }
 
-  .duo .kp { margin: 0 auto; }
+  .duo .kp { margin: 0 auto; max-width: 380px; }
 
   /* 复刻面板在 hero 中的缩放适配 */
   @media (max-width: 960px) {
@@ -1005,6 +1032,83 @@
   }
 
   .showcase-note b { color: var(--blue-2); font-weight: 600; }
+
+  /* ============ Kimi 一键登录 ============ */
+  .login-visual {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    align-items: center;
+  }
+
+  .login-panel-mask {
+    position: relative;
+    width: 100%;
+    max-width: 360px;
+  }
+
+  .login-panel-mask .kp {
+    margin: 0 auto;
+    max-width: 360px;
+  }
+
+  .login-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    border-radius: 20px;
+    background: rgba(6, 9, 15, .78);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    text-align: center;
+    color: var(--text);
+  }
+
+  .login-overlay .login-icon { font-size: 28px; line-height: 1; }
+
+  .login-overlay .login-title {
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .login-overlay .login-btn {
+    margin-top: 4px;
+    padding: 8px 16px;
+    border-radius: 10px;
+    background: var(--blue);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 4px 14px rgba(45, 117, 246, .4);
+  }
+
+  .login-status-card {
+    width: 100%;
+    max-width: 360px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text-2);
+    font-size: 13px;
+  }
+
+  .login-status-card b { color: var(--text); font-weight: 600; }
+
+  .login-status-card .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #4ADE90;
+    box-shadow: 0 0 8px #4ADE90;
+  }
 
   /* ============ 滚动入场 ============ */
   .reveal {
@@ -1059,6 +1163,7 @@
     <div class="nav-links">
       <a href="#features">功能</a>
       <a href="#showcase">预览</a>
+      <a href="#login">一键登录</a>
       <a href="#update">更新探测</a>
       <a href="#privacy">隐私</a>
       <a href="https://github.com/xifandev/KimiCodeBar" target="_blank" rel="noopener">GitHub</a>
@@ -1076,13 +1181,10 @@
       <span class="dot"></span>
       <b>v1.1.0</b>&nbsp;·&nbsp;macOS&nbsp;·&nbsp;MIT 开源&nbsp;·&nbsp;Kimi 社区版
     </span>
+    <p class="hero-tag reveal">专为 Kimi Code 打造的 macOS 菜单栏监控工具</p>
     <h1 class="reveal">
-      菜单栏上的<br><span class="grad">Kimi Code 用量仪表盘</span>
+      抬头即见，<br><span class="grad">限额一目了然</span>
     </h1>
-    <p class="sub reveal">
-      KimiCodeBar 是专为 <b>Kimi Code</b> 打造的 macOS 菜单栏监控工具。<br>
-      本周限额、5 小时用量、加油包余额 —— 抬头即见，限额一目了然。
-    </p>
     <div class="cta-row reveal">
       <a class="btn btn-primary btn-lg" href="https://github.com/xifandev/KimiCodeBar/releases" target="_blank" rel="noopener">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -1116,9 +1218,7 @@
           <span class="clock" id="mockClock"></span>
         </div>
       </div>
-      <!-- 悬浮面板：HTML/CSS 实时复刻，非截图 -->
       <div class="panel-float">
-        <span class="live-pill"><i></i>LIVE · 实时复刻</span>
         <div class="kp-scale"><div class="kp-mount" data-theme="dark"></div></div>
         <noscript><img src="assets/panel-01.png" alt="KimiCodeBar 暗夜模式面板"></noscript>
       </div>
@@ -1139,19 +1239,19 @@
       <p>轻量驻留菜单栏，不占 Dock、不打断心流，需要时一眼可见。</p>
     </div>
     <div class="features">
+      <div class="card reveal card-highlight">
+        <div class="icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+        </div>
+        <h3>Kimi 一键登录 ✨</h3>
+        <p>采用 Kimi Code 官方接口，浏览器授权即登录；同时保留 API Key 方式，可在设置中自由切换。</p>
+      </div>
       <div class="card reveal">
         <div class="icon">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
         </div>
         <h3>用量一目了然</h3>
         <p>本周（7 天）与 5 小时限额常驻菜单栏，百分比、进度条、重置时间一屏掌握，还有加油包余额。</p>
-      </div>
-      <div class="card reveal">
-        <div class="icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-        </div>
-        <h3>Kimi 一键登录</h3>
-        <p>采用 Kimi Code 官方接口，浏览器授权即登录；同时保留 API Key 方式，可在设置中自由切换。</p>
       </div>
       <div class="card reveal">
         <div class="icon">
@@ -1191,10 +1291,48 @@
         <figcaption><b>浅色模式</b> · 白天同样清晰</figcaption>
       </figure>
     </div>
-    <p class="showcase-note reveal">
-      以上不是截图 —— 而是按最新版 SwiftUI 源码用 HTML / CSS <b>1:1 实时复刻</b>的面板：
-      Logo 会眨眼、会左顾右盼，按钮可以点，进度条会动。
-    </p>
+  </div>
+</section>
+
+<!-- Kimi 一键登录 -->
+<section id="login">
+  <div class="container">
+    <div class="split">
+      <div class="reveal">
+        <span class="sec-tag">Kimi Login</span>
+        <h2>Kimi 一键登录</h2>
+        <p class="desc">浏览器授权即可登录，无需手动复制 API Key；也保留传统 Key 方式，随你习惯切换。</p>
+        <ul class="check-list">
+          <li>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            <span><b>浏览器一键授权</b>，自动获取并保存登录态</span>
+          </li>
+          <li>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            <span><b>API Key 方式保留</b>，专业用户可自由切换</span>
+          </li>
+          <li>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            <span><b>设置页随时查看</b>授权状态，一键退出</span>
+          </li>
+        </ul>
+      </div>
+      <div class="login-visual reveal">
+        <div class="login-panel-mask">
+          <div class="kp-mount" data-theme="dark"></div>
+          <div class="login-overlay">
+            <span class="login-icon">🔒</span>
+            <span class="login-title">需要登录 Kimi 账号</span>
+            <span class="login-btn">一键授权登录</span>
+          </div>
+        </div>
+        <div class="login-status-card">
+          <span class="status-dot"></span>
+          <span><b>授权状态</b>：已登录</span>
+          <span style="margin-left:auto;color:var(--text-3);font-size:12px;">Kimi Code</span>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -1433,15 +1571,15 @@
       <a class="kp-act" href="https://www.kimi.com/code/console" target="_blank" rel="noopener">
         <span class="kp-kimi">KIMI</span><span>控制台</span>
       </a>
-      <button class="kp-act" data-kp-action="refresh">
+      <button class="kp-act">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
         <span>刷新</span>
       </button>
-      <button class="kp-act" data-kp-action="settings">
+      <button class="kp-act">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         <span>设置</span>
       </button>
-      <button class="kp-act" data-kp-action="quit">
+      <button class="kp-act">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
         <span>退出</span>
       </button>
