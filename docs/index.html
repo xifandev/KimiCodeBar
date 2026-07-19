@@ -399,8 +399,8 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 18px;
-        height: 18px;
+        width: 20px;
+        height: 20px;
         color: rgba(255, 255, 255, 0.9);
       }
 
@@ -410,18 +410,25 @@
         height: 100%;
       }
 
-      .hero-app-name {
-        font-weight: 700;
-      }
-
-      .hero-menu {
-        color: rgba(255, 255, 255, 0.75);
-      }
-
       .hero-menubar-right {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 10px;
+      }
+
+      .hero-sys-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 18px;
+        color: rgba(255, 255, 255, 0.9);
+      }
+
+      .hero-sys-icon svg {
+        display: block;
+        width: 100%;
+        height: 100%;
       }
 
       .hero-widget {
@@ -1927,7 +1934,7 @@
           margin-bottom: 14px;
           border-radius: 24px 24px 0 0;
         }
-        .hero-menu {
+        .hero-sys-icon {
           display: none;
         }
         .hero-clock {
@@ -2019,12 +2026,8 @@
           <div class="hero-menubar">
             <div class="hero-menubar-left">
               <span class="hero-apple">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
               </span>
-              <span class="hero-app-name">KimiCodeBar</span>
-              <span class="hero-menu">控制台</span>
-              <span class="hero-menu">设置</span>
-              <span class="hero-menu">帮助</span>
             </div>
             <div class="hero-menubar-right">
               <div class="hero-widget" title="本周用量 84% · 5 小时用量 6%">
@@ -2037,6 +2040,15 @@
                   <span class="hero-widget-v">6%</span>
                 </div>
               </div>
+              <span class="hero-sys-icon" title="Wi-Fi">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+              </span>
+              <span class="hero-sys-icon" title="电池">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="16" height="10" rx="2" ry="2"/><line x1="22" y1="11" x2="22" y2="13"/></svg>
+              </span>
+              <span class="hero-sys-icon" title="控制中心">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/><circle cx="12" cy="15" r="1.5" fill="currentColor" stroke="none"/></svg>
+              </span>
               <span class="hero-clock" id="mockClock"></span>
             </div>
           </div>
