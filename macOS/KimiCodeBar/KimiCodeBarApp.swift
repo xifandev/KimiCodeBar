@@ -638,6 +638,10 @@ struct AppUpdateRow: View {
     @StateObject private var sparkleUpdater = SparkleUpdater.shared
     @State private var isHovered = false
 
+    private var isClickable: Bool {
+        sparkleUpdater.isUpdateReadyToRestart
+    }
+
     var body: some View {
         HStack(alignment: .center, spacing: 10) {
             Text("KimiCodeBar")
@@ -646,7 +650,7 @@ struct AppUpdateRow: View {
 
             Spacer()
 
-            updateButtonText()
+            rightContent()
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
@@ -655,40 +659,44 @@ struct AppUpdateRow: View {
                 .fill(Color.kimiCardBackground)
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.kimiTextPrimary.opacity(isHovered ? 0.06 : 0))
+                        .fill(Color.kimiTextPrimary.opacity(isHovered && isClickable ? 0.06 : 0))
                 )
         )
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .contentShape(Rectangle())
         .onHover { isHovered = $0 }
-        .cursor(.pointingHand)
+        .cursor(isClickable ? .pointingHand : .arrow)
         .onTapGesture {
-            handleTap()
+            if sparkleUpdater.isUpdateReadyToRestart {
+                sparkleUpdater.restartToInstallUpdate()
+            }
         }
     }
 
     @ViewBuilder
-    private func updateButtonText() -> some View {
+    private func rightContent() -> some View {
         if sparkleUpdater.isUpdateReadyToRestart {
             LText("重启完成更新")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.green)
-        } else if model.pendingAppUpdateVersion != nil || sparkleUpdater.isUpdateAvailable {
+        } else if sparkleUpdater.isUpdateAvailable || model.pendingAppUpdateVersion != nil {
             LText("下载新版本")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.orange)
         } else {
-            LText("检查更新…")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.kimiBlue)
-        }
-    }
+            HStack(spacing: 6) {
+                Text(appVersion())
+                    .font(.system(size: 12, weight: .medium, design: .monospaced))
+                    .foregroundStyle(.kimiTextSecondary)
 
-    private func handleTap() {
-        if sparkleUpdater.isUpdateReadyToRestart {
-            sparkleUpdater.restartToInstallUpdate()
-        } else {
-            sparkleUpdater.checkForUpdatesInBackground()
+                LText("当前最新")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(.kimiTextTertiary)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 1)
+                    .background(Color.kimiTextPrimary.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+            }
         }
     }
 }
@@ -990,15 +998,10 @@ struct KimiMenu: View {
             Task {
                 await model.loadKimiVersion()
                 await model.checkForKimiCLIUpdate()
-                await model.checkForAppUpdate()
 
                 // 版本已追平（例如刚在外部更新完 CLI），关闭基于过期状态弹出的更新提示
                 if model.pendingUpdateVersion == nil {
                     showUpdateAlert = false
-                }
-
-                if model.pendingAppUpdateVersion != nil && model.pendingUpdateVersion == nil {
-                    showAppUpdateAlert = true
                 }
             }
         }
@@ -1012,18 +1015,11 @@ struct KimiMenu: View {
                 Task {
                     await model.loadKimiVersion()
                     await model.checkForKimiCLIUpdate()
-                    await model.checkForAppUpdate()
 
                     // 版本已追平（例如刚在外部更新完 CLI），关闭基于过期状态弹出的更新提示
                     if model.pendingUpdateVersion == nil {
                         showUpdateAlert = false
                     }
-
-                    /* Sparkle 接管 App 自动更新，旧手动弹窗已禁用
-                    if model.pendingAppUpdateVersion != nil && model.pendingUpdateVersion == nil {
-                        showAppUpdateAlert = true
-                    }
-                    */
                 }
             }
         }
