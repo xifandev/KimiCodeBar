@@ -248,6 +248,19 @@
         .hero {
           text-align: center;
         }
+        .hero .sub {
+          text-align: center;
+          margin: 20px auto 0;
+        }
+        .hero .check-list {
+          text-align: left;
+          display: inline-flex;
+          flex-direction: column;
+          align-items: flex-start;
+        }
+        .cta-row {
+          justify-content: center;
+        }
         .hero-split {
           grid-template-columns: 1fr;
           gap: 40px;
@@ -302,22 +315,36 @@
       }
 
       .hero .sub {
-        margin: 20px auto 0;
+        margin: 20px 0 0;
         max-width: 560px;
         font-size: 18px;
         color: var(--text-2);
-        text-align: center;
+        text-align: left;
       }
 
-      .hero .sub b {
+      .hero .check-list {
+        margin-top: 24px;
+        text-align: left;
+      }
+
+      .hero .check-list li {
+        color: var(--text-2);
+        font-size: 16px;
+      }
+
+      .hero .check-list li b {
         color: var(--text);
         font-weight: 600;
+      }
+
+      .hero .check-list svg {
+        color: var(--blue-2);
       }
 
       .cta-row {
         margin-top: 36px;
         display: flex;
-        justify-content: center;
+        justify-content: flex-start;
         gap: 14px;
         flex-wrap: wrap;
       }
@@ -2488,10 +2515,20 @@
               <span class="sec-divider-line"></span>
               <span class="sec-divider-glow"></span>
             </div>
-            <p class="sub">
-              专为 <b>Kimi Code</b> 打造的菜单栏监控工具。<br />
-              抬头即见，限额一目了然。
-            </p>
+            <ul class="check-list">
+              <li>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <span><b>菜单栏实时显示</b>本周 / 5 小时用量</span>
+              </li>
+              <li>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <span><b>限额一目了然</b>，避免超额扣费</span>
+              </li>
+            </ul>
             <div class="cta-row">
               <a class="btn btn-primary btn-lg" href="https://github.com/xifandev/KimiCodeBar/releases" target="_blank" rel="noopener">
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
