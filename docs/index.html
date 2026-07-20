@@ -143,10 +143,6 @@
         height: 20px;
         width: auto;
         display: block;
-        /* logo 原图可能是黑底白字或白底黑字，在深色按钮背景上不可见。
-           用 brightness(0) 先把整个图变成纯黑，再 invert(1) 反色变纯白，
-           这样不管原图什么颜色，最终都显示成白色，跟按钮文字色一致。 */
-        filter: brightness(0) invert(1);
         opacity: 0.95;
       }
 
