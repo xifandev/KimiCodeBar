@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>KimiCodeBar — 菜单栏上的 Kimi Code 用量监控</title>
-    <meta name="description" content="KimiCodeBar 是专为 Kimi Code 打造的菜单栏用量监控工具：本周限额、5 小时用量、加油包余额，抬头即见。开源免费，数据仅存本地。" />
-    <meta property="og:title" content="KimiCodeBar — 菜单栏上的 Kimi Code 用量监控" />
-    <meta property="og:description" content="专为 Kimi Code 打造的菜单栏用量监控工具，限额一目了然。" />
+    <title data-i18n="pageTitle">KimiCodeBar — 菜单栏上的 Kimi Code 用量监控</title>
+    <meta name="description" data-i18n="metaDesc" content="KimiCodeBar 是专为 Kimi Code 打造的菜单栏用量监控工具：本周限额、5 小时用量、加油包余额，抬头即见。开源免费，数据仅存本地。" />
+    <meta property="og:title" data-i18n="ogTitle" content="KimiCodeBar — 菜单栏上的 Kimi Code 用量监控" />
+    <meta property="og:description" data-i18n="ogDesc" content="专为 Kimi Code 打造的菜单栏用量监控工具，限额一目了然。" />
     <meta property="og:image" content="assets/panel-01.png" />
     <meta property="og:type" content="website" />
     <link rel="icon" href="assets/logo.gif" type="image/gif" />
@@ -151,6 +151,99 @@
       }
       .nav-links a:hover {
         color: var(--text);
+      }
+
+      /* 语言切换器 */
+      .lang-switch {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 10px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        color: var(--text-2);
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: color 0.2s, background 0.2s, border-color 0.2s;
+        user-select: none;
+      }
+      .lang-switch:hover {
+        color: var(--text);
+        background: var(--card-hover);
+        border-color: var(--border-strong);
+      }
+      .lang-switch svg {
+        width: 14px;
+        height: 14px;
+        opacity: 0.85;
+      }
+      .lang-switch .lang-arrow {
+        width: 10px;
+        height: 10px;
+        opacity: 0.6;
+        transition: transform 0.2s;
+      }
+      .lang-switch[aria-expanded='true'] .lang-arrow {
+        transform: rotate(180deg);
+      }
+      .lang-menu {
+        position: absolute;
+        top: calc(100% + 8px);
+        right: 0;
+        min-width: 120px;
+        padding: 6px;
+        border-radius: 12px;
+        background: rgba(12, 17, 29, 0.96);
+        border: 1px solid var(--border-strong);
+        box-shadow: 0 16px 44px rgba(0, 0, 0, 0.55);
+        backdrop-filter: blur(18px) saturate(1.4);
+        -webkit-backdrop-filter: blur(18px) saturate(1.4);
+        opacity: 0;
+        transform: translateY(-6px) scale(0.96);
+        pointer-events: none;
+        transition: opacity 0.18s, transform 0.18s;
+        z-index: 200;
+      }
+      .lang-switch[aria-expanded='true'] .lang-menu {
+        opacity: 1;
+        transform: none;
+        pointer-events: auto;
+      }
+      .lang-menu button {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 8px 10px;
+        border-radius: 8px;
+        background: transparent;
+        border: none;
+        color: var(--text-2);
+        font: inherit;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: color 0.15s, background 0.15s;
+        white-space: nowrap;
+      }
+      .lang-menu button:hover {
+        color: var(--text);
+        background: rgba(255, 255, 255, 0.06);
+      }
+      .lang-menu button.active {
+        color: var(--text);
+      }
+      .lang-menu button.active::after {
+        content: '';
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--blue-2);
+        box-shadow: 0 0 6px var(--blue-2);
       }
 
       .btn {
@@ -2465,6 +2558,21 @@
           KimiCodeBar
         </a>
         <div class="nav-links">
+          <button type="button" class="lang-switch" id="langSwitch" aria-haspopup="true" aria-expanded="false" data-i18n="langSwitchAria" aria-label="切换语言">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M2 12h20" />
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+            </svg>
+            <span id="langSwitchLabel">中文</span>
+            <svg class="lang-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+            <div class="lang-menu" role="menu" data-i18n="langMenuLabel" aria-label="语言选择">
+              <button type="button" role="menuitem" data-lang="zh">中文</button>
+              <button type="button" role="menuitem" data-lang="en">English</button>
+            </div>
+          </button>
           <a class="btn btn-outline-blue btn-sm nav-kimi-link" href="https://www.kimi.com/code" target="_blank" rel="noopener" title="Kimi Code">
             <img src="assets/kimi-logo.png" alt="Kimi Code" class="nav-kimi-logo" />
           </a>
@@ -2485,7 +2593,7 @@
         <div class="hero-split">
           <!-- 左侧：产品面板展示（循环演示） -->
           <div class="hero-shot-wrap reveal">
-            <div class="hero-shot demo-loop" aria-label="KimiCodeBar 菜单栏用量监控演示">
+            <div class="hero-shot demo-loop" data-i18n="heroDemoAria" aria-label="KimiCodeBar 菜单栏用量监控演示">
               <div class="hero-glow"></div>
               <div class="hero-menubar">
                 <div class="hero-menubar-left">
@@ -2497,7 +2605,7 @@
                   </span>
                 </div>
                 <div class="hero-menubar-right">
-                  <div class="hero-widget" title="本周用量 84% · 5 小时用量 6%">
+                  <div class="hero-widget" data-i18n="heroWidgetTitle" title="本周用量 84% · 5 小时用量 6%">
                     <div class="hero-widget-row">
                       <span class="hero-widget-k">7D</span>
                       <span class="hero-widget-v">84%</span>
@@ -2507,7 +2615,7 @@
                       <span class="hero-widget-v">6%</span>
                     </div>
                   </div>
-                  <span class="hero-sys-icon" title="Wi-Fi">
+                  <span class="hero-sys-icon" data-i18n="iconWifiTitle" title="Wi-Fi">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M5 12.55a11 11 0 0 1 14.08 0" />
                       <path d="M1.42 9a16 16 0 0 1 21.16 0" />
@@ -2515,14 +2623,14 @@
                       <line x1="12" y1="20" x2="12.01" y2="20" />
                     </svg>
                   </span>
-                  <span class="hero-sys-icon" title="电池">
+                  <span class="hero-sys-icon" data-i18n="iconBatteryTitle" title="电池">
                     <svg width="26" height="13" viewBox="0 0 26 13" fill="none">
                       <rect x="0.5" y="0.5" width="22" height="12" rx="3" stroke="currentColor" stroke-width="1" opacity="0.45" />
                       <rect x="23.2" y="3.5" width="2" height="6" rx="0.8" fill="currentColor" opacity="0.45" />
                       <rect x="2" y="2" width="18" height="9" rx="1.8" fill="currentColor" />
                     </svg>
                   </span>
-                  <span class="hero-sys-icon" title="控制中心">
+                  <span class="hero-sys-icon" data-i18n="iconControlCenterTitle" title="控制中心">
                     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                       <line x1="3" y1="8" x2="11" y2="8" />
                       <circle cx="14" cy="8" r="3" fill="currentColor" stroke="none" />
@@ -2551,7 +2659,7 @@
 
           <!-- 右侧：标题 + 副标题 + 下载按钮 -->
           <div class="reveal">
-            <h1>
+            <h1 data-i18n-html="heroHeading">
               ✨免费开源
               <br />
               <span class="grad">Kimi Code 用量仪表盘</span>
@@ -2565,13 +2673,13 @@
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
-                <span><b>菜单栏实时显示</b> 7天 / 5小时用量</span>
+                <span data-i18n-html="heroCheck1"><b>菜单栏实时显示</b> 7天 / 5小时用量</span>
               </li>
               <li>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
-                <span><b>限额一目了然</b></span>
+                <span data-i18n-html="heroCheck2"><b>限额一目了然</b></span>
               </li>
             </ul>
             <div class="cta-row">
@@ -2581,7 +2689,7 @@
                   <polyline points="7 10 12 15 17 10" />
                   <line x1="12" y1="15" x2="12" y2="3" />
                 </svg>
-                macOS 版
+                <span data-i18n="downloadMacOS">macOS 版</span>
               </a>
               <span class="btn btn-disabled btn-lg">
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
@@ -2589,8 +2697,8 @@
                   <polyline points="7 10 12 15 17 10" />
                   <line x1="12" y1="15" x2="12" y2="3" />
                 </svg>
-                Windows 版
-                <span class="tag tag-wip">开发中</span>
+                <span data-i18n="downloadWindows">Windows 版</span>
+                <span class="tag tag-wip" data-i18n="tagWip">开发中</span>
               </span>
             </div>
           </div>
@@ -2603,8 +2711,8 @@
       <div class="container">
         <div class="sec-head reveal">
           <span class="sec-tag">Features</span>
-          <h2>为 Kimi Code 而生</h2>
-          <p>轻量驻留菜单栏，不占 Dock、不打断心流，需要时一眼可见。</p>
+          <h2 data-i18n="featuresTitle">为 Kimi Code 而生</h2>
+          <p data-i18n="featuresDesc">轻量驻留菜单栏，不占 Dock、不打断心流，需要时一眼可见。</p>
         </div>
         <div class="sec-divider reveal" aria-hidden="true">
           <span class="sec-divider-line"></span>
@@ -2618,33 +2726,33 @@
       <div class="container">
         <div class="split">
           <div class="reveal">
-            <span class="sec-tag">Kimi Login</span>
-            <h2>Kimi 一键登录</h2>
-            <p class="desc">浏览器授权即可登录，无需手动复制 API Key；也保留传统 Key 方式，随你习惯切换。</p>
+            <span class="sec-tag" data-i18n="loginTag">Kimi Login</span>
+            <h2 data-i18n="loginTitle">Kimi 一键登录</h2>
+            <p class="desc" data-i18n="loginDesc">浏览器授权即可登录，无需手动复制 API Key；也保留传统 Key 方式，随你习惯切换。</p>
             <ul class="check-list">
               <li>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                <span><b>浏览器一键授权</b>，自动获取并保存登录态</span>
+                <span data-i18n-html="loginCheck1"><b>浏览器一键授权</b>，自动获取并保存登录态</span>
               </li>
               <li>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                <span><b>API Key 方式保留</b>，专业用户可自由切换</span>
+                <span data-i18n-html="loginCheck2"><b>API Key 方式保留</b>，专业用户可自由切换</span>
               </li>
               <li>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                <span><b>设置页随时查看</b>授权状态，一键退出</span>
+                <span data-i18n-html="loginCheck3"><b>设置页随时查看</b>授权状态，一键退出</span>
               </li>
             </ul>
           </div>
           <div class="login-visual reveal">
             <div class="login-card">
-              <div class="login-card-title">登录方式</div>
+              <div class="login-card-title" data-i18n="loginCardTitle">登录方式</div>
               <div class="login-card-section">
-                <h4>认证方式</h4>
-                <p>选择 KimiCodeBar 查询用量时使用的登录方式</p>
+                <h4 data-i18n="loginAuthMethod">认证方式</h4>
+                <p data-i18n="loginAuthMethodDesc">选择 KimiCodeBar 查询用量时使用的登录方式</p>
                 <div class="login-method-tabs">
-                  <span class="login-method-tab active">授权登录</span>
-                  <span class="login-method-tab inactive">Token 登录</span>
+                  <span class="login-method-tab active" data-i18n="loginTabAuth">授权登录</span>
+                  <span class="login-method-tab inactive" data-i18n="loginTabToken">Token 登录</span>
                 </div>
               </div>
               <hr class="login-divider" />
@@ -2655,13 +2763,13 @@
                       <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
                       <polyline points="22 4 12 14.01 9 11.01" />
                     </svg>
-                    已授权 Kimi 账号
+                    <span data-i18n="loginAuthorized">已授权 Kimi 账号</span>
                   </div>
-                  <div class="login-auth-sub">凭证有效期至 07-19 17:04，到期自动续期</div>
+                  <div class="login-auth-sub" data-i18n="loginAuthSub">凭证有效期至 07-19 17:04，到期自动续期</div>
                 </div>
-                <span class="login-logout">退出登录</span>
+                <span class="login-logout" data-i18n="loginLogout">退出登录</span>
               </div>
-              <p class="login-card-footnote">授权登录通过浏览器跳转 Kimi 账号完成认证，凭证与 KimiCode CLI 共享，过期自动续期。</p>
+              <p class="login-card-footnote" data-i18n="loginFootnote">授权登录通过浏览器跳转 Kimi 账号完成认证，凭证与 KimiCode CLI 共享，过期自动续期。</p>
             </div>
           </div>
         </div>
@@ -2673,25 +2781,25 @@
       <div class="container">
         <div class="split">
           <div class="reveal">
-            <span class="sec-tag">Performance</span>
-            <h2>原生代码<br />超级轻量化运行</h2>
-            <p class="desc">基于 Swift 与 AppKit 原生构建，常驻菜单栏，几乎感知不到它的存在。</p>
+            <span class="sec-tag" data-i18n="perfTag">Performance</span>
+            <h2 data-i18n-html="perfTitle">原生代码<br />超级轻量化运行</h2>
+            <p class="desc" data-i18n="perfDesc">基于 Swift 与 AppKit 原生构建，常驻菜单栏，几乎感知不到它的存在。</p>
             <ul class="check-list">
               <li>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                <span><b>Swift 原生语言</b>，与 macOS 深度集成，运行流畅稳定</span>
+                <span data-i18n-html="perfCheck1"><b>Swift 原生语言</b>，与 macOS 深度集成，运行流畅稳定</span>
               </li>
               <li>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                <span><b>24 小时运行</b>，开机自启，静默驻留菜单栏</span>
+                <span data-i18n-html="perfCheck2"><b>24 小时运行</b>，开机自启，静默驻留菜单栏</span>
               </li>
               <li>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                <span><b>内存常驻 30–50 MB</b>，远低于同类产品，Mac 性能零负担</span>
+                <span data-i18n-html="perfCheck3"><b>内存常驻 30–50 MB</b>，远低于同类产品，Mac 性能零负担</span>
               </li>
               <li>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                <span><b>超轻量极简</b>，无多余后台进程，无冗余功能</span>
+                <span data-i18n-html="perfCheck4"><b>超轻量极简</b>，无多余后台进程，无冗余功能</span>
               </li>
             </ul>
           </div>
@@ -2699,16 +2807,16 @@
             <div class="perf-monitor">
               <div class="perf-monitor-bar">
                 <div class="perf-monitor-dot"></div>
-                <span>活动监视器</span>
+                <span data-i18n="perfMonitorTitle">活动监视器</span>
               </div>
               <div class="perf-monitor-body">
                 <div class="perf-metric-row">
                   <div class="perf-metric">
-                    <span class="perf-label">内存占用</span>
+                    <span class="perf-label" data-i18n="perfLabelMemory">内存占用</span>
                     <span class="perf-value">38 MB</span>
                   </div>
                   <div class="perf-metric">
-                    <span class="perf-label">CPU 占用</span>
+                    <span class="perf-label" data-i18n="perfLabelCpu">CPU 占用</span>
                     <span class="perf-value">0.3%</span>
                   </div>
                 </div>
@@ -2741,30 +2849,30 @@
       <div class="container">
         <div class="split">
           <div class="reveal">
-            <span class="sec-tag">Auto Update</span>
-            <h2>Kimi Code 更新，<br />不再错过</h2>
-            <p class="desc">自动探测 Kimi Code CLI 新版本，从通知到面板，第一时间提醒你升级。</p>
+            <span class="sec-tag" data-i18n="updateTag">Auto Update</span>
+            <h2 data-i18n-html="updateTitle">Kimi Code 更新，<br />不再错过</h2>
+            <p class="desc" data-i18n="updateDesc">自动探测 Kimi Code CLI 新版本，从通知到面板，第一时间提醒你升级。</p>
             <ul class="check-list">
               <li>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                <span><b>系统级通知</b>，新版本发布即刻推送</span>
+                <span data-i18n-html="updateCheck1"><b>系统级通知</b>，新版本发布即刻推送</span>
               </li>
               <li>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                <span><b>更新日志直接展示</b>，改了什么一目了然</span>
+                <span data-i18n-html="updateCheck2"><b>更新日志直接展示</b>，改了什么一目了然</span>
               </li>
               <li>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                <span><b>一键安装更新</b>，也可以「稍后再说」</span>
+                <span data-i18n-html="updateCheck3"><b>一键安装更新</b>，也可以「稍后再说」</span>
               </li>
             </ul>
           </div>
           <div class="update-visual reveal">
             <div class="notify">
-              <img src="assets/msg.png" alt="KimiCode 新版本系统通知" loading="lazy" />
+              <img src="assets/msg.png" data-i18n="updateNotifyAlt" alt="KimiCode 新版本系统通知" loading="lazy" />
             </div>
             <div class="dialog">
-              <img src="assets/newtip.png" alt="KimiCode 新版本更新对话框" loading="lazy" />
+              <img src="assets/newtip.png" data-i18n="updateDialogAlt" alt="KimiCode 新版本更新对话框" loading="lazy" />
             </div>
           </div>
         </div>
@@ -2776,21 +2884,21 @@
       <div class="container">
         <div class="split">
           <div class="reveal">
-            <span class="sec-tag">Showcase</span>
-            <h2>明暗双主题，<br />跟随系统</h2>
-            <p class="desc">面板外观自动适配 macOS 深浅色模式，融入桌面，毫不突兀。</p>
+            <span class="sec-tag" data-i18n="showcaseTag">Showcase</span>
+            <h2 data-i18n-html="showcaseTitle">明暗双主题，<br />跟随系统</h2>
+            <p class="desc" data-i18n="showcaseDesc">面板外观自动适配 macOS 深浅色模式，融入桌面，毫不突兀。</p>
             <ul class="check-list">
               <li>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                <span><b>跟随系统外观</b>，自动切换深色 / 浅色</span>
+                <span data-i18n-html="showcaseCheck1"><b>跟随系统外观</b>，自动切换深色 / 浅色</span>
               </li>
               <li>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                <span><b>原生半透明面板</b>，与 macOS 菜单栏视觉统一</span>
+                <span data-i18n-html="showcaseCheck2"><b>原生半透明面板</b>，与 macOS 菜单栏视觉统一</span>
               </li>
               <li>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                <span><b>无需手动设置</b>，随系统主题实时变化</span>
+                <span data-i18n-html="showcaseCheck3"><b>无需手动设置</b>，随系统主题实时变化</span>
               </li>
             </ul>
           </div>
@@ -2798,11 +2906,11 @@
             <div class="duo">
               <figure>
                 <div class="kp-mount" data-theme="dark"></div>
-                <noscript><img src="assets/panel-01.png" alt="KimiCodeBar 暗夜模式面板" loading="lazy" /></noscript>
+                <noscript><img src="assets/panel-01.png" data-i18n="showcaseDarkAlt" alt="KimiCodeBar 暗夜模式面板" loading="lazy" /></noscript>
               </figure>
               <figure>
                 <div class="kp-mount" data-theme="light"></div>
-                <noscript><img src="assets/panel-02.png" alt="KimiCodeBar 浅色模式面板" loading="lazy" /></noscript>
+                <noscript><img src="assets/panel-02.png" data-i18n="showcaseLightAlt" alt="KimiCodeBar 浅色模式面板" loading="lazy" /></noscript>
               </figure>
             </div>
           </div>
@@ -2814,8 +2922,8 @@
     <section id="privacy">
       <div class="container">
         <div class="sec-head reveal">
-          <span class="sec-tag">Privacy</span>
-          <h2>你的数据，只在你的 Mac 上</h2>
+          <span class="sec-tag" data-i18n="privacyTag">Privacy</span>
+          <h2 data-i18n="privacyTitle">你的数据，只在你的 Mac 上</h2>
         </div>
         <div class="privacy">
           <div class="card reveal">
@@ -2826,8 +2934,8 @@
                 <line x1="12" y1="17" x2="12" y2="21" />
               </svg>
             </div>
-            <h3>本地存储</h3>
-            <p>用量数据与登录凭据只保存在本地，不上传、不同步到任何第三方。</p>
+            <h3 data-i18n="privacyCard1Title">本地存储</h3>
+            <p data-i18n="privacyCard1Desc">用量数据与登录凭据只保存在本地，不上传、不同步到任何第三方。</p>
           </div>
           <div class="card reveal">
             <div class="icon">
@@ -2836,8 +2944,8 @@
                 <path d="M7 11V7a5 5 0 0 1 10 0v4" />
               </svg>
             </div>
-            <h3>官方直连</h3>
-            <p>所有网络请求仅与 Kimi 官方接口通信，没有中间商，没有统计埋点。</p>
+            <h3 data-i18n="privacyCard2Title">官方直连</h3>
+            <p data-i18n="privacyCard2Desc">所有网络请求仅与 Kimi 官方接口通信，没有中间商，没有统计埋点。</p>
           </div>
           <div class="card reveal">
             <div class="icon">
@@ -2846,8 +2954,8 @@
                 <polyline points="8 6 2 12 8 18" />
               </svg>
             </div>
-            <h3>开源可审计</h3>
-            <p>MIT 协议全量开源，每一行代码都在 GitHub 上，欢迎审阅与共建。</p>
+            <h3 data-i18n="privacyCard3Title">开源可审计</h3>
+            <p data-i18n="privacyCard3Desc">MIT 协议全量开源，每一行代码都在 GitHub 上，欢迎审阅与共建。</p>
           </div>
         </div>
       </div>
@@ -2857,8 +2965,8 @@
     <section id="platform">
       <div class="container">
         <div class="sec-head reveal">
-          <span class="sec-tag">Platforms</span>
-          <h2>平台支持</h2>
+          <span class="sec-tag" data-i18n="platformTag">Platforms</span>
+          <h2 data-i18n="platformTitle">平台支持</h2>
         </div>
         <div class="platforms">
           <div class="platform reveal">
@@ -2869,8 +2977,8 @@
               </svg>
             </div>
             <div>
-              <h3>macOS <span class="tag tag-ok">已发布</span></h3>
-              <p>菜单栏轻量运行，开箱即用</p>
+              <h3>macOS <span class="tag tag-ok" data-i18n="tagOk">已发布</span></h3>
+              <p data-i18n="platformMacDesc">菜单栏轻量运行，开箱即用</p>
             </div>
           </div>
           <div class="platform soon reveal">
@@ -2878,8 +2986,8 @@
               <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.5 10.5 4.4v7.1H3V5.5zm9 8.1H3v7.1l7.5-1.1v-6zm1.5-8.3L21 4v7.5h-7.5V5.3zM13.5 13.5H21V20l-7.5 1.1v-7.6z" /></svg>
             </div>
             <div>
-              <h3>Windows <span class="tag tag-wip">开发中</span></h3>
-              <p>已在路线图上，敬请期待</p>
+              <h3>Windows <span class="tag tag-wip" data-i18n="tagWip">开发中</span></h3>
+              <p data-i18n="platformWinDesc">已在路线图上，敬请期待</p>
             </div>
           </div>
         </div>
@@ -2890,8 +2998,8 @@
     <section class="cta-final" id="download">
       <div class="container reveal">
         <img class="logo" src="assets/logo.gif" alt="KimiCodeBar Logo" />
-        <h2>现在就把限额<br />放到菜单栏上</h2>
-        <p>免费 · 开源 · 一分钟完成安装</p>
+        <h2 data-i18n-html="downloadTitle">现在就把限额<br />放到菜单栏上</h2>
+        <p data-i18n="downloadDesc">免费 · 开源 · 一分钟完成安装</p>
         <div class="cta-row">
           <a class="btn btn-primary btn-lg" href="https://github.com/xifandev/KimiCodeBar/releases" target="_blank" rel="noopener">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -2899,9 +3007,9 @@
               <polyline points="7 10 12 15 17 10" />
               <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
-            前往 GitHub Releases 下载
+            <span data-i18n="downloadCtaPrimary">前往 GitHub Releases 下载</span>
           </a>
-          <a class="btn btn-ghost btn-lg" href="https://github.com/xifandev/KimiCodeBar/issues" target="_blank" rel="noopener">反馈问题 / 建议</a>
+          <a class="btn btn-ghost btn-lg" href="https://github.com/xifandev/KimiCodeBar/issues" target="_blank" rel="noopener" data-i18n="downloadCtaSecondary">反馈问题 / 建议</a>
         </div>
       </div>
     </section>
@@ -2921,27 +3029,319 @@
             <a href="https://github.com/xifandev/KimiCodeBar/issues" target="_blank" rel="noopener">Issues</a>
             <a href="https://www.kimi.com/code" target="_blank" rel="noopener">Kimi Code</a>
           </div>
-          <p class="foot-note">KimiCodeBar 是由社区开发者维护的开源项目（Kimi 社区版），并非 Kimi 官方产品。 本项目通过 Kimi Code 官方公开接口获取用量数据，仅用于本地展示。</p>
+          <p class="foot-note" data-i18n="footerNote">KimiCodeBar 是由社区开发者维护的开源项目（Kimi 社区版），并非 Kimi 官方产品。 本项目通过 Kimi Code 官方公开接口获取用量数据，仅用于本地展示。</p>
         </div>
       </div>
     </footer>
 
     <script>
-      // 模拟菜单栏实时时钟（macOS 中文风格）
+      // ============ 多语言（中文 / 英文） ============
+      (function () {
+        var I18N = {
+          zh: {
+            pageTitle: 'KimiCodeBar — 菜单栏上的 Kimi Code 用量监控',
+            metaDesc: 'KimiCodeBar 是专为 Kimi Code 打造的菜单栏用量监控工具：本周限额、5 小时用量、加油包余额，抬头即见。开源免费，数据仅存本地。',
+            ogTitle: 'KimiCodeBar — 菜单栏上的 Kimi Code 用量监控',
+            ogDesc: '专为 Kimi Code 打造的菜单栏用量监控工具，限额一目了然。',
+            heroDemoAria: 'KimiCodeBar 菜单栏用量监控演示',
+            heroWidgetTitle: '本周用量 84% · 5 小时用量 6%',
+            iconWifiTitle: 'Wi-Fi',
+            iconBatteryTitle: '电池',
+            iconControlCenterTitle: '控制中心',
+            langSwitchAria: '切换语言',
+            langMenuLabel: '语言选择',
+            heroHeading: '✨免费开源<br><span class="grad">Kimi Code 用量仪表盘</span>',
+            heroCheck1: '<b>菜单栏实时显示</b> 7天 / 5小时用量',
+            heroCheck2: '<b>限额一目了然</b>',
+            downloadMacOS: 'macOS 版',
+            downloadWindows: 'Windows 版',
+            tagWip: '开发中',
+            featuresTitle: '为 Kimi Code 而生',
+            featuresDesc: '轻量驻留菜单栏，不占 Dock、不打断心流，需要时一眼可见。',
+            loginTag: 'Kimi Login',
+            loginTitle: 'Kimi 一键登录',
+            loginDesc: '浏览器授权即可登录，无需手动复制 API Key；也保留传统 Key 方式，随你习惯切换。',
+            loginCheck1: '<b>浏览器一键授权</b>，自动获取并保存登录态',
+            loginCheck2: '<b>API Key 方式保留</b>，专业用户可自由切换',
+            loginCheck3: '<b>设置页随时查看</b>授权状态，一键退出',
+            loginCardTitle: '登录方式',
+            loginAuthMethod: '认证方式',
+            loginAuthMethodDesc: '选择 KimiCodeBar 查询用量时使用的登录方式',
+            loginTabAuth: '授权登录',
+            loginTabToken: 'Token 登录',
+            loginAuthorized: '已授权 Kimi 账号',
+            loginAuthSub: '凭证有效期至 07-19 17:04，到期自动续期',
+            loginLogout: '退出登录',
+            loginFootnote: '授权登录通过浏览器跳转 Kimi 账号完成认证，凭证与 KimiCode CLI 共享，过期自动续期。',
+            perfTag: 'Performance',
+            perfTitle: '原生代码<br>超级轻量化运行',
+            perfDesc: '基于 Swift 与 AppKit 原生构建，常驻菜单栏，几乎感知不到它的存在。',
+            perfCheck1: '<b>Swift 原生语言</b>，与 macOS 深度集成，运行流畅稳定',
+            perfCheck2: '<b>24 小时运行</b>，开机自启，静默驻留菜单栏',
+            perfCheck3: '<b>内存常驻 30–50 MB</b>，远低于同类产品，Mac 性能零负担',
+            perfCheck4: '<b>超轻量极简</b>，无多余后台进程，无冗余功能',
+            perfMonitorTitle: '活动监视器',
+            perfLabelMemory: '内存占用',
+            perfLabelCpu: 'CPU 占用',
+            updateTag: 'Auto Update',
+            updateTitle: 'Kimi Code 更新，<br>不再错过',
+            updateDesc: '自动探测 Kimi Code CLI 新版本，从通知到面板，第一时间提醒你升级。',
+            updateCheck1: '<b>系统级通知</b>，新版本发布即刻推送',
+            updateCheck2: '<b>更新日志直接展示</b>，改了什么一目了然',
+            updateCheck3: '<b>一键安装更新</b>，也可以「稍后再说」',
+            updateNotifyAlt: 'KimiCode 新版本系统通知',
+            updateDialogAlt: 'KimiCode 新版本更新对话框',
+            showcaseTag: 'Showcase',
+            showcaseTitle: '明暗双主题，<br>跟随系统',
+            showcaseDesc: '面板外观自动适配 macOS 深浅色模式，融入桌面，毫不突兀。',
+            showcaseCheck1: '<b>跟随系统外观</b>，自动切换深色 / 浅色',
+            showcaseCheck2: '<b>原生半透明面板</b>，与 macOS 菜单栏视觉统一',
+            showcaseCheck3: '<b>无需手动设置</b>，随系统主题实时变化',
+            showcaseDarkAlt: 'KimiCodeBar 暗夜模式面板',
+            showcaseLightAlt: 'KimiCodeBar 浅色模式面板',
+            privacyTag: 'Privacy',
+            privacyTitle: '你的数据，只在你的 Mac 上',
+            privacyCard1Title: '本地存储',
+            privacyCard1Desc: '用量数据与登录凭据只保存在本地，不上传、不同步到任何第三方。',
+            privacyCard2Title: '官方直连',
+            privacyCard2Desc: '所有网络请求仅与 Kimi 官方接口通信，没有中间商，没有统计埋点。',
+            privacyCard3Title: '开源可审计',
+            privacyCard3Desc: 'MIT 协议全量开源，每一行代码都在 GitHub 上，欢迎审阅与共建。',
+            platformTag: 'Platforms',
+            platformTitle: '平台支持',
+            tagOk: '已发布',
+            platformMacDesc: '菜单栏轻量运行，开箱即用',
+            platformWinDesc: '已在路线图上，敬请期待',
+            downloadTitle: '现在就把限额<br>放到菜单栏上',
+            downloadDesc: '免费 · 开源 · 一分钟完成安装',
+            downloadCtaPrimary: '前往 GitHub Releases 下载',
+            downloadCtaSecondary: '反馈问题 / 建议',
+            footerNote: 'KimiCodeBar 是由社区开发者维护的开源项目（Kimi 社区版），并非 Kimi 官方产品。 本项目通过 Kimi Code 官方公开接口获取用量数据，仅用于本地展示。',
+            kpCommunity: '社区版',
+            kpWeekly: '本周用量',
+            kp5Hour: '5小时用量',
+            kpReset1: '13小时3分钟后重置',
+            kpReset2: '3小时3分钟后重置',
+            kpBooster: '加油包余额',
+            kpDisabled: '未启用',
+            kpSpent: '本月消费',
+            kpRunning: '运行中',
+            kpOpen: '打开',
+            kpStop: '停止',
+            kpRestart: '重启',
+            kpConsole: '控制台',
+            kpRefresh: '刷新',
+            kpSettings: '设置',
+            kpQuit: '退出',
+            kpUpdateAvailable: '发现新版本',
+          },
+          en: {
+            pageTitle: 'KimiCodeBar — Kimi Code usage at a glance in your menu bar',
+            metaDesc: 'KimiCodeBar is a menu bar usage monitor built for Kimi Code: weekly quota, 5-hour usage, booster balance, all at a glance. Free, open source, data stays local.',
+            ogTitle: 'KimiCodeBar — Kimi Code usage at a glance in your menu bar',
+            ogDesc: 'A menu bar usage monitor for Kimi Code. See your quota at a glance.',
+            heroDemoAria: 'KimiCodeBar menu bar usage monitor demo',
+            heroWidgetTitle: 'Weekly 84% · 5-hour 6%',
+            iconWifiTitle: 'Wi-Fi',
+            iconBatteryTitle: 'Battery',
+            iconControlCenterTitle: 'Control Center',
+            langSwitchAria: 'Switch language',
+            langMenuLabel: 'Language',
+            heroHeading: '✨ Free & Open Source<br><span class="grad">Kimi Code Usage Dashboard</span>',
+            heroCheck1: '<b>Live in the menu bar</b> 7-day / 5-hour usage',
+            heroCheck2: '<b>Quota at a glance</b>',
+            downloadMacOS: 'macOS',
+            downloadWindows: 'Windows',
+            tagWip: 'Coming soon',
+            featuresTitle: 'Built for Kimi Code',
+            featuresDesc: 'Lightweight menu bar resident. No Dock icon, no flow interruption, visible when you need it.',
+            loginTag: 'Kimi Login',
+            loginTitle: 'One-click Kimi Login',
+            loginDesc: 'Log in via browser authorization—no manual API Key copy-pasting. Classic Key mode remains available.',
+            loginCheck1: '<b>One-click browser auth</b> automatically fetches and saves your session',
+            loginCheck2: '<b>API Key mode kept</b> for advanced users',
+            loginCheck3: '<b>Check auth status</b> anytime in settings and log out with one click',
+            loginCardTitle: 'Login Method',
+            loginAuthMethod: 'Auth Method',
+            loginAuthMethodDesc: 'Choose how KimiCodeBar fetches your usage',
+            loginTabAuth: 'Authorize',
+            loginTabToken: 'Token',
+            loginAuthorized: 'Kimi account authorized',
+            loginAuthSub: 'Session valid until 07-19 17:04, auto-renews',
+            loginLogout: 'Log out',
+            loginFootnote: 'Authorization opens your browser to log into Kimi. Credentials are shared with KimiCode CLI and renew automatically.',
+            perfTag: 'Performance',
+            perfTitle: 'Native code<br>Ultra-lightweight',
+            perfDesc: 'Built natively with Swift and AppKit. Lives in the menu bar, barely noticeable.',
+            perfCheck1: '<b>Native Swift</b>, deeply integrated with macOS for smooth, stable performance',
+            perfCheck2: '<b>Runs 24/7</b>, auto-starts on boot, silently in the menu bar',
+            perfCheck3: '<b>30–50 MB memory</b>, far below alternatives, zero Mac burden',
+            perfCheck4: '<b>Ultra-light & minimal</b>, no extra background processes or bloat',
+            perfMonitorTitle: 'Activity Monitor',
+            perfLabelMemory: 'Memory',
+            perfLabelCpu: 'CPU',
+            updateTag: 'Auto Update',
+            updateTitle: 'Never miss a<br>Kimi Code update',
+            updateDesc: 'Auto-detects new Kimi Code CLI releases and alerts you via notifications and panel.',
+            updateCheck1: '<b>System notifications</b> pushed as soon as a release drops',
+            updateCheck2: '<b>Release notes inline</b>, see what\'s changed at a glance',
+            updateCheck3: '<b>One-click install</b>, or remind me later',
+            updateNotifyAlt: 'New version system notification',
+            updateDialogAlt: 'New version update dialog',
+            showcaseTag: 'Showcase',
+            showcaseTitle: 'Light & dark themes,<br>following your system',
+            showcaseDesc: 'The panel automatically matches macOS light/dark mode, blending into your desktop.',
+            showcaseCheck1: '<b>Follows system appearance</b>, switching dark / light automatically',
+            showcaseCheck2: '<b>Native translucent panel</b>, visually unified with macOS menu bar',
+            showcaseCheck3: '<b>No manual setup</b>, updates in real time with the system theme',
+            showcaseDarkAlt: 'KimiCodeBar dark mode panel',
+            showcaseLightAlt: 'KimiCodeBar light mode panel',
+            privacyTag: 'Privacy',
+            privacyTitle: 'Your data stays on your Mac',
+            privacyCard1Title: 'Local Storage',
+            privacyCard1Desc: 'Usage data and credentials are stored locally only. No upload, no third-party sync.',
+            privacyCard2Title: 'Official Direct',
+            privacyCard2Desc: 'All network requests talk only to Kimi\'s official APIs. No middlemen, no tracking.',
+            privacyCard3Title: 'Open Source',
+            privacyCard3Desc: 'Fully open source under MIT. Every line is on GitHub for review and contribution.',
+            platformTag: 'Platforms',
+            platformTitle: 'Supported Platforms',
+            tagOk: 'Available',
+            platformMacDesc: 'Lightweight menu bar app, ready to use',
+            platformWinDesc: 'On the roadmap, stay tuned',
+            downloadTitle: 'Put your quota<br>in the menu bar now',
+            downloadDesc: 'Free · Open Source · Install in one minute',
+            downloadCtaPrimary: 'Download from GitHub Releases',
+            downloadCtaSecondary: 'Feedback / Suggestions',
+            footerNote: 'KimiCodeBar is an open-source project maintained by community developers (Kimi Community Edition), not an official Kimi product. It fetches usage data via Kimi Code\'s official public API for local display only.',
+            kpCommunity: 'Community',
+            kpWeekly: 'Weekly',
+            kp5Hour: '5-Hour',
+            kpReset1: 'Resets in 13h 3m',
+            kpReset2: 'Resets in 3h 3m',
+            kpBooster: 'Booster Balance',
+            kpDisabled: 'Disabled',
+            kpSpent: 'Spent this month',
+            kpRunning: 'Running',
+            kpOpen: 'Open',
+            kpStop: 'Stop',
+            kpRestart: 'Restart',
+            kpConsole: 'Console',
+            kpRefresh: 'Refresh',
+            kpSettings: 'Settings',
+            kpQuit: 'Quit',
+            kpUpdateAvailable: 'Update available',
+          },
+        };
+
+        function detectLang() {
+          var params = new URLSearchParams(window.location.search);
+          var urlLang = params.get('lang');
+          if (urlLang === 'zh' || urlLang === 'en') return urlLang;
+          var saved = localStorage.getItem('kcb-lang');
+          if (saved === 'zh' || saved === 'en') return saved;
+          var nav = (navigator.language || navigator.userLanguage || 'en').toLowerCase();
+          return nav.indexOf('zh') === 0 ? 'zh' : 'en';
+        }
+
+        var currentLang = detectLang();
+        window.__currentLang = currentLang;
+
+        function t(key) {
+          var dict = I18N[currentLang] || I18N.zh;
+          return dict[key] !== undefined ? dict[key] : (I18N.zh[key] || key);
+        }
+        window.__t = t;
+
+        function applyLanguage(lang) {
+          currentLang = lang;
+          window.__currentLang = lang;
+          localStorage.setItem('kcb-lang', lang);
+          document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+
+          document.querySelectorAll('[data-i18n]').forEach(function (el) {
+            var key = el.getAttribute('data-i18n');
+            var val = t(key);
+            if (el.tagName === 'TITLE') el.textContent = val;
+            else if (el.hasAttribute('content')) el.setAttribute('content', val);
+            else if (el.hasAttribute('alt')) el.setAttribute('alt', val);
+            else if (el.hasAttribute('aria-label')) el.setAttribute('aria-label', val);
+            else if (el.hasAttribute('title')) el.setAttribute('title', val);
+            else el.textContent = val;
+          });
+          document.querySelectorAll('[data-i18n-html]').forEach(function (el) {
+            el.innerHTML = t(el.getAttribute('data-i18n-html'));
+          });
+
+          // 刷新演示面板（先清理旧面板的眼睛动画定时器，避免内存泄漏）
+          document.querySelectorAll('.kp-eyes').forEach(function (eyes) {
+            if (eyes.__lookTimeout) clearTimeout(eyes.__lookTimeout);
+          });
+          document.querySelectorAll('.kp').forEach(function (kp) {
+            var theme = kp.classList.contains('kp-light') ? 'light' : 'dark';
+            kp.innerHTML = getKP_HTML();
+            if (theme === 'light') kp.classList.add('kp-light');
+          });
+          initKPEyes();
+
+          // 更新语言按钮
+          var switchLabel = document.getElementById('langSwitchLabel');
+          if (switchLabel) switchLabel.textContent = lang === 'zh' ? '中文' : 'EN';
+          document.querySelectorAll('.lang-menu button').forEach(function (btn) {
+            btn.classList.toggle('active', btn.getAttribute('data-lang') === lang);
+          });
+
+          // 刷新菜单栏时钟
+          var clock = document.getElementById('mockClock');
+          if (clock && window.__tickClock) window.__tickClock();
+        }
+        window.__applyLanguage = applyLanguage;
+
+        // 语言切换器交互
+        var langSwitch = document.getElementById('langSwitch');
+        if (langSwitch) {
+          langSwitch.addEventListener('click', function (e) {
+            e.stopPropagation();
+            var expanded = langSwitch.getAttribute('aria-expanded') === 'true';
+            langSwitch.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+          });
+          document.querySelectorAll('.lang-menu button').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+              e.stopPropagation();
+              applyLanguage(btn.getAttribute('data-lang'));
+              langSwitch.setAttribute('aria-expanded', 'false');
+            });
+          });
+          document.addEventListener('click', function () {
+            langSwitch.setAttribute('aria-expanded', 'false');
+          });
+        }
+
+        applyLanguage(currentLang);
+      })();
+
+      // 模拟菜单栏实时时钟（根据当前语言切换中/英文格式）
       (function () {
         var el = document.getElementById('mockClock');
         if (!el) return;
-        var weeks = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+        var weeksZh = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+        var weeksEn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         function pad(n) {
           return n < 10 ? '0' + n : '' + n;
         }
         function tick() {
           var d = new Date();
-          var h = d.getHours();
-          var ap = h < 12 ? '上午' : '下午';
-          var h12 = h % 12 || 12;
-          el.textContent = d.getMonth() + 1 + '月' + d.getDate() + '日 ' + weeks[d.getDay()] + ' ' + ap + h12 + ':' + pad(d.getMinutes());
+          var lang = window.__currentLang || 'zh';
+          if (lang === 'zh') {
+            var h = d.getHours();
+            var ap = h < 12 ? '上午' : '下午';
+            var h12 = h % 12 || 12;
+            el.textContent = d.getMonth() + 1 + '月' + d.getDate() + '日 ' + weeksZh[d.getDay()] + ' ' + ap + h12 + ':' + pad(d.getMinutes());
+          } else {
+            el.textContent = weeksEn[d.getDay()] + ' ' + (d.getMonth() + 1) + '/' + d.getDate() + ', ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+          }
         }
+        window.__tickClock = tick;
         tick();
         setInterval(tick, 1000);
       })();
@@ -2971,115 +3371,123 @@
           io.observe(el);
         });
       })();
+
       // ============ KimiPanel 实时复刻：模板 + 交互 ============
       // 结构与设计令牌依据 macOS/KimiCodeBar/KimiCodeBarApp.swift 最新源码
-      var KP_HTML = `
+      function getKP_HTML() {
+        var t = window.__t;
+        return `
     <div class="kp-header">
       <div class="kp-logo"><div class="kp-logo-body"></div><div class="kp-eyes"><i></i><i></i></div></div>
       <span class="kp-title">KimiCodeBar</span>
       <button type="button" class="kp-community">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55 0-.27-.01-1.17-.02-2.12-3.2.7-3.88-1.36-3.88-1.36-.52-1.33-1.28-1.68-1.28-1.68-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.19 1.76 1.19 1.03 1.75 2.69 1.25 3.35.95.1-.74.4-1.25.72-1.54-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11.1 11.1 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.42-2.7 5.39-5.26 5.68.41.35.77 1.05.77 2.12 0 1.53-.01 2.76-.01 3.14 0 .3.2.67.8.55A11.51 11.51 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/></svg>
-        社区版
+        ` + t('kpCommunity') + `
       </button>
     </div>
     <div class="kp-cards">
       <div class="kp-quota-row">
         <div class="kp-card kp-quota">
-          <span class="kp-quota-title">本周用量</span>
+          <span class="kp-quota-title">` + t('kpWeekly') + `</span>
           <div class="kp-value"><span class="kp-num">84%</span><span class="kp-ring"></span></div>
           <div class="kp-bar" style="--c:#3B82F5;--c-glow:rgba(59,130,245,.4)"><i style="--p:84%"></i></div>
-          <span class="kp-reset">13小时3分钟后重置</span>
+          <span class="kp-reset">` + t('kpReset1') + `</span>
         </div>
         <div class="kp-card kp-quota">
-          <span class="kp-quota-title">5小时用量</span>
+          <span class="kp-quota-title">` + t('kp5Hour') + `</span>
           <div class="kp-value"><span class="kp-num">6%</span><span class="kp-ring"></span></div>
           <div class="kp-bar" style="--c:var(--orange);--c-glow:transparent"><i style="--p:6%"></i></div>
-          <span class="kp-reset">3小时3分钟后重置</span>
+          <span class="kp-reset">` + t('kpReset2') + `</span>
         </div>
       </div>
       <div class="kp-card kp-wallet">
         <div class="kp-row">
-          <span class="kp-label">加油包余额</span>
-          <span class="kp-badge">未启用</span>
+          <span class="kp-label">` + t('kpBooster') + `</span>
+          <span class="kp-badge">` + t('kpDisabled') + `</span>
         </div>
         <div class="kp-balance-row">
           <span class="kp-balance">¥100</span>
           <span class="kp-ring" style="width:20px;height:20px"></span>
-          <span class="kp-spend">本月消费 <b>¥0</b> / ¥100</span>
+          <span class="kp-spend">` + t('kpSpent') + ` <b>¥0</b> / ¥100</span>
         </div>
         <div class="kp-bar thin"><i style="--p:0%"></i></div>
       </div>
       <div class="kp-card kp-server">
         <div class="kp-row">
           <span class="kp-server-title">Kimi Web</span>
-          <span class="kp-badge green">运行中</span>
+          <span class="kp-badge green">` + t('kpRunning') + `</span>
           <span class="kp-spacer"></span>
           <span class="kp-version">0.23.5</span>
         </div>
         <div class="kp-server-btns">
           <button type="button" class="kp-btn wide">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-            <span class="kp-btn-label">打开</span><span class="kp-ring"></span>
+            <span class="kp-btn-label">` + t('kpOpen') + `</span><span class="kp-ring"></span>
           </button>
-          <button type="button" class="kp-btn"><span class="kp-btn-label">停止</span><span class="kp-ring"></span></button>
-          <button type="button" class="kp-btn"><span class="kp-btn-label">重启</span><span class="kp-ring"></span></button>
+          <button type="button" class="kp-btn"><span class="kp-btn-label">` + t('kpStop') + `</span><span class="kp-ring"></span></button>
+          <button type="button" class="kp-btn"><span class="kp-btn-label">` + t('kpRestart') + `</span><span class="kp-ring"></span></button>
         </div>
       </div>
     </div>
     <div class="kp-actions">
       <button type="button" class="kp-act">
-        <span class="kp-kimi">KIMI</span><span>控制台</span>
+        <span class="kp-kimi">KIMI</span><span>` + t('kpConsole') + `</span>
       </button>
       <button type="button" class="kp-act">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-        <span>刷新</span>
+        <span>` + t('kpRefresh') + `</span>
       </button>
       <button type="button" class="kp-act">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-        <span>设置</span>
+        <span>` + t('kpSettings') + `</span>
       </button>
       <button type="button" class="kp-act">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
-        <span>退出</span>
+        <span>` + t('kpQuit') + `</span>
       </button>
     </div>
     <button type="button" class="kp-cli">
       <span>KimiCode CLI</span>
       <span class="kp-version">0.23.5</span>
-      <span class="kp-badge-new">发现新版本</span>
+      <span class="kp-badge-new">` + t('kpUpdateAvailable') + `</span>
       <span class="kp-spacer"></span>
       <span class="kp-chevron"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>
     </button>`;
+      }
+
+      function initKPEyes() {
+        document.querySelectorAll('.kp-eyes').forEach(function (eyes) {
+          if (eyes.__lookTimeout) clearTimeout(eyes.__lookTimeout);
+          var offset = -Math.random() * 3;
+          eyes.querySelectorAll('i').forEach(function (eye) {
+            eye.style.animationDelay = offset + 's';
+          });
+          var amplitude = 6.9;
+          var targets = [amplitude, 0, -amplitude, 0];
+          var idx = Math.floor(Math.random() * targets.length);
+          (function look() {
+            eyes.__lookTimeout = setTimeout(
+              function () {
+                eyes.style.transform = 'translateX(' + targets[idx % targets.length] + 'px)';
+                idx++;
+                look();
+              },
+              1000 + Math.random() * 2000,
+            );
+          })();
+        });
+      }
 
       // 挂载所有复刻面板
       document.querySelectorAll('.kp-mount').forEach(function (m) {
         var kp = document.createElement('div');
         kp.className = 'kp' + (m.getAttribute('data-theme') === 'light' ? ' kp-light' : '');
-        kp.innerHTML = KP_HTML;
+        kp.innerHTML = getKP_HTML();
         if (m.style.cssText) kp.style.cssText = m.style.cssText;
         m.replaceWith(kp);
       });
 
-      // Logo：眨眼随机偏移 + 左顾右盼（复刻 startRandomLooking）
-      document.querySelectorAll('.kp-eyes').forEach(function (eyes) {
-        var offset = -Math.random() * 3;
-        eyes.querySelectorAll('i').forEach(function (eye) {
-          eye.style.animationDelay = offset + 's';
-        });
-        var amplitude = 6.9;
-        var targets = [amplitude, 0, -amplitude, 0];
-        var idx = Math.floor(Math.random() * targets.length);
-        (function look() {
-          setTimeout(
-            function () {
-              eyes.style.transform = 'translateX(' + targets[idx % targets.length] + 'px)';
-              idx++;
-              look();
-            },
-            1000 + Math.random() * 2000,
-          );
-        })();
-      });
+      initKPEyes();
     </script>
   </body>
 </html>
