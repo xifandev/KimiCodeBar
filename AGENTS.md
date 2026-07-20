@@ -12,6 +12,18 @@
 
 > 案例：主题切换不要对 `MenuBarExtra` 内容视图使用 `.preferredColorScheme()`，这会触发 SwiftUI 运行时警告 `Publishing changes from within view updates is not allowed`。应通过 `NSApplication.shared.appearance` 控制应用整体外观，让 `NSColor` 动态配色自动适配。
 
+## Kimi CLI 命令参考
+
+涉及 `kimi` 命令（如 `kimi web`、`kimi web kill`、`kimi web ps` 等）的改动前，必须先查阅官方文档确认命令的真实行为与参数，不要凭猜测实现：
+
+- 命令参考：https://moonshotai.github.io/kimi-code/zh/reference/kimi-command.html
+- 本地服务还会挂载 `GET /openapi.json`（REST 路由文档）与 `GET /asyncapi.json`（WebSocket 协议文档），需要接口细节时优先从运行中的实例拉取。
+
+## 构建验证规范
+
+- 写完代码后只做临时编译验证（`xcodebuild build` 确认编译通过），验证完删除本次构建产物（DerivedData 中对应的 Build 目录）。
+- 不需要运行测试、也不需要启动 App 验证——维护者会自己用 Xcode 构建运行。
+
 ## 可点击元素反馈规范
 
 所有可点击的 UI 元素必须同时满足：
