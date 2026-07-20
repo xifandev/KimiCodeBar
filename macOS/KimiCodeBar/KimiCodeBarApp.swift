@@ -717,6 +717,7 @@ struct KimiMenu: View {
                     },
                     onStart: {
                         kimiServerOperation = .starting
+                        dismissMenuBarPanel()
                         Task {
                             await model.startKimiServer()
                             await MainActor.run { kimiServerOperation = .none }
@@ -4386,18 +4387,21 @@ final class KimiCodeBarModel: ObservableObject {
     }
 
     func startKimiServer() async {
-        // Kimi CLI 0.28 起 kimi server 命令树废弃，改用 kimi web 前台运行
-        // 用 Process 后台 spawn，不 waitUntilExit（kimi web 是持续运行的前台命令）
-        // stdout/stderr 在 shell 层面重定向到 /dev/null，避免 Process 释放后 fd 关闭导致进程退出
+        // 呼出 Terminal.app 执行 kimi web 命令，让用户在可视化终端里看 server 运行状态
+        // 跟 installKimiCLIUpdate 同样模式：KimiCodeBar 不接管 server 进程，只帮用户打开终端输入命令
+        // server 进程归 Terminal 管理，KimiCodeBar 退出/crash 不影响
         let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/bin/bash")
-        task.arguments = ["-lc", "kimi web --no-open --dangerous-bypass-auth > /dev/null 2>&1"]
-
-        do {
-            try task.run()
-        } catch {
-            // 启动失败，refreshKimiServerState 会显示 stopped
-        }
+        task.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+        task.arguments = [
+            "-e",
+            """
+            tell application "Terminal"
+                activate
+                do script "kimi web --no-open --dangerous-bypass-auth"
+            end tell
+            """
+        ]
+        try? task.run()
 
         // 轮询等待 server 起来（最多 10 秒）
         for _ in 0..<10 {
