@@ -29,7 +29,11 @@ final class SparkleUpdater: ObservableObject {
 
     /// 弹出 Sparkle 标准更新窗口（含更新日志、进度条、立即更新/稍后/跳过）
     func showStandardUpdateUI() {
-        updaterController.checkForUpdates(nil)
+        // 先把本 App 提到最前，避免菜单栏面板关闭后 Sparkle 弹窗落到 Safari 等其它窗口底下
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            self.updaterController.checkForUpdates(nil)
+        }
     }
 
     /// 打开 GitHub Releases 页面让用户手动下载
