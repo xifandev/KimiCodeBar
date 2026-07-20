@@ -8,6 +8,8 @@
   <a href="LICENSE"><img src="https://img.shields.io/github/license/xifandev/KimiCodeBar" alt="License"></a>
 </p>
 
+[English](README_EN.md) | 中文
+
 专为 [Kimi Code](https://www.kimi.com/code) 打造的用量监控小工具，在菜单中轻量化运行，限额一目了然！
 
 #
