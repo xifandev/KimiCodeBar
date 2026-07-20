@@ -198,10 +198,11 @@ final class KimiCodeBarQuotaService {
             let monthlyChargeLimitCents = Int(raw.monthlyChargeLimit?.priceInCents ?? "0") ?? 0
             let monthlyUsedCents = Int(raw.monthlyUsed?.priceInCents ?? "0") ?? 0
             // 真实余额来自 balance.amountLeft，单位为 1e-8 元（如 315250700 = ¥3.15）。
-            // 接口未返回该字段时，不应按「月度上限 - 当月消费」估算，否则会在余额为 0
-            // 或月度上限未启用时显示错误金额（如 ¥75）。
+            // 仅在加油包处于启用状态时才读取该字段——未启用时接口可能返回一个与
+            // 「月度上限 - 月度消费」相关的值（例如 ¥75），而非用户真正的钱包余额，
+            // 此时应显示 ¥0。同时，接口未返回该字段时也不做估算。
             let balanceYuan: Double
-            if let amountLeft = raw.balance?.amountLeft, let v = Double(amountLeft) {
+            if isEnabled, let amountLeft = raw.balance?.amountLeft, let v = Double(amountLeft) {
                 balanceYuan = max(0, v / 100_000_000.0)
             } else {
                 balanceYuan = 0
