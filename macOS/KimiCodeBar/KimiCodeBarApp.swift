@@ -4112,7 +4112,6 @@ struct KimiServerState: Equatable {
     var status: KimiServerStatus = .unknown
     var version: String = ""
     var port: Int = 58627
-    var connections: Int = 0
 }
 
 enum KimiServerOperation: Equatable {
@@ -4489,55 +4488,101 @@ final class KimiCodeBarModel: ObservableObject {
     }
 
     func stopKimiServer() async {
-        // kimi web kill all：先 POST /api/v1/shutdown 优雅退出，再 SIGTERM/SIGKILL，停止全部实例
-        _ = await runKimiCommand(arguments: ["web", "kill", "all"])
+        // Kimi Code 0.28 起 `kimi web` 是前台进程，且 `kimi web kill` 已移除。
+        // 通过结束 `kimi web` 进程来停止服务，再关闭由我们打开的 Terminal 标签页/窗口。
+        await terminateKimiWebProcesses()
+        await closeKimiWebTerminalWindows()
 
         // 清理可能残留的旧 LaunchAgent，避免 KeepAlive 反复拉起进程
-        let manager = KimiWebLaunchAgentManager.shared
-        await manager.uninstall()
+        await KimiWebLaunchAgentManager.shared.uninstall()
 
-        // 给优雅退出一点时间
         try? await Task.sleep(nanoseconds: 1_000_000_000)
-
         await refreshKimiServerState()
     }
 
+    /// 查找并结束所有 `kimi web` 进程。
+    private func terminateKimiWebProcesses() async {
+        await Task.detached(priority: .utility) {
+            guard let pids = Self.findKimiWebPIDs(), !pids.isEmpty else { return }
+
+            for pid in pids {
+                kill(pid, SIGTERM)
+            }
+
+            // 等待 2 秒让进程自行退出
+            try? await Task.sleep(nanoseconds: 2 * 1_000_000_000)
+
+            // 仍在跑的强制 SIGKILL
+            for pid in pids {
+                if kill(pid, 0) == 0 {
+                    kill(pid, SIGKILL)
+                }
+            }
+        }.value
+    }
+
+    private static nonisolated func findKimiWebPIDs() -> [Int32]? {
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/bin/bash")
+        task.arguments = ["-lc", "pgrep -f 'kimi web'"]
+
+        let pipe = Pipe()
+        task.standardOutput = pipe
+        task.standardError = pipe
+
+        do {
+            try task.run()
+            task.waitUntilExit()
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            let output = String(data: data, encoding: .utf8) ?? ""
+            return output.components(separatedBy: .newlines)
+                .compactMap { line -> Int32? in
+                    let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+                    return trimmed.isEmpty ? nil : Int32(trimmed)
+                }
+        } catch {
+            return nil
+        }
+    }
+
+    /// 关闭标题包含启动脚本名的 Terminal 标签页/窗口。
+    /// 进程结束后 Terminal 不再提示“终止运行中的进程”，可直接关闭。
+    private func closeKimiWebTerminalWindows() async {
+        await Task.detached(priority: .utility) {
+            let script = """
+            tell application "Terminal"
+                set targetName to "start-kimi-web.command"
+                repeat with w in windows
+                    repeat with t in tabs of w
+                        if name of t contains targetName then
+                            close t
+                        end if
+                    end repeat
+                end repeat
+            end tell
+            """
+            var errorInfo: NSDictionary?
+            guard let appleScript = NSAppleScript(source: script) else { return }
+            appleScript.executeAndReturnError(&errorInfo)
+        }.value
+    }
+
     private func detectKimiServerState() async -> KimiServerState {
-        // 直接探测本地端口判定运行状态：`kimi web ps` 只跟踪它自己拉起的实例，
-        // 通过 Terminal 前台启动的 kimi web 不在其列表中，会被误判为已停止。
+        // 直接探测本地端口判定运行状态。
+        // Kimi Code 0.28 起 `kimi web ps` 已被移除，不再通过 CLI 判断。
         let port = 58627
         guard let version = await fetchKimiServerVersion(port: port) else {
             return KimiServerState(
                 status: .stopped,
                 version: LanguageManager.tr("未检测到"),
-                port: port,
-                connections: 0
+                port: port
             )
-        }
-
-        // 连接数尽量从 kimi web ps 补充；ps 看不到 Terminal 前台启动的实例时记 0
-        var connections = 0
-        let psResult = await runKimiCommand(arguments: ["web", "ps", "--json"])
-
-        struct PsResponse: Decodable {
-            struct ServerInfo: Decodable {
-                struct ConnectionInfo: Decodable {}
-                let connections: [ConnectionInfo]
-            }
-            let servers: [ServerInfo]
-        }
-
-        if psResult.exitCode == 0,
-           let data = psResult.output.data(using: .utf8),
-           let resp = try? JSONDecoder().decode(PsResponse.self, from: data) {
-            connections = resp.servers.reduce(0) { $0 + $1.connections.count }
         }
 
         return KimiServerState(
             status: .running,
             version: version,
-            port: port,
-            connections: connections
+            port: port
         )
     }
 

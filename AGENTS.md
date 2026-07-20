@@ -14,9 +14,10 @@
 
 ## Kimi CLI 命令参考
 
-涉及 `kimi` 命令（如 `kimi web`、`kimi web kill`、`kimi web ps` 等）的改动前，必须先查阅官方文档确认命令的真实行为与参数，不要凭猜测实现：
+涉及 `kimi` 命令（如 `kimi web`、`kimi server` 等）的改动前，必须先查阅官方文档确认命令的真实行为与参数，不要凭猜测实现：
 
 - 命令参考：https://moonshotai.github.io/kimi-code/zh/reference/kimi-command.html
+- 注意：从 Kimi Code 0.28 起，`kimi web` 是启动本地 Web 前台的唯一入口，并以**前台进程**运行；`kimi server` 已 deprecated，`kimi web kill`、`kimi web ps` 等生命周期命令已移除。停止服务应通过结束 `kimi web` 前台进程实现。
 - 本地服务还会挂载 `GET /openapi.json`（REST 路由文档）与 `GET /asyncapi.json`（WebSocket 协议文档），需要接口细节时优先从运行中的实例拉取。
 
 ## 构建验证规范

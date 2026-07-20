@@ -1,13 +1,11 @@
 import Foundation
 
-/// 通过 macOS LaunchAgent 在后台管理 kimi web 服务。
+/// 仅用于清理旧版本残留的 macOS LaunchAgent。
 ///
-/// 与直接调用 Terminal.app 相比，LaunchAgent 方案：
-/// - 不弹出终端窗口
-/// - 服务由 launchd 管理，KimiCodeBar 退出/崩溃后仍能继续运行
-/// - 可配置崩溃自动重启（KeepAlive）
+/// Kimi Code 0.28 起 `kimi web` 为前台进程，不再通过 LaunchAgent 启动。
+/// 保留此类是为了卸载早期版本可能写入的 plist，防止旧 KeepAlive 配置反复拉起进程。
 ///
-/// 注意：当前使用 `--dangerous-bypass-auth` 关闭 bearer-token 鉴权，
+/// 注意：历史 plist 使用 `--dangerous-bypass-auth` 关闭 bearer-token 鉴权，
 /// 仅适合在本地可信网络环境使用。
 final class KimiWebLaunchAgentManager: @unchecked Sendable {
     static let shared = KimiWebLaunchAgentManager()
