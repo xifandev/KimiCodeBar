@@ -1,0 +1,13 @@
+/Users/getlong/Code/KimiCodeBar/Windows/src/KimiCodeBar.Core/obj/Debug/net8.0/KimiCodeBar.Core.csproj.AssemblyReference.cache
+/Users/getlong/Code/KimiCodeBar/Windows/src/KimiCodeBar.Core/obj/Debug/net8.0/KimiCodeBar.Core.GeneratedMSBuildEditorConfig.editorconfig
+/Users/getlong/Code/KimiCodeBar/Windows/src/KimiCodeBar.Core/obj/Debug/net8.0/KimiCodeBar.Core.AssemblyInfoInputs.cache
+/Users/getlong/Code/KimiCodeBar/Windows/src/KimiCodeBar.Core/obj/Debug/net8.0/KimiCodeBar.Core.AssemblyInfo.cs
+/Users/getlong/Code/KimiCodeBar/Windows/src/KimiCodeBar.Core/obj/Debug/net8.0/KimiCodeBar.Core.csproj.CoreCompileInputs.cache
+/Users/getlong/Code/KimiCodeBar/Windows/src/KimiCodeBar.Core/obj/Debug/net8.0/KimiCodeBar.Core.sourcelink.json
+/Users/getlong/Code/KimiCodeBar/Windows/src/KimiCodeBar.Core/bin/Debug/net8.0/KimiCodeBar.Core.deps.json
+/Users/getlong/Code/KimiCodeBar/Windows/src/KimiCodeBar.Core/bin/Debug/net8.0/KimiCodeBar.Core.dll
+/Users/getlong/Code/KimiCodeBar/Windows/src/KimiCodeBar.Core/bin/Debug/net8.0/KimiCodeBar.Core.pdb
+/Users/getlong/Code/KimiCodeBar/Windows/src/KimiCodeBar.Core/obj/Debug/net8.0/KimiCodeBar.Core.dll
+/Users/getlong/Code/KimiCodeBar/Windows/src/KimiCodeBar.Core/obj/Debug/net8.0/refint/KimiCodeBar.Core.dll
+/Users/getlong/Code/KimiCodeBar/Windows/src/KimiCodeBar.Core/obj/Debug/net8.0/KimiCodeBar.Core.pdb
+/Users/getlong/Code/KimiCodeBar/Windows/src/KimiCodeBar.Core/obj/Debug/net8.0/ref/KimiCodeBar.Core.dll

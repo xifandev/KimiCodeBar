@@ -1,0 +1,83 @@
+<UserControl
+    x:Class="KimiCodeBar.Views.Controls.UsageCard"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:KimiCodeBar"
+    xmlns:converters="using:KimiCodeBar.Views.Converters">
+
+    <UserControl.Resources>
+        <converters:PercentToWidthConverter x:Key="PercentToWidthConverter" />
+    </UserControl.Resources>
+
+    <Border
+        Background="{ThemeResource CardBackgroundBrush}"
+        CornerRadius="14">
+        <StackPanel Padding="14" Spacing="12">
+            <!-- 标题行 -->
+            <Grid>
+                <TextBlock
+                    x:Name="TitleText"
+                    Text="{x:Bind Title, Mode=OneWay}"
+                    FontSize="13"
+                    FontWeight="Medium"
+                    Foreground="{ThemeResource TextPrimaryBrush}"
+                    HorizontalAlignment="Left" />
+                <TextBlock
+                    x:Name="SubtitleText"
+                    Text="{x:Bind Subtitle, Mode=OneWay}"
+                    FontSize="10"
+                    FontWeight="Medium"
+                    Foreground="{ThemeResource TextTertiaryBrush}"
+                    HorizontalAlignment="Right"
+                    Visibility="Collapsed" />
+            </Grid>
+
+            <!-- 数值 -->
+            <Grid Height="38">
+                <TextBlock
+                    x:Name="PercentageText"
+                    Text="0%"
+                    FontSize="32"
+                    FontWeight="Bold"
+                    FontFamily="{ThemeResource ContentControlThemeFontFamily}"
+                    Foreground="{ThemeResource TextPrimaryBrush}"
+                    VerticalAlignment="Center" />
+                <ProgressRing
+                    x:Name="LoadingRing"
+                    Width="24"
+                    Height="24"
+                    IsActive="False"
+                    Visibility="Collapsed"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Left" />
+            </Grid>
+
+            <!-- 进度条（两列：已用 / 剩余） -->
+            <Grid Height="4">
+                <Rectangle
+                    Fill="{ThemeResource TrackBrush}"
+                    RadiusX="2"
+                    RadiusY="2" />
+                <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition x:Name="FillColumn" Width="*" />
+                        <ColumnDefinition x:Name="RestColumn" Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Rectangle
+                        Fill="{x:Bind AccentColor, Mode=OneWay}"
+                        RadiusX="2"
+                        RadiusY="2"
+                        Grid.Column="0" />
+                </Grid>
+            </Grid>
+
+            <!-- 重置时间 -->
+            <TextBlock
+                x:Name="ResetTextBlock"
+                Text=""
+                FontSize="11"
+                Foreground="{ThemeResource TextSecondaryBrush}" />
+        </StackPanel>
+    </Border>
+
+</UserControl>

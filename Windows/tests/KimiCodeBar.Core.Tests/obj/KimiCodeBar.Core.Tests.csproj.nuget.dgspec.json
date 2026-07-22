@@ -1,0 +1,150 @@
+{
+  "format": 1,
+  "restore": {
+    "/Users/getlong/Code/KimiCodeBar/Windows/tests/KimiCodeBar.Core.Tests/KimiCodeBar.Core.Tests.csproj": {}
+  },
+  "projects": {
+    "/Users/getlong/Code/KimiCodeBar/Windows/src/KimiCodeBar.Core/KimiCodeBar.Core.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/Users/getlong/Code/KimiCodeBar/Windows/src/KimiCodeBar.Core/KimiCodeBar.Core.csproj",
+        "projectName": "KimiCodeBar.Core",
+        "projectPath": "/Users/getlong/Code/KimiCodeBar/Windows/src/KimiCodeBar.Core/KimiCodeBar.Core.csproj",
+        "packagesPath": "/Users/getlong/.nuget/packages/",
+        "outputPath": "/Users/getlong/Code/KimiCodeBar/Windows/src/KimiCodeBar.Core/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/Users/getlong/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "CommunityToolkit.Mvvm": {
+              "target": "Package",
+              "version": "[8.2.2, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/Users/getlong/.dotnet/sdk/8.0.423/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "/Users/getlong/Code/KimiCodeBar/Windows/tests/KimiCodeBar.Core.Tests/KimiCodeBar.Core.Tests.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/Users/getlong/Code/KimiCodeBar/Windows/tests/KimiCodeBar.Core.Tests/KimiCodeBar.Core.Tests.csproj",
+        "projectName": "KimiCodeBar.Core.Tests",
+        "projectPath": "/Users/getlong/Code/KimiCodeBar/Windows/tests/KimiCodeBar.Core.Tests/KimiCodeBar.Core.Tests.csproj",
+        "packagesPath": "/Users/getlong/.nuget/packages/",
+        "outputPath": "/Users/getlong/Code/KimiCodeBar/Windows/tests/KimiCodeBar.Core.Tests/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/Users/getlong/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "/Users/getlong/Code/KimiCodeBar/Windows/src/KimiCodeBar.Core/KimiCodeBar.Core.csproj": {
+                "projectPath": "/Users/getlong/Code/KimiCodeBar/Windows/src/KimiCodeBar.Core/KimiCodeBar.Core.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "Microsoft.NET.Test.Sdk": {
+              "target": "Package",
+              "version": "[17.11.1, )"
+            },
+            "xunit": {
+              "target": "Package",
+              "version": "[2.9.2, )"
+            },
+            "xunit.runner.visualstudio": {
+              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[2.8.2, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/Users/getlong/.dotnet/sdk/8.0.423/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}

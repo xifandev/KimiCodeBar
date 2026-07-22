@@ -1,0 +1,50 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KimiCodeBar.Core", "src\KimiCodeBar.Core\KimiCodeBar.Core.csproj", "{A1B2C3D4-0001-0000-0000-000000000001}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KimiCodeBar", "src\KimiCodeBar\KimiCodeBar.csproj", "{A1B2C3D4-0002-0000-0000-000000000002}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KimiCodeBar.Core.Tests", "tests\KimiCodeBar.Core.Tests\KimiCodeBar.Core.Tests.csproj", "{A1B2C3D4-0003-0000-0000-000000000003}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A1B2C3D4-0001-0000-0000-000000000001}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A1B2C3D4-0001-0000-0000-000000000001}.Debug|x64.Build.0 = Debug|Any CPU
+		{A1B2C3D4-0001-0000-0000-000000000001}.Release|x64.ActiveCfg = Release|Any CPU
+		{A1B2C3D4-0001-0000-0000-000000000001}.Release|x64.Build.0 = Release|Any CPU
+		{A1B2C3D4-0001-0000-0000-000000000001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1B2C3D4-0001-0000-0000-000000000001}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1B2C3D4-0001-0000-0000-000000000001}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1B2C3D4-0001-0000-0000-000000000001}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1B2C3D4-0002-0000-0000-000000000002}.Debug|x64.ActiveCfg = Debug|x64
+		{A1B2C3D4-0002-0000-0000-000000000002}.Debug|x64.Build.0 = Debug|x64
+		{A1B2C3D4-0002-0000-0000-000000000002}.Debug|x64.Deploy.0 = Debug|x64
+		{A1B2C3D4-0002-0000-0000-000000000002}.Release|x64.ActiveCfg = Release|x64
+		{A1B2C3D4-0002-0000-0000-000000000002}.Release|x64.Build.0 = Release|x64
+		{A1B2C3D4-0002-0000-0000-000000000002}.Release|x64.Deploy.0 = Release|x64
+		{A1B2C3D4-0002-0000-0000-000000000002}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{A1B2C3D4-0002-0000-0000-000000000002}.Debug|Any CPU.Build.0 = Debug|x64
+		{A1B2C3D4-0002-0000-0000-000000000002}.Release|Any CPU.ActiveCfg = Release|x64
+		{A1B2C3D4-0002-0000-0000-000000000002}.Release|Any CPU.Build.0 = Release|x64
+		{A1B2C3D4-0003-0000-0000-000000000003}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A1B2C3D4-0003-0000-0000-000000000003}.Debug|x64.Build.0 = Debug|Any CPU
+		{A1B2C3D4-0003-0000-0000-000000000003}.Release|x64.ActiveCfg = Release|Any CPU
+		{A1B2C3D4-0003-0000-0000-000000000003}.Release|x64.Build.0 = Release|Any CPU
+		{A1B2C3D4-0003-0000-0000-000000000003}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1B2C3D4-0003-0000-0000-000000000003}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1B2C3D4-0003-0000-0000-000000000003}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1B2C3D4-0003-0000-0000-000000000003}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

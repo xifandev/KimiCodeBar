@@ -1,0 +1,214 @@
+classDiagram
+    %% ===== 纯逻辑模型（跨平台，Core） =====
+    class KimiQuota {
+        +QuotaDetail Weekly
+        +QuotaDetail FiveHour
+        +QuotaDetail TotalQuota
+        +string? MembershipLevel
+        +BoosterWallet? BoosterWallet
+    }
+    class QuotaDetail {
+        +int Used
+        +int Limit
+        +int Remaining
+        +DateTimeOffset? ResetTime
+        +int Percentage
+        +string TimeUntilReset()
+        +string ResetTimeText()
+    }
+    class BoosterWallet {
+        +string Status
+        +bool IsEnabled
+        +string Currency
+        +double BalanceYuan
+        +bool MonthlyChargeLimitEnabled
+        +int MonthlyChargeLimitCents
+        +int MonthlyUsedCents
+        +int TopupLimitCents
+        +double MonthlyChargeLimitYuan
+        +double MonthlyUsedYuan
+        +double TopupLimitYuan
+    }
+    class KimiServerState {
+        <<enum>> Status { Unknown, Running, Stopped, Error }
+        +ServerStatus Status
+        +string Version
+        +int? Port
+        +string? Url
+    }
+    class AppSettings {
+        +AppTheme Theme
+        +bool LaunchAtLogin
+        +string? KimiExecutablePath
+        +int KimiWebPort
+    }
+
+    %% ===== 纯逻辑解析器（可在 macOS 单测，Core） =====
+    class QuotaParser {
+        +KimiQuota Parse(ReadOnlySpan~byte~ json)
+        -QuotaDetail MakeDetail(string? limit, string? used, string? remaining, string? resetTime)
+        -DateTimeOffset? ParseDate(string? s)
+    }
+    class VersionComparer {
+        +int Compare(string a, string b)
+        +bool IsNewer(string latest, string current)
+        +string Normalize(string v)
+    }
+    class ChangelogParser {
+        +ChangelogEntry? Parse(string text)
+        +List~ChangelogEntry~ ParseEntries(string text, int max)
+        +string? FetchNotes(string text, string version)
+    }
+    class ChangelogEntry {
+        +string Version
+        +string Notes
+    }
+
+    %% ===== 服务接口（Core 定义，App 实现） =====
+    class IQuotaService {
+        <<interface>>
+        +Task~Result~KimiQuota,QuotaError~~ FetchQuotaAsync(string token)
+    }
+    class IKimiWebManager {
+        <<interface>>
+        +Task StartAsync()
+        +Task StopAsync()
+        +Task RestartAsync()
+        +Task~KimiServerState~ ProbeAsync()
+    }
+    class ICredentialStore {
+        <<interface>>
+        +void Save(string key, string secret)
+        +string? Load(string key)
+        +void Delete(string key)
+    }
+    class IUpdateService {
+        <<interface>>
+        +Task~(string?,string?)~ FetchLatestCliVersionAsync()
+        +Task~(string?,string?)~ FetchLatestAppReleaseAsync()
+        +Task~(string?,string?)~ FetchChangelogAsync()
+    }
+    class ILaunchAtLogin {
+        <<interface>>
+        +bool IsEnabled
+        +void SetEnabled(bool enabled)
+    }
+
+    %% ===== 应用层服务（Windows 专属，App） =====
+    class QuotaService {
+        -HttpClient _http
+        +Task~Result~...~ FetchQuotaAsync(token)
+        +static string? ExtractErrorMessage(ReadOnlySpan~byte~ data)
+    }
+    class KimiWebManager {
+        -ProcessRunner _runner
+        -PortProbeService _probe
+        -string _kimiPath
+        +Task StartAsync()
+        +Task StopAsync()
+        +Task RestartAsync()
+        +Task~KimiServerState~ ProbeAsync()
+    }
+    class PortProbeService {
+        +IReadOnlyList~int~ CandidatePorts
+        +Task~int?~ ProbeAsync()
+    }
+    class WindowsCredentialStore {
+        -PasswordVault _vault
+        +Save() / Load() / Delete()
+    }
+    class UpdateService {
+        -HttpClient _http
+        +FetchLatestCliVersionAsync()
+        +FetchLatestAppReleaseAsync()
+        +FetchChangelogAsync()
+    }
+    class RegistryLaunchAtLogin {
+        -string _runKeyPath
+        +IsEnabled / SetEnabled()
+    }
+    class ThemeManager {
+        +AppTheme Theme
+        +event ThemeChanged
+    }
+    class ProcessRunner {
+        +Task StartAsync(string file, string args)
+        +Task StopTreeAsync(int pid)
+    }
+
+    %% ===== 视图模型（编排） =====
+    class MainViewModel {
+        -IQuotaService _quota
+        -IKimiWebManager _web
+        -ICredentialStore _cred
+        -IUpdateService _update
+        +KimiQuota? Quota
+        +KimiServerState ServerState
+        +bool IsLoading
+        +bool HasCredential
+        +string KimiVersion
+        +string? PendingCliUpdate
+        +string? PendingAppUpdate
+        +Task RefreshAllAsync()
+        +Task RefreshQuotaAsync()
+        +Task OpenKimiWebAsync()
+        +Task StartKimiServerAsync()
+        +Task StopKimiServerAsync()
+        +Task RestartKimiServerAsync()
+        +Task LoadKimiVersionAsync()
+        +Task CheckForUpdatesAsync()
+    }
+    class SettingsViewModel {
+        +string ApiKey
+        +AppTheme Theme
+        +bool LaunchAtLogin
+        +Task SaveAsync()
+    }
+
+    %% ===== 托盘 / UI（App） =====
+    class TrayIconManager {
+        -NotifyIcon _notify
+        -TrayIconRenderer _renderer
+        +void SetQuota(KimiQuota?)
+        +void ShowPanel()
+        +event EventHandler PanelRequested
+    }
+    class TrayIconRenderer {
+        +Bitmap Draw(QuotaDetail weekly, QuotaDetail fiveHour)
+    }
+    class MainPanelWindow
+    class SettingsWindow
+    class UsageCard
+    class BoosterWalletCard
+    class KimiServerCard
+    class ActionButton
+    class LoginOverlay
+
+    %% ===== 关系 =====
+    KimiQuota *-- QuotaDetail : Weekly/FiveHour/Total
+    KimiQuota *-- BoosterWallet
+    QuotaService ..|> IQuotaService
+    QuotaService ..> QuotaParser : 调用
+    KimiWebManager ..|> IKimiWebManager
+    KimiWebManager ..> PortProbeService
+    KimiWebManager ..> ProcessRunner
+    WindowsCredentialStore ..|> ICredentialStore
+    UpdateService ..|> IUpdateService
+    UpdateService ..> VersionComparer
+    UpdateService ..> ChangelogParser
+    RegistryLaunchAtLogin ..|> ILaunchAtLogin
+    MainViewModel ..> IQuotaService
+    MainViewModel ..> IKimiWebManager
+    MainViewModel ..> ICredentialStore
+    MainViewModel ..> IUpdateService
+    MainViewModel ..> QuotaParser
+    SettingsViewModel ..> ICredentialStore
+    SettingsViewModel ..> ILaunchAtLogin
+    SettingsViewModel ..> ThemeManager
+    TrayIconManager ..> TrayIconRenderer
+    MainPanelWindow ..> MainViewModel
+    MainPanelWindow o-- UsageCard
+    MainPanelWindow o-- BoosterWalletCard
+    MainPanelWindow o-- KimiServerCard
+    MainPanelWindow o-- LoginOverlay
+    SettingsWindow ..> SettingsViewModel

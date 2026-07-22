@@ -1,0 +1,55 @@
+sequenceDiagram
+    actor User
+    participant App as App.xaml.cs
+    participant DI as ServiceRegistration
+    participant Tray as TrayIconManager
+    participant VM as MainViewModel
+    participant Cred as ICredentialStore
+    participant QS as QuotaService
+    participant QP as QuotaParser
+    participant Web as KimiWebManager
+    participant Probe as PortProbeService
+    participant Upd as UpdateService
+    participant Panel as MainPanelWindow
+
+    Note over App: 进程启动（无主窗口，仅托盘驻留）
+    App->>DI: 注册所有服务（Singleton）
+    App->>Tray: 初始化 NotifyIcon + Tooltip
+    Tray->>Tray: 绘制默认图标（无数据时显示 "Kimi"）
+    App->>VM: 构造 MainViewModel
+    VM->>Cred: Load("api_key")
+    alt 无凭据
+        VM-->>Tray: HasCredential=false（面板叠加登录遮罩）
+    else 有 API Key
+        VM->>QS: FetchQuotaAsync(token)
+        QS->>QS: POST api.kimi.com/coding/v1/usages (Bearer)
+        QS->>QP: Parse(json)
+        QP-->>QS: KimiQuota
+        QS-->>VM: Result<KimiQuota>
+        VM->>Tray: SetQuota(quota) → 重绘图标 7D/5H
+    end
+    VM->>Web: ProbeAsync()
+    Web->>Probe: 探测候选端口
+    Probe-->>Web: 端口状态
+    Web-->>VM: KimiServerState
+    VM->>Upd: FetchLatestCliVersion + FetchLatestAppRelease
+    Upd-->>VM: 版本 / 更新信息
+
+    User->>Tray: 点击托盘图标
+    Tray->>Tray: 计算托盘锚点坐标
+    Tray->>Panel: ShowNearTray()
+    Panel->>VM: OnVisible → RefreshQuotaAsync + ProbeAsync
+    User->>Panel: 点击「刷新」
+    Panel->>VM: RefreshAllAsync()
+    VM->>QS: FetchQuotaAsync(token)
+    QS-->>VM: KimiQuota（更新图标 + 卡片）
+    User->>Panel: 点击 Kimi Web「启动/停止/重启」
+    Panel->>VM: Start/Stop/RestartKimiServerAsync()
+    VM->>Web: Start/Stop/Restart
+    Web->>Web: 启动/停止 kimi web 进程
+    Web->>Probe: 刷新端口状态
+    Web-->>VM: KimiServerState（更新卡片）
+    User->>Panel: 点击「设置」
+    Panel->>Panel: 打开 SettingsWindow（绑定 SettingsViewModel）
+    User->>Panel: 点击「退出」
+    Panel->>App: 释放托盘并退出进程

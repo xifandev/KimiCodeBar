@@ -1,0 +1,70 @@
+<UserControl
+    x:Class="KimiCodeBar.Views.Controls.BoosterWalletCard"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:KimiCodeBar">
+
+    <Border
+        Background="{ThemeResource CardBackgroundBrush}"
+        CornerRadius="12">
+        <StackPanel Padding="12" Spacing="8">
+            <!-- 标题 + 状态徽标 -->
+            <Grid>
+                <TextBlock
+                    Text="加油包余额"
+                    FontSize="12"
+                    FontWeight="Medium"
+                    Foreground="{ThemeResource TextPrimaryBrush}"
+                    HorizontalAlignment="Left" />
+                <Border
+                    x:Name="Badge"
+                    Padding="6,2"
+                    CornerRadius="4"
+                    HorizontalAlignment="Right"
+                    Visibility="Collapsed">
+                    <TextBlock
+                        x:Name="BadgeText"
+                        FontSize="10"
+                        FontWeight="Medium" />
+                </Border>
+            </Grid>
+
+            <!-- 余额 + 本月消费 -->
+            <Grid Height="28">
+                <TextBlock
+                    x:Name="BalanceText"
+                    Text="--"
+                    FontSize="22"
+                    FontWeight="Bold"
+                    Foreground="{ThemeResource TextPrimaryBrush}"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Left" />
+                <StackPanel
+                    x:Name="MonthlyRow"
+                    Orientation="Horizontal"
+                    Spacing="4"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Right"
+                    Visibility="Collapsed">
+                    <TextBlock Text="本月消费" FontSize="11" Foreground="{ThemeResource TextSecondaryBrush}" />
+                    <TextBlock x:Name="MonthlyUsedText" FontSize="11" FontWeight="Medium" Foreground="{ThemeResource TextPrimaryBrush}" />
+                    <TextBlock Text="/" FontSize="11" Foreground="{ThemeResource TextSecondaryBrush}" />
+                    <TextBlock x:Name="MonthlyLimitText" FontSize="11" Foreground="{ThemeResource TextSecondaryBrush}" />
+                </StackPanel>
+            </Grid>
+
+            <!-- 月度消费进度条 -->
+            <Grid Height="3">
+                <Rectangle Fill="{ThemeResource TrackBrush}" RadiusX="1.5" RadiusY="1.5" />
+                <Rectangle
+                    x:Name="MonthlyFill"
+                    Width="0"
+                    Fill="{ThemeResource TextTertiaryBrush}"
+                    RadiusX="1.5"
+                    RadiusY="1.5"
+                    HorizontalAlignment="Left" />
+            </Grid>
+        </StackPanel>
+    </Border>
+
+</UserControl>

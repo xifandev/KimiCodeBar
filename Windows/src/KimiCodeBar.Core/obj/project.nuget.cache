@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "YW32PFBS6qU=",
+  "success": true,
+  "projectFilePath": "/Users/getlong/Code/KimiCodeBar/Windows/src/KimiCodeBar.Core/KimiCodeBar.Core.csproj",
+  "expectedPackageFiles": [
+    "/Users/getlong/.nuget/packages/communitytoolkit.mvvm/8.2.2/communitytoolkit.mvvm.8.2.2.nupkg.sha512"
+  ],
+  "logs": []
+}
