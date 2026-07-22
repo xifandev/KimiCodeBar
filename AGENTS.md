@@ -59,9 +59,7 @@ App 支持应用内语言切换（跟随系统 / 中文 / English），机制见
 ## 版本号管理
 
 - App 版本读取 `macOS/KimiCodeBar/Info.plist` 的 `CFBundleShortVersionString`，代码中通过 `Bundle.main.infoDictionary?["CFBundleShortVersionString"]` 读取。
-- 发版前需同时修改两处，保持一致：
-  1. `macOS/KimiCodeBar/Info.plist` 的 `CFBundleShortVersionString`
-  2. `macOS/KimiCodeBar.xcodeproj/project.pbxproj` 的 `MARKETING_VERSION`
+- `Info.plist` 中的 `CFBundleShortVersionString` 已改为引用 `$(MARKETING_VERSION)`，发版前只需修改 `macOS/KimiCodeBar.xcodeproj/project.pbxproj` 的 `MARKETING_VERSION`。
 - GitHub Release tag 使用 `v{VERSION}` 格式，例如 `v1.0.0`。
 - App 内「查看更新」跳转到 `https://github.com/xifandev/KimiCodeBar/releases/`。
 
@@ -70,6 +68,7 @@ App 支持应用内语言切换（跟随系统 / 中文 / English），机制见
 - 不依赖 GitHub 自动生成的 Release Notes。
 - 每个版本整理 3~5 条核心更新点，由维护者复制到 GitHub Release body。
 - 一句话一条，不写细节堆砌，不写「修复了若干 bug」这类空话。
+- **只写用户可见、可感知的更新点**：如功能新增、UI 交互优化、bug 修复。不写仓库内部维护项，如 CI 流程调整、文件命名规范、版本号管理方式等。
 
 ### 示例（v1.1.1）
 
