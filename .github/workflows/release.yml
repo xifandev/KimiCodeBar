@@ -51,6 +51,7 @@ jobs:
             -project macOS/KimiCodeBar.xcodeproj \
             -target KimiCodeBar \
             -configuration Release \
+            CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="Developer ID Application" \
             DEVELOPMENT_TEAM="Z2L7QJW4R7" \
             CODE_SIGNING_REQUIRED=YES \
