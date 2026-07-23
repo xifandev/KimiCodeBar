@@ -81,9 +81,26 @@ jobs:
             "KimiCodeBar.app"
 
       - name: Sign app and disk image
+        env:
+          SIGN_ID: "Developer ID Application: Shandong Gaite Network Co., Ltd. (Z2L7QJW4R7)"
         run: |
-          codesign --force --deep --sign "Developer ID Application: Shandong Gaite Network Co., Ltd. (Z2L7QJW4R7)" --options runtime dist/KimiCodeBar.app
-          codesign --sign "Developer ID Application: Shandong Gaite Network Co., Ltd. (Z2L7QJW4R7)" --options runtime dist/KimiCodeBar-*-macOS.dmg
+          APP="dist/KimiCodeBar.app"
+
+          # 1. 重新签名 Sparkle 框架内部所有辅助二进制（从里到外）
+          codesign --force --timestamp --options runtime --sign "$SIGN_ID" "$APP/Contents/Frameworks/Sparkle.framework/Versions/B/XPCServices/Downloader.xpc"
+          codesign --force --timestamp --options runtime --sign "$SIGN_ID" "$APP/Contents/Frameworks/Sparkle.framework/Versions/B/XPCServices/Installer.xpc"
+          codesign --force --timestamp --options runtime --sign "$SIGN_ID" "$APP/Contents/Frameworks/Sparkle.framework/Versions/B/Autoupdate"
+          codesign --force --timestamp --options runtime --sign "$SIGN_ID" "$APP/Contents/Frameworks/Sparkle.framework/Versions/B/Updater.app"
+          codesign --force --timestamp --options runtime --sign "$SIGN_ID" "$APP/Contents/Frameworks/Sparkle.framework/Versions/B/Sparkle"
+
+          # 2. 重新签名主程序，显式指定发布版 entitlements（去除调试用的 get-task-allow）
+          codesign --force --timestamp --options runtime --entitlements macOS/KimiCodeBar/KimiCodeBar.entitlements --sign "$SIGN_ID" "$APP/Contents/MacOS/KimiCodeBar"
+
+          # 3. 最终 deep 签名整个 app bundle
+          codesign --force --deep --timestamp --options runtime --sign "$SIGN_ID" "$APP"
+
+          # 4. 签名 dmg
+          codesign --force --timestamp --options runtime --sign "$SIGN_ID" dist/KimiCodeBar-*-macOS.dmg
 
       - name: Notarize
         env:
