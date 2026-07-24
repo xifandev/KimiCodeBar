@@ -770,29 +770,10 @@ struct KimiMenu: View {
                     )
                 }
 
-                // CLI 升级后提醒重启 Kimi Web 服务（保留：与 CLI 更新检查配套）
-                if model.kimiServerNeedsRestart && !isKimiServerRestartHintDismissed && kimiServerOperation == .none {
-                    KimiServerRestartHint(
-                        runningVersion: model.kimiServerState.version,
-                        installedVersion: model.kimiVersion,
-                        onRestart: {
-                            isKimiServerRestartHintDismissed = true
-                            kimiServerOperation = .restarting
-                            Task {
-                                await model.restartKimiServer()
-                                await MainActor.run { kimiServerOperation = .none }
-                            }
-                        },
-                        onDismiss: {
-                            isKimiServerRestartHintDismissed = true
-                        }
-                    )
-                }
-
-                // Kimi Web 卡片临时屏蔽（2026-07）：Kimi 官方将 Kimi Web 改为纯前端展示，
-                // 且移除了 web kill 等管理命令，启停管理失去意义。
-                // KimiServerCard / startKimiServer / stopKimiServer 等实现全部保留，
-                // 恢复时把 KimiServerCard 的调用加回此处即可。
+                // Kimi Web 卡片及重启提示条临时屏蔽（2026-07）：Kimi 官方将 Kimi Web 改为
+                // 纯前端展示，且移除了 web kill 等管理命令，启停管理失去意义。
+                // KimiServerCard / KimiServerRestartHint / startKimiServer / stopKimiServer
+                // 等实现全部保留，恢复时把对应调用加回此处即可。
             }
 
             // 操作按钮卡片
