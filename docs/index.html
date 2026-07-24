@@ -939,28 +939,7 @@
         font-size: 8px;
       }
 
-      .duo .kp-server {
-        gap: 6px;
-        padding: 8px;
-      }
 
-      .duo .kp-server-title {
-        font-size: 9px;
-      }
-
-      .duo .kp-version {
-        font-size: 8px;
-      }
-
-      .duo .kp-server-btns {
-        gap: 5px;
-      }
-
-      .duo .kp-btn {
-        padding: 5px 0;
-        border-radius: 6px;
-        font-size: 8px;
-      }
 
       .duo .kp-actions {
         gap: 5px;
@@ -982,17 +961,35 @@
         height: 11px;
       }
 
-      .duo .kp-cli {
-        padding: 7px 8px;
+      .duo .kp-local-usage {
+        gap: 6px;
+        padding: 8px;
+      }
+
+      .duo .kp-lu-title {
+        font-size: 9px;
+      }
+
+      .duo .kp-lu-range span {
+        font-size: 7px;
+        padding: 2px 5px;
+      }
+
+      .duo .kp-lu-metric-value {
+        font-size: 13px;
+      }
+
+      .duo .kp-lu-metric-value .unit {
+        font-size: 9px;
+      }
+
+      .duo .kp-lu-metric-label {
         font-size: 8px;
       }
 
-      .duo .kp-badge {
-        font-size: 7px;
-      }
-
-      .duo .kp-badge-new {
-        font-size: 6px;
+      .duo .kp-lu-chart {
+        height: 30px;
+        gap: 2px;
       }
 
       @media (max-width: 640px) {
@@ -1706,80 +1703,117 @@
         animation: none;
       }
 
-      /* --- Kimi Web 卡片 --- */
-      .kp-server {
+      /* --- 本机消耗量卡片 --- */
+      .kp-local-usage {
         border-radius: 12px;
         padding: 12px;
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: 10px;
       }
 
-      .kp-server-title {
+      .kp-lu-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .kp-lu-title {
         font-size: 13px;
         font-weight: 600;
         color: var(--p1);
       }
 
-      .kp-version {
-        font-size: 12px;
-        font-weight: 500;
-        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
-        color: var(--p2);
-      }
-
-      .kp-server-btns {
+      .kp-lu-range {
+        margin-left: auto;
         display: flex;
-        gap: 8px;
+        gap: 2px;
+        padding: 2px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.06);
       }
 
-      .kp-btn {
-        flex: 1;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 4px;
-        padding: 10px 0;
-        border-radius: 10px;
-        background: var(--act-bg);
-        border: 1px solid var(--act-border);
+      .kp-light .kp-lu-range {
+        background: rgba(0, 0, 0, 0.06);
+      }
+
+      .kp-lu-range span {
+        font-size: 11px;
+        font-weight: 500;
+        padding: 3px 8px;
+        border-radius: 999px;
         color: var(--p2);
+        cursor: default;
+        transition: background 0.15s, color 0.15s;
+      }
+
+      .kp-lu-range span.active {
+        background: var(--blue);
+        color: #fff;
+      }
+
+      .kp-lu-metrics {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+      }
+
+      .kp-lu-metric {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .kp-lu-metric.right {
+        margin-left: auto;
+        align-items: flex-end;
+      }
+
+      .kp-lu-metric-value {
+        font-family: ui-rounded, 'SF Pro Rounded', -apple-system, 'PingFang SC', sans-serif;
+        font-size: 18px;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        color: var(--p1);
+        line-height: 1.2;
+      }
+
+      .kp-lu-metric-value .unit {
         font-size: 13px;
         font-weight: 500;
-        transition:
-          color 0.15s,
-          background 0.15s;
       }
 
-      .kp-btn:hover {
-        background: var(--btn-h);
-        color: var(--p2);
+      .kp-lu-metric-value.green {
+        color: #4ade80;
       }
 
-      .kp-btn.wide {
-        flex: none;
-        width: 42%;
-      }
-
-      .kp-btn.disabled,
-      .kp-btn.disabled:hover {
+      .kp-lu-metric-label {
+        font-size: 11px;
         color: var(--p3);
-        background: var(--btn);
-        cursor: default;
-        pointer-events: none;
       }
 
-      .kp-btn .kp-ring {
-        width: 14px;
-        height: 14px;
-        border-width: 2px;
+      .kp-lu-chart {
+        display: flex;
+        align-items: flex-end;
+        gap: 3px;
+        height: 44px;
       }
-      .kp-btn.loading .kp-ring {
-        display: block;
+
+      .kp-lu-bar {
+        flex: 1;
+        min-width: 0;
+        border-radius: 2px;
+        background: var(--blue);
+        opacity: 0.35;
+        transition: opacity 0.15s;
       }
-      .kp-btn.loading .kp-btn-label,
-      .kp-btn.loading svg {
-        display: none;
+
+      .kp-lu-bar:hover {
+        opacity: 1;
+      }
+
+      .kp-lu-bar.accent {
+        opacity: 1;
       }
 
       /* --- 操作按钮 --- */
@@ -1834,51 +1868,7 @@
         animation: kp-spin 1s linear infinite;
       }
 
-      /* --- CLI 版本条 --- */
-      .kp-cli {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 12px 14px;
-        border-radius: 12px;
-        background: var(--card);
-        color: var(--p3);
-        font-size: 13px;
-        font-weight: 500;
-        cursor: pointer;
-        text-decoration: none;
-        transition: background 0.15s;
-        position: relative;
-      }
 
-      .kp-cli:hover::after {
-        content: '';
-        position: absolute;
-        inset: 0;
-        border-radius: 12px;
-        background: var(--overlay);
-      }
-
-      .kp-cli .kp-version {
-        font-size: 12px;
-      }
-
-      .kp-badge-new {
-        font-size: 9px;
-        font-weight: 500;
-        padding: 1px 5px;
-        border-radius: 4px;
-        color: var(--orange);
-        background: color-mix(in srgb, var(--orange) 12%, transparent);
-      }
-
-      .kp-chevron {
-        color: var(--p3);
-        display: flex;
-      }
-      .kp-cli:hover .kp-chevron {
-        color: var(--p2);
-      }
 
       /* --- 复刻标识 pill --- */
       .live-pill {
@@ -3186,14 +3176,17 @@
             kpDisabled: '未启用',
             kpSpent: '本月消费',
             kpRunning: '运行中',
-            kpOpen: '打开',
-            kpStop: '停止',
-            kpRestart: '重启',
             kpConsole: '控制台',
             kpRefresh: '刷新',
             kpSettings: '设置',
             kpQuit: '退出',
             kpUpdateAvailable: '发现新版本',
+            kpLocalUsage: '本机消耗量',
+            kpRangeAll: '累计',
+            kpRangeToday: '今日',
+            kpRangeWeek: '7天',
+            kpTotalTokens: '累计使用 Token',
+            kpCacheHitRate: '缓存命中率',
           },
           en: {
             pageTitle: 'KimiCodeBar — Kimi Code usage at a glance in your menu bar',
@@ -3283,14 +3276,17 @@
             kpDisabled: 'Disabled',
             kpSpent: 'Spent this month',
             kpRunning: 'Running',
-            kpOpen: 'Open',
-            kpStop: 'Stop',
-            kpRestart: 'Restart',
             kpConsole: 'Console',
             kpRefresh: 'Refresh',
             kpSettings: 'Settings',
             kpQuit: 'Quit',
             kpUpdateAvailable: 'Update available',
+            kpLocalUsage: 'Local Consumption',
+            kpRangeAll: 'All',
+            kpRangeToday: 'Today',
+            kpRangeWeek: '7 Days',
+            kpTotalTokens: 'Total Tokens Used',
+            kpCacheHitRate: 'Cache Hit Rate',
           },
         };
 
@@ -3474,20 +3470,40 @@
         </div>
         <div class="kp-bar thin"><i style="--p:0%"></i></div>
       </div>
-      <div class="kp-card kp-server">
-        <div class="kp-row">
-          <span class="kp-server-title">Kimi Web</span>
-          <span class="kp-badge green">` + t('kpRunning') + `</span>
-          <span class="kp-spacer"></span>
-          <span class="kp-version">0.23.5</span>
+      <div class="kp-card kp-local-usage">
+        <div class="kp-lu-header">
+          <span class="kp-lu-title">` + t('kpLocalUsage') + `</span>
+          <div class="kp-lu-range">
+            <span class="active">` + t('kpRangeAll') + `</span>
+            <span>` + t('kpRangeToday') + `</span>
+            <span>` + t('kpRangeWeek') + `</span>
+          </div>
         </div>
-        <div class="kp-server-btns">
-          <button type="button" class="kp-btn wide">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-            <span class="kp-btn-label">` + t('kpOpen') + `</span><span class="kp-ring"></span>
-          </button>
-          <button type="button" class="kp-btn"><span class="kp-btn-label">` + t('kpStop') + `</span><span class="kp-ring"></span></button>
-          <button type="button" class="kp-btn"><span class="kp-btn-label">` + t('kpRestart') + `</span><span class="kp-ring"></span></button>
+        <div class="kp-lu-metrics">
+          <div class="kp-lu-metric">
+            <span class="kp-lu-metric-value">2.4<span class="unit">M</span></span>
+            <span class="kp-lu-metric-label">` + t('kpTotalTokens') + `</span>
+          </div>
+          <div class="kp-lu-metric right">
+            <span class="kp-lu-metric-value green">63.2%</span>
+            <span class="kp-lu-metric-label">` + t('kpCacheHitRate') + `</span>
+          </div>
+        </div>
+        <div class="kp-lu-chart">
+          <div class="kp-lu-bar" style="height:20%"></div>
+          <div class="kp-lu-bar" style="height:45%"></div>
+          <div class="kp-lu-bar" style="height:30%"></div>
+          <div class="kp-lu-bar" style="height:75%"></div>
+          <div class="kp-lu-bar accent" style="height:100%"></div>
+          <div class="kp-lu-bar" style="height:55%"></div>
+          <div class="kp-lu-bar" style="height:40%"></div>
+          <div class="kp-lu-bar" style="height:65%"></div>
+          <div class="kp-lu-bar" style="height:85%"></div>
+          <div class="kp-lu-bar" style="height:50%"></div>
+          <div class="kp-lu-bar" style="height:35%"></div>
+          <div class="kp-lu-bar" style="height:70%"></div>
+          <div class="kp-lu-bar" style="height:90%"></div>
+          <div class="kp-lu-bar" style="height:60%"></div>
         </div>
       </div>
     </div>
@@ -3508,13 +3524,7 @@
         <span>` + t('kpQuit') + `</span>
       </button>
     </div>
-    <button type="button" class="kp-cli">
-      <span>KimiCode CLI</span>
-      <span class="kp-version">0.23.5</span>
-      <span class="kp-badge-new">` + t('kpUpdateAvailable') + `</span>
-      <span class="kp-spacer"></span>
-      <span class="kp-chevron"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>
-    </button>`;
+`;
       }
 
       function initKPEyes() {
