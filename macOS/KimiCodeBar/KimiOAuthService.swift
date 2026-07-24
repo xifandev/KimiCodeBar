@@ -165,7 +165,7 @@ final class KimiOAuthService {
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.timeoutInterval = 30
 
-        for (key, value) in identityHeaders().merging(extraHeaders) { $1 } {
+        for (key, value) in identityHeaders().merging(extraHeaders, uniquingKeysWith: { $1 }) {
             request.setValue(value, forHTTPHeaderField: key)
         }
 

@@ -90,6 +90,17 @@
         }
       }
     },
+    "7 天使用 Token" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7-Day Token Used"
+          }
+        }
+      }
+    },
     "7D" : {
 
     },
@@ -416,6 +427,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Today"
+          }
+        }
+      }
+    },
+    "今日使用 Token" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Token Used Today"
           }
         }
       }
@@ -1520,28 +1542,6 @@
         }
       }
     },
-    "本地用量" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Local Usage"
-          }
-        }
-      }
-    },
-    "本地用量卡片" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Local Usage Card"
-          }
-        }
-      }
-    },
     "本月消费" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1549,6 +1549,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Spent This Month"
+          }
+        }
+      }
+    },
+    "本机消耗量" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Local Consumption"
+          }
+        }
+      }
+    },
+    "本机消耗量卡片" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Local Consumption Card"
           }
         }
       }
@@ -1883,6 +1905,17 @@
         }
       }
     },
+    "累计使用 Token" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total Token Used"
+          }
+        }
+      }
+    },
     "缓存命中率" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2011,6 +2044,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Running"
+          }
+        }
+      }
+    },
+    "近 30 天暂无记录" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No Records in Last 30 Days"
           }
         }
       }
@@ -2154,50 +2198,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Default"
-          }
-        }
-      }
-    },
-    "累计使用 Token" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Total Token Used"
-          }
-        }
-      }
-    },
-    "今日使用 Token" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Token Used Today"
-          }
-        }
-      }
-    },
-    "7 天使用 Token" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "7-Day Token Used"
-          }
-        }
-      }
-    },
-    "近 30 天暂无记录" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No Records in Last 30 Days"
           }
         }
       }

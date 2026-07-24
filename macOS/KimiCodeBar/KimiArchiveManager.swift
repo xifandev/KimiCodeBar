@@ -152,7 +152,7 @@ final class KimiArchiveManager: ObservableObject {
             lastError = nil
         }
 
-        Self.unarchiveSession(at: session.path)
+        _ = Self.unarchiveSession(at: session.path)
         await scanSessions()
 
         await MainActor.run {

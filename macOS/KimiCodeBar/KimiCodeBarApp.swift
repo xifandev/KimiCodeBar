@@ -778,7 +778,7 @@ struct KimiMenu: View {
                     )
                 }
 
-                // 本地用量卡片：扫描本地会话记录（wire.jsonl usage.record）得出 Token 消耗
+                // 本机消耗量卡片：扫描本地会话记录（wire.jsonl usage.record）得出 Token 消耗
                 if model.showLocalUsageCard {
                     LocalUsageCard()
                 }
@@ -923,7 +923,7 @@ struct KimiMenu: View {
                 }
                 // 面板打开时探测 App 新版本，只更新状态、不弹窗
                 SparkleUpdater.shared.checkForUpdateInformation()
-                // 面板打开时扫描一次本地会话用量（后台线程，3 分钟节流）
+                // 面板打开时扫描一次本机消耗量（后台线程，3 分钟节流）
                 KimiLocalUsageService.shared.refreshIfNeeded()
                 // 基于缓存快速判断是否需要弹窗
                 model.checkCachedKimiUpdate()
@@ -2672,7 +2672,7 @@ struct SettingsRootView: View {
                 AboutSettingsView()
             }
         }
-        .onChange(of: languageManager.language) { _ in
+        .onChange(of: languageManager.language) { _, _ in
             SettingsWindowManager.shared.refreshTitle()
         }
     }
@@ -3430,7 +3430,7 @@ struct PanelCustomSettingsView: View {
                         SettingsCardDivider()
 
                         SettingsCardRow(
-                            title: languageManager.tr("本地用量卡片")
+                            title: languageManager.tr("本机消耗量卡片")
                         ) {
                             Toggle("", isOn: $model.showLocalUsageCard)
                                 .labelsHidden()
@@ -3774,17 +3774,16 @@ struct SkillsSettingsView: View {
             .background(Color.kimiCardBackground)
             .clipShape(RoundedRectangle(cornerRadius: 12))
 
-            // 正文卡片
+            // 正文卡片（使用 TextEditor 按需渲染，避免 Text + textSelection 布局全文卡死主线程）
             VStack(alignment: .leading, spacing: 0) {
-                Text(skill.content)
+                TextEditor(text: .constant(skill.content))
                     .font(.system(size: 12, design: .monospaced))
                     .foregroundStyle(.kimiTextSecondary)
-                    .lineSpacing(3)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(16)
-                    .textSelection(.enabled)
+                    .scrollContentBackground(.hidden)
+                    .background(Color.kimiCardBackground)
+                    .frame(maxWidth: .infinity, minHeight: 200, maxHeight: 500)
+                    .padding(12)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color.kimiCardBackground)
             .clipShape(RoundedRectangle(cornerRadius: 12))
         }
@@ -3815,7 +3814,7 @@ struct SkillsSettingsView: View {
         selectedSkill = skill
         isLoadingPreview = true
         Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 50_000_000)
+            try? await Task.sleep(nanoseconds: 100_000_000)
             // 快速连点时只有最后一次选择生效
             guard selectedSkill?.id == skill.id else { return }
             displayedSkill = skill

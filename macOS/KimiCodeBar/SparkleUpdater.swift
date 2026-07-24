@@ -85,11 +85,12 @@ final class SparkleUpdater: ObservableObject {
             }
         }
 
-        func updater(_ updater: SPUUpdater, willInstallUpdateOnQuit item: SUAppcastItem, immediateInstallationBlock: @escaping () -> Void) {
+        func updater(_ updater: SPUUpdater, willInstallUpdateOnQuit item: SUAppcastItem, immediateInstallationBlock: @escaping () -> Void) -> Bool {
             DispatchQueue.main.async {
                 self.installUpdateBlock = immediateInstallationBlock
                 self.owner?.isUpdateReadyToRestart = true
             }
+            return true
         }
     }
 }
