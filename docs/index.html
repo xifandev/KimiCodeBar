@@ -1205,6 +1205,149 @@
         width: 100%;
       }
 
+      /* ============ 用量一目了然 ============ */
+      .usage-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      .usage-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        transition: border-color 0.2s, background 0.2s;
+      }
+
+      .usage-card:hover {
+        border-color: var(--border-strong);
+        background: var(--card-hover);
+      }
+
+      .usage-card-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .usage-card-icon {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: none;
+      }
+
+      .usage-card-icon svg {
+        width: 15px;
+        height: 15px;
+      }
+
+      .usage-card-icon.blue {
+        background: rgba(45, 117, 246, 0.15);
+        color: var(--blue-2);
+      }
+
+      .usage-card-icon.orange {
+        background: rgba(245, 166, 35, 0.15);
+        color: var(--orange);
+      }
+
+      .usage-card-icon.green {
+        background: rgba(74, 222, 128, 0.15);
+        color: #4ade80;
+      }
+
+      .usage-card-icon.purple {
+        background: rgba(168, 85, 247, 0.15);
+        color: #a855f7;
+      }
+
+      .usage-card-title {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text-2);
+      }
+
+      .usage-card-value {
+        font-family: ui-rounded, 'SF Pro Rounded', -apple-system, 'PingFang SC', sans-serif;
+        font-size: 28px;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        color: var(--text);
+        line-height: 1;
+      }
+
+      .usage-card-value .unit {
+        font-size: 16px;
+        font-weight: 500;
+        margin-left: 2px;
+      }
+
+      .usage-card-value.green {
+        color: #4ade80;
+      }
+
+      .usage-card-bar {
+        width: 100%;
+        height: 4px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        overflow: hidden;
+      }
+
+      .usage-card-bar i {
+        display: block;
+        height: 100%;
+        width: 0;
+        border-radius: 999px;
+        animation: usage-grow 1.4s cubic-bezier(0.22, 1, 0.36, 1) 0.5s forwards;
+      }
+
+      @keyframes usage-grow {
+        to { width: var(--p); }
+      }
+
+      .usage-card-sub {
+        font-size: 12px;
+        color: var(--text-3);
+      }
+
+      .usage-card-metrics {
+        display: flex;
+        gap: 16px;
+      }
+
+      .usage-card-metric {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .usage-card-metric-val {
+        font-family: ui-rounded, 'SF Pro Rounded', -apple-system, 'PingFang SC', sans-serif;
+        font-size: 20px;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        color: var(--text);
+        line-height: 1.2;
+      }
+
+      .usage-card-metric-val.green {
+        color: #4ade80;
+      }
+
+      .usage-card-metric-lbl {
+        font-size: 11px;
+        color: var(--text-3);
+      }
+
       /* ============ 隐私安全 ============ */
       .privacy {
         display: grid;
@@ -2131,6 +2274,9 @@
         .features {
           grid-template-columns: 1fr;
         }
+        .usage-grid {
+          grid-template-columns: 1fr;
+        }
         .duo {
           grid-template-columns: 1fr 1fr;
         }
@@ -2929,6 +3075,87 @@
       </div>
     </section>
 
+    <!-- 用量一目了然 -->
+    <section id="usage">
+      <div class="container">
+        <div class="split">
+          <div class="reveal">
+            <span class="sec-tag" data-i18n="usageTag">Usage</span>
+            <h2 data-i18n="usageTitle">用量一目了然</h2>
+            <p class="desc" data-i18n="usageDesc">从本周限额到本机 Token 消耗，多维度的用量追踪就在菜单栏上，抬眼可见，心中有数。</p>
+            <ul class="check-list">
+              <li>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                <span data-i18n-html="usageCheck1"><b>7 天 / 5 小时双维度</b>，精准追踪限额使用进度，重置倒计时实时显示</span>
+              </li>
+              <li>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                <span data-i18n-html="usageCheck2"><b>加油包余额与消费</b>，实时同步，金额花到哪里清清楚楚</span>
+              </li>
+              <li>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                <span data-i18n-html="usageCheck3"><b>本机 Token 消耗</b>，扫描本地会话记录，按天展示用量趋势与缓存命中率</span>
+              </li>
+            </ul>
+          </div>
+          <div class="usage-visual reveal">
+            <div class="usage-grid">
+              <div class="usage-card">
+                <div class="usage-card-head">
+                  <div class="usage-card-icon blue">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  </div>
+                  <span class="usage-card-title" data-i18n="usageCardWeekly">本周用量</span>
+                </div>
+                <span class="usage-card-value">84<span class="unit">%</span></span>
+                <div class="usage-card-bar"><i style="--p:84%;background:#3B82F5"></i></div>
+                <span class="usage-card-sub" data-i18n="usageCardWeeklySub">13小时3分钟后重置</span>
+              </div>
+              <div class="usage-card">
+                <div class="usage-card-head">
+                  <div class="usage-card-icon orange">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                  </div>
+                  <span class="usage-card-title" data-i18n="usageCard5H">5小时用量</span>
+                </div>
+                <span class="usage-card-value">6<span class="unit">%</span></span>
+                <div class="usage-card-bar"><i style="--p:6%;background:var(--orange)"></i></div>
+                <span class="usage-card-sub" data-i18n="usageCard5HSub">3小时3分钟后重置</span>
+              </div>
+              <div class="usage-card">
+                <div class="usage-card-head">
+                  <div class="usage-card-icon green">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                  </div>
+                  <span class="usage-card-title" data-i18n="usageCardBooster">加油包余额</span>
+                </div>
+                <span class="usage-card-value">¥100</span>
+                <span class="usage-card-sub" data-i18n="usageCardBoosterSub">本月消费 ¥0 / ¥100</span>
+              </div>
+              <div class="usage-card">
+                <div class="usage-card-head">
+                  <div class="usage-card-icon purple">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                  </div>
+                  <span class="usage-card-title" data-i18n="usageCardLocal">本机消耗量</span>
+                </div>
+                <div class="usage-card-metrics">
+                  <div class="usage-card-metric">
+                    <span class="usage-card-metric-val">2.4<span class="unit" style="font-size:14px;font-weight:500">M</span></span>
+                    <span class="usage-card-metric-lbl" data-i18n="usageCardLocalTokens">累计使用 Token</span>
+                  </div>
+                  <div class="usage-card-metric">
+                    <span class="usage-card-metric-val green">63.2%</span>
+                    <span class="usage-card-metric-lbl" data-i18n="usageCardLocalCache">缓存命中率</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- 双主题预览 -->
     <section id="showcase">
       <div class="container">
@@ -3141,6 +3368,21 @@
             updateCheck3: '<b>一键安装更新</b>，也可以「稍后再说」',
             updateNotifyAlt: 'KimiCode 新版本系统通知',
             updateDialogAlt: 'KimiCode 新版本更新对话框',
+            usageTag: 'Usage',
+            usageTitle: '用量一目了然',
+            usageDesc: '从本周限额到本机 Token 消耗，多维度的用量追踪就在菜单栏上，抬眼可见，心中有数。',
+            usageCheck1: '<b>7 天 / 5 小时双维度</b>，精准追踪限额使用进度，重置倒计时实时显示',
+            usageCheck2: '<b>加油包余额与消费</b>，实时同步，金额花到哪里清清楚楚',
+            usageCheck3: '<b>本机 Token 消耗</b>，扫描本地会话记录，按天展示用量趋势与缓存命中率',
+            usageCardWeekly: '本周用量',
+            usageCardWeeklySub: '13小时3分钟后重置',
+            usageCard5H: '5小时用量',
+            usageCard5HSub: '3小时3分钟后重置',
+            usageCardBooster: '加油包余额',
+            usageCardBoosterSub: '本月消费 ¥0 / ¥100',
+            usageCardLocal: '本机消耗量',
+            usageCardLocalTokens: '累计使用 Token',
+            usageCardLocalCache: '缓存命中率',
             showcaseTag: 'Showcase',
             showcaseTitle: '明暗双主题，<br>跟随系统',
             showcaseDesc: '面板外观自动适配 macOS 深浅色模式，融入桌面，毫不突兀。',
@@ -3241,6 +3483,21 @@
             updateCheck3: '<b>One-click install</b>, or remind me later',
             updateNotifyAlt: 'New version system notification',
             updateDialogAlt: 'New version update dialog',
+            usageTag: 'Usage',
+            usageTitle: 'Usage at a Glance',
+            usageDesc: 'From weekly quota to local token consumption, multi-dimensional usage tracking lives in your menu bar — just look up.',
+            usageCheck1: '<b>7-day / 5-hour dual tracking</b>, precise quota progress with live reset countdown',
+            usageCheck2: '<b>Booster balance & spending</b>, synced in real time, know exactly where your credits go',
+            usageCheck3: '<b>Local token consumption</b>, scans local session logs, daily trends and cache hit rate',
+            usageCardWeekly: 'Weekly',
+            usageCardWeeklySub: 'Resets in 13h 3m',
+            usageCard5H: '5-Hour',
+            usageCard5HSub: 'Resets in 3h 3m',
+            usageCardBooster: 'Booster Balance',
+            usageCardBoosterSub: 'Spent this month: ¥0 / ¥100',
+            usageCardLocal: 'Local Consumption',
+            usageCardLocalTokens: 'Total Tokens Used',
+            usageCardLocalCache: 'Cache Hit Rate',
             showcaseTag: 'Showcase',
             showcaseTitle: 'Light & dark themes,<br>following your system',
             showcaseDesc: 'The panel automatically matches macOS light/dark mode, blending into your desktop.',
