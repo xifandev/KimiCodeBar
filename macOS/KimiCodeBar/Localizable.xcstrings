@@ -2005,13 +2005,13 @@
         }
       }
     },
-    "Kimi Code 版本号" : {
+    "KimiCode CLI 版本号" : {
       "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kimi Code Version"
+            "value" : "KimiCode CLI Version"
           }
         }
       }

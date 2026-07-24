@@ -3415,7 +3415,7 @@ struct PanelCustomSettingsView: View {
                         // showKimiServerCard 存储保留，恢复时把开关行加回即可。
 
                         SettingsCardRow(
-                            title: languageManager.tr("Kimi Code 版本号")
+                            title: languageManager.tr("KimiCode CLI 版本号")
                         ) {
                             Toggle("", isOn: $model.showKimiVersionRow)
                                 .labelsHidden()
