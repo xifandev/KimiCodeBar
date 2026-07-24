@@ -10,6 +10,8 @@
 
 [English](README_EN.md) | 中文
 
+🌐 **官网：** [https://xifandev.github.io/KimiCodeBar/](https://xifandev.github.io/KimiCodeBar/)
+
 专为 Kimi Code 打造的用量监控小工具，在菜单中轻量化运行，限额一目了然！
 
 #

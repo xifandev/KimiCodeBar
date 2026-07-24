@@ -8,6 +8,8 @@
   <a href="LICENSE"><img src="https://img.shields.io/github/license/xifandev/KimiCodeBar" alt="License"></a>
 </p>
 
+🌐 **Website:** [https://xifandev.github.io/KimiCodeBar/](https://xifandev.github.io/KimiCodeBar/)
+
 A lightweight usage monitoring tool built for [Kimi Code](https://www.kimi.com/code). It runs quietly in your menu bar, so your quota is always at a glance!
 
 #
