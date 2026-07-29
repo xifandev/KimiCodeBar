@@ -53,16 +53,9 @@
 
 ### 🛠 系统适配
 
-- MacOS（已发布）
+- macOS（已发布）
 - Windows（已发布，由 @JYH1878 维护）
 
 #
 
 ### 欢迎提交 👉 <a href="https://github.com/xifandev/KimiCodeBar/issues">Issues</a> 反馈问题或建议
-
-#
-
-###
-
-  <img src="https://img.shields.io/badge/-KIMI%E7%A4%BE%E5%8C%BA%E7%89%88-orange" alt="社区版">
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/xifandev/KimiCodeBar" alt="License"></a>

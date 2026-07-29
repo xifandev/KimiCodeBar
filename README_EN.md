@@ -57,10 +57,3 @@ All data is stored locally. APIs only communicate with official Kimi servers. Th
 #
 
 ### Feedback 👉 <a href="https://github.com/xifandev/KimiCodeBar/issues">Issues</a>
-
-#
-
-###
-
-  <img src="https://img.shields.io/badge/-KIMI%20Community%20Edition-orange" alt="Community Edition">
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/xifandev/KimiCodeBar" alt="License"></a>
