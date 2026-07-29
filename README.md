@@ -2,7 +2,7 @@
   <img src="Assets/logo.gif" width="55" alt="KimiCodeBar Logo" align="absmiddle">&nbsp;&nbsp;KimiCodeBar
 </h1>
 <p align="left">
-  <a href="https://github.com/xifandev/KimiCodeBar/releases"><img src="https://img.shields.io/badge/version-1.1.1-333333" alt="Version"></a>
+  <a href="https://github.com/xifandev/KimiCodeBar/releases"><img src="https://img.shields.io/badge/version-1.2.0-333333" alt="Version"></a>
  <img src="https://img.shields.io/badge/macOS-333333?logo=apple&logoColor=white" alt="macOS">
   <img src="https://img.shields.io/badge/-KIMI%E7%A4%BE%E5%8C%BA%E7%89%88-orange" alt="社区版">
   <a href="LICENSE"><img src="https://img.shields.io/github/license/xifandev/KimiCodeBar" alt="License"></a>
