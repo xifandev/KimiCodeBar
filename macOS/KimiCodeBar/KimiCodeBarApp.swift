@@ -3325,6 +3325,7 @@ struct BasicSettingsView: View {
                                     weekly: quota.weekly.percentage,
                                     fiveHour: quota.fiveHour.percentage
                                 ))
+                                .foregroundStyle(.white)
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 6)
                                 .background(Color.black)
