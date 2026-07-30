@@ -1486,9 +1486,9 @@ struct AccountQuotaRow: View {
         .onHover { isHovered = $0 }
         .cursor(.pointingHand)
         .onTapGesture {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                isExpanded.toggle()
-            }
+            // 不用动画：MenuBarExtra 面板窗口高度跟随内容变化，SwiftUI 布局动画
+            // 与 macOS 窗口 frame 动画节奏不一致会产生抖动，瞬时切换反而更稳。
+            isExpanded.toggle()
         }
     }
 
