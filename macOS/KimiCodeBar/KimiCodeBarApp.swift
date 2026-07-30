@@ -220,7 +220,8 @@ enum MenuBarDisplayScheme: String, CaseIterable, Identifiable {
 
 @MainActor
 enum MenuBarTextRenderer {
-    private static let textColor = Color(red: 0.886, green: 0.910, blue: 0.961)
+    // 模板图只读取 alpha 通道，实际染色由系统按菜单栏明暗外观决定，此处颜色只需保证不透明
+    private static let textColor = Color.black
 
     static func image(scheme: MenuBarDisplayScheme, weekly: Int, fiveHour: Int) -> NSImage {
         switch scheme {
@@ -323,7 +324,7 @@ enum MenuBarTextRenderer {
         guard let nsImage = renderer.nsImage else {
             return NSImage(size: NSSize(width: 56, height: 22))
         }
-        nsImage.isTemplate = false
+        nsImage.isTemplate = true
         return nsImage
     }
 }
