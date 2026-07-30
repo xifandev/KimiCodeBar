@@ -207,7 +207,8 @@ jobs:
           rmdir "$MOUNT_POINT"
 
           # 用已 staple 的 App 生成 Sparkle 自动更新用 zip
-          (cd dist && zip -r "KimiCodeBar-${VERSION}-sparkle-update.zip" KimiCodeBar.app)
+          # -y 保留符号链接（Sparkle.framework 依赖 Versions/Current 等 symlink）
+          (cd dist && zip -yr "KimiCodeBar-${VERSION}-sparkle-update.zip" KimiCodeBar.app)
 
           # 用已 staple 的 App 重新打包 DMG，确保 DMG 内的 App 也携带票据
           rm -f "$DMG_PATH"
