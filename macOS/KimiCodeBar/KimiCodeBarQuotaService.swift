@@ -37,6 +37,31 @@ struct KimiQuota: Equatable {
     let totalQuota: QuotaDetail
     let membershipLevel: String?
     let boosterWallet: BoosterWallet?
+    /// 账号唯一标识（user 对象中的 id/phone/email，取第一个非空值；都没有则为 nil）。
+    /// 仅用于多账号添加时的尽力去重，界面不展示。
+    let userIdentifier: String?
+}
+
+/// 宽松字符串解析：兼容服务端把标识字段以数字形式返回的情况
+private struct LenientString: Codable {
+    let value: String?
+
+    init(value: String?) {
+        self.value = value
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let string = try? container.decode(String.self) {
+            value = string
+        } else if let int = try? container.decode(Int.self) {
+            value = String(int)
+        } else if let double = try? container.decode(Double.self) {
+            value = String(double)
+        } else {
+            value = nil
+        }
+    }
 }
 
 final class KimiCodeBarQuotaService {
@@ -131,6 +156,10 @@ final class KimiCodeBarQuotaService {
                     let level: String?
                 }
                 let membership: Membership?
+                // 账号唯一标识候选字段，宽松解析（服务端可能以数字形式返回 id）
+                let id: LenientString?
+                let phone: LenientString?
+                let email: LenientString?
             }
             struct BoosterWallet: Codable {
                 struct Money: Codable {
@@ -225,7 +254,10 @@ final class KimiCodeBarQuotaService {
             fiveHour: fiveHour,
             totalQuota: totalQuota,
             membershipLevel: membershipLevel,
-            boosterWallet: boosterWallet
+            boosterWallet: boosterWallet,
+            userIdentifier: [resp.user?.id?.value, resp.user?.phone?.value, resp.user?.email?.value]
+                .compactMap { $0 }
+                .first(where: { !$0.isEmpty })
         )
     }
 

@@ -330,63 +330,9 @@ final class KimiOAuthService {
         }
     }
 
-    // MARK: Token 持久化
-
-    /// Bar 专属的 token 存储路径。
-    /// 注意：刻意与 KimiCode CLI 的 ~/.kimi-code/credentials/kimi-code.json 隔离，
-    /// Bar 的授权、刷新、退出登录都只操作本文件，绝不读写 CLI 的凭证，
-    /// 避免因 refresh_token 服务端轮换导致 CLI 凭证失效。
-    static func credentialsFileURL() -> URL {
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        return appSupport.appendingPathComponent("KimiCodeBar/credentials.json")
-    }
-
-    /// 从磁盘读取 Bar 自己的 token
-    static func loadStoredToken() -> KimiOAuthToken? {
-        let url = credentialsFileURL()
-        guard let data = try? Data(contentsOf: url) else { return nil }
-        guard let token = try? JSONDecoder().decode(KimiOAuthToken.self, from: data) else { return nil }
-        return token.isValid ? token : nil
-    }
-
-    /// 原子写入 token 文件：目录 0700，文件 0600
-    @discardableResult
-    static func saveToken(_ token: KimiOAuthToken) -> Bool {
-        let url = credentialsFileURL()
-        let directory = url.deletingLastPathComponent()
-
-        do {
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-            let data = try encoder.encode(token)
-
-            try FileManager.default.createDirectory(
-                at: directory,
-                withIntermediateDirectories: true,
-                attributes: [.posixPermissions: 0o700]
-            )
-
-            let tempURL = directory.appendingPathComponent(".\(url.lastPathComponent).tmp.\(ProcessInfo.processInfo.processIdentifier)")
-            try data.write(to: tempURL, options: .atomic)
-
-            if FileManager.default.fileExists(atPath: url.path) {
-                _ = try FileManager.default.replaceItemAt(url, withItemAt: tempURL)
-            } else {
-                try FileManager.default.moveItem(at: tempURL, to: url)
-            }
-            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
-            return true
-        } catch {
-            return false
-        }
-    }
-
-    static func clearToken() {
-        let url = credentialsFileURL()
-        try? FileManager.default.removeItem(at: url)
-    }
-
     // MARK: 私有解析
+
+    /// 凭证持久化已迁移到 KimiAccountStore（多账号存储），本服务只保留网络职责。
 
     /// 解析 token 响应。登录时响应必含全部字段；刷新时服务端可能省略
     /// refresh_token，由 fallbackRefreshToken 传入旧值兜底。

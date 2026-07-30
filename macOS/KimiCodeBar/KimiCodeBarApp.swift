@@ -751,31 +751,37 @@ struct KimiMenu: View {
 
             // 用量卡片
             VStack(spacing: 12) {
-                HStack(spacing: 12) {
-                    UsageCard(
-                        title: languageManager.tr("本周用量"),
-                        subtitle: nil,
-                        percentage: model.quota?.weekly.percentage ?? 0,
-                        reset: model.quota?.weekly.timeUntilReset ?? "--",
-                        color: .kimiBlue,
-                        isLoading: model.isLoading
-                    )
+                if model.loginMethod == .oauth && !model.accounts.isEmpty {
+                    // OAuth 多账号：账号紧凑行列表，点击行展开对应账号的卡片组
+                    AccountQuotaListView()
+                } else {
+                    // API Key 模式（或 OAuth 尚无账号）：保持原有卡片布局
+                    HStack(spacing: 12) {
+                        UsageCard(
+                            title: languageManager.tr("本周用量"),
+                            subtitle: nil,
+                            percentage: model.quota?.weekly.percentage ?? 0,
+                            reset: model.quota?.weekly.timeUntilReset ?? "--",
+                            color: .kimiBlue,
+                            isLoading: model.isLoading
+                        )
 
-                    UsageCard(
-                        title: languageManager.tr("5小时用量"),
-                        subtitle: nil,
-                        percentage: model.quota?.fiveHour.percentage ?? 0,
-                        reset: model.quota?.fiveHour.timeUntilReset ?? "--",
-                        color: .orange,
-                        isLoading: model.isLoading
-                    )
-                }
+                        UsageCard(
+                            title: languageManager.tr("5小时用量"),
+                            subtitle: nil,
+                            percentage: model.quota?.fiveHour.percentage ?? 0,
+                            reset: model.quota?.fiveHour.timeUntilReset ?? "--",
+                            color: .orange,
+                            isLoading: model.isLoading
+                        )
+                    }
 
-                if model.showBoosterWalletCard {
-                    BoosterWalletCard(
-                        wallet: model.quota?.boosterWallet,
-                        isLoading: model.isLoading
-                    )
+                    if model.showBoosterWalletCard {
+                        BoosterWalletCard(
+                            wallet: model.quota?.boosterWallet,
+                            isLoading: model.isLoading
+                        )
+                    }
                 }
 
                 // 本机消耗量卡片：扫描本地会话记录（wire.jsonl usage.record）得出 Token 消耗
@@ -1352,6 +1358,193 @@ struct BoosterWalletCard: View {
         return formatCurrency(wallet.monthlyChargeLimitYuan, currency: wallet.currency)
     }
  }
+
+// MARK: - 账号配额区（OAuth 多账号）
+
+/// OAuth 多账号模式下的账号配额区：每个账号一行紧凑摘要，
+/// 点击行展开/收起该账号的完整卡片组（本周/5小时用量 + 加油包）。
+struct AccountQuotaListView: View {
+    @StateObject private var model = KimiCodeBarModel.shared
+
+    var body: some View {
+        VStack(spacing: 8) {
+            ForEach(model.accounts) { account in
+                AccountQuotaRow(
+                    account: account,
+                    isPrimary: account.id == model.primaryAccountID
+                )
+            }
+        }
+    }
+}
+
+/// 单个账号的紧凑行 + 展开后的卡片组。展开状态本地管理：主账号默认展开，其余默认收起。
+struct AccountQuotaRow: View {
+    let account: KimiAccount
+    let isPrimary: Bool
+
+    @StateObject private var model = KimiCodeBarModel.shared
+    @StateObject private var languageManager = LanguageManager.shared
+    @State private var isExpanded: Bool
+    @State private var isHovered = false
+
+    init(account: KimiAccount, isPrimary: Bool) {
+        self.account = account
+        self.isPrimary = isPrimary
+        _isExpanded = State(initialValue: isPrimary)
+    }
+
+    /// 该账号最近一次拉取成功的配额（失败时保留旧值）
+    private var quota: KimiQuota? {
+        model.accountQuotas[account.id]
+    }
+
+    /// 该账号当前加载状态
+    private var state: KimiAccountState {
+        model.accountStates[account.id] ?? .idle
+    }
+
+    private var isLoadingState: Bool {
+        if case .loading = state { return true }
+        return false
+    }
+
+    var body: some View {
+        VStack(spacing: 8) {
+            rowButton
+
+            if isExpanded {
+                expandedContent
+            }
+        }
+    }
+
+    // MARK: 紧凑行
+
+    private var rowButton: some View {
+        HStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Text(model.displayName(for: account))
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.kimiTextPrimary)
+
+                    if isPrimary {
+                        LText("主账号")
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundStyle(Color.kimiBlue)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(Color.kimiBlue.opacity(0.12))
+                            .clipShape(RoundedRectangle(cornerRadius: 4))
+                    }
+
+                    if case .unauthorized = state {
+                        LText("登录失效")
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundStyle(.red)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(Color.red.opacity(0.12))
+                            .clipShape(RoundedRectangle(cornerRadius: 4))
+                    }
+                }
+
+                // 摘要行：失败时显示灰色错误提示，否则展示最近一次成功的配额
+                if case .failed(let message) = state {
+                    Text(message)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.kimiTextTertiary)
+                        .lineLimit(1)
+                } else if let quota {
+                    LText("周 %1$d%% · 5h %2$d%%", quota.weekly.percentage, quota.fiveHour.percentage)
+                        .font(.system(size: 11, weight: .medium, design: .monospaced))
+                        .foregroundStyle(isHovered ? .kimiTextPrimary : .kimiTextSecondary)
+                } else {
+                    Text("--")
+                        .font(.system(size: 11, weight: .medium, design: .monospaced))
+                        .foregroundStyle(isHovered ? .kimiTextPrimary : .kimiTextSecondary)
+                }
+            }
+
+            Spacer(minLength: 8)
+
+            if case .loading = state {
+                LoadingRing()
+                    .frame(width: 12, height: 12)
+            }
+
+            Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(.kimiTextTertiary)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(Color.white.opacity(isHovered ? 0.14 : 0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .contentShape(Rectangle())
+        .onHover { isHovered = $0 }
+        .cursor(.pointingHand)
+        .onTapGesture {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                isExpanded.toggle()
+            }
+        }
+    }
+
+    // MARK: 展开卡片组
+
+    @ViewBuilder
+    private var expandedContent: some View {
+        if case .unauthorized = state {
+            // 登录失效：凭证保留，引导到设置-账号重新授权（管理操作在设置页完成）
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.red)
+
+                LText("登录失效，请到设置-账号重新授权")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.kimiTextSecondary)
+
+                Spacer()
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(Color.red.opacity(0.10))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+        } else {
+            VStack(spacing: 8) {
+                HStack(spacing: 12) {
+                    UsageCard(
+                        title: languageManager.tr("本周用量"),
+                        subtitle: nil,
+                        percentage: quota?.weekly.percentage ?? 0,
+                        reset: quota?.weekly.timeUntilReset ?? "--",
+                        color: .kimiBlue,
+                        isLoading: isLoadingState
+                    )
+
+                    UsageCard(
+                        title: languageManager.tr("5小时用量"),
+                        subtitle: nil,
+                        percentage: quota?.fiveHour.percentage ?? 0,
+                        reset: quota?.fiveHour.timeUntilReset ?? "--",
+                        color: .orange,
+                        isLoading: isLoadingState
+                    )
+                }
+
+                if model.showBoosterWalletCard {
+                    BoosterWalletCard(
+                        wallet: quota?.boosterWallet,
+                        isLoading: isLoadingState
+                    )
+                }
+            }
+        }
+    }
+}
 
 // MARK: - Kimi Web 重启提示
 
@@ -2606,6 +2799,7 @@ private func parseNestedFrontMatterValue(_ frontMatter: String, outerKey: String
 
 enum SettingsPane: String, CaseIterable, Identifiable {
     case basic
+    case accounts
     case panelCustom
     case archive
     case skills
@@ -2616,6 +2810,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .basic: return LanguageManager.tr("基本设置")
+        case .accounts: return LanguageManager.tr("账号")
         case .panelCustom: return LanguageManager.tr("面板自定义")
         case .archive: return LanguageManager.tr("自动归档")
         case .skills: return LanguageManager.tr("技能管理")
@@ -2626,6 +2821,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     var icon: String {
         switch self {
         case .basic: return "gear"
+        case .accounts: return "person.2"
         case .panelCustom: return "rectangle.3.group"
         case .archive: return "archivebox"
         case .skills: return "puzzlepiece.extension"
@@ -2662,6 +2858,8 @@ struct SettingsRootView: View {
             switch selectedPane {
             case .basic:
                 BasicSettingsView()
+            case .accounts:
+                AccountsSettingsView()
             case .panelCustom:
                 PanelCustomSettingsView()
             case .archive:
@@ -4238,10 +4436,26 @@ final class KimiCodeBarModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var isLoading = false
 
-    @Published var oauthToken: KimiOAuthToken?
     @Published var oauthDeviceAuth: KimiDeviceAuthorization?
     @Published var oauthLoginInProgress = false
     @Published var oauthLoginError: String?
+
+    // MARK: - 多账号（仅 loginMethod == .oauth 时生效）
+
+    /// 账号列表（镜像 KimiAccountStore 的内存状态）
+    @Published var accounts: [KimiAccount] = []
+    /// 主账号 ID：菜单栏文字/图形与面板只展示主账号用量
+    @Published var primaryAccountID: UUID?
+    /// 每个账号最近一次拉取成功的配额（失败时保留旧值）
+    @Published var accountQuotas: [UUID: KimiQuota] = [:]
+    /// 每个账号的加载状态（错误隔离：单账号失败不影响其他账号）
+    @Published var accountStates: [UUID: KimiAccountState] = [:]
+
+    /// 兼容属性：主账号的 token。现有 UI 只读它判断是否已授权。
+    var oauthToken: KimiOAuthToken? {
+        guard let id = primaryAccountID else { return nil }
+        return accounts.first(where: { $0.id == id })?.token
+    }
 
     @Published var kimiVersion: String = LanguageManager.tr("检测中…")
     @Published var isCheckingUpdate: Bool = false
@@ -4284,7 +4498,12 @@ final class KimiCodeBarModel: ObservableObject {
     }
 
     init() {
-        oauthToken = KimiOAuthService.loadStoredToken()
+        // 加载多账号凭证（旧单 token 格式由 store 自动迁移），并保证主账号有效
+        let store = KimiAccountStore.shared
+        store.ensurePrimaryAccount()
+        let snapshot = store.snapshot
+        accounts = snapshot.accounts
+        primaryAccountID = snapshot.primaryAccountID
         refresh(showsLoading: false)
         Task { await loadKimiVersion() }
         startQuotaTimer()
@@ -4320,6 +4539,11 @@ final class KimiCodeBarModel: ObservableObject {
     ///   仅手动点「刷新」按钮时传 true；后台场景（启动、定时器、面板打开、切登录方式、
     ///   设置窗口 onAppear、saveKey）一律传 false，避免界面无谓闪烁。
     func refresh(showsLoading: Bool = true) {
+        // OAuth 模式走多账号并行刷新；以下原逻辑仅服务 API Key 模式
+        guard loginMethod == .token else {
+            refreshAllAccounts(showsLoading: showsLoading)
+            return
+        }
         if showsLoading {
             isLoading = true
         }
@@ -4365,58 +4589,177 @@ final class KimiCodeBarModel: ObservableObject {
         }
     }
 
-    /// 根据当前登录方式解析 Bearer 凭证。
-    /// OAuth 模式下使用 Bar 专属凭证文件（与 CLI 隔离），过期前自动用 refresh_token 换新。
+    /// 解析 API Key 模式下的 Bearer 凭证。
+    /// OAuth 模式不再走这里，按账号维度走 resolveAccessToken(for:)。
     private func resolveBearerToken() async -> String? {
-        switch loginMethod {
-        case .token:
-            return key.isEmpty ? nil : key
-        case .oauth:
-            if let fresh = KimiOAuthService.loadStoredToken() {
-                oauthToken = fresh
-            }
-            guard let token = oauthToken, token.isValid else { return nil }
+        key.isEmpty ? nil : key
+    }
 
-            guard token.needsRefresh else {
-                return token.accessToken
-            }
+    /// 解析单个账号当前可用的 access token。
+    /// 语义与旧单账号逻辑一致（按账号维度）：
+    /// 过期前自动用 refresh_token 换新；刷新前再读一次磁盘，防御其他 Bar 实例刚刷新过；
+    /// 授权被吊销（unauthorized）时返回 nil，由调用方把账号标记为「登录失效」——
+    /// 凭证保留在列表中等待用户重新授权，不删除。
+    private func resolveAccessToken(for accountID: UUID) async -> String? {
+        let store = KimiAccountStore.shared
+        guard let account = store.account(id: accountID), account.token.isValid else { return nil }
+        let token = account.token
 
-            // 刷新前再读一次磁盘：防御其他 Bar 实例刚完成刷新并写入了新凭证
-            if let latest = KimiOAuthService.loadStoredToken(),
-               latest.accessToken != token.accessToken,
-               !latest.needsRefresh {
-                oauthToken = latest
+        guard token.needsRefresh else {
+            return token.accessToken
+        }
+
+        // 刷新前再读一次磁盘：防御其他 Bar 实例刚完成刷新并写入了新凭证
+        if let latest = store.freshAccount(id: accountID)?.token,
+           latest.accessToken != token.accessToken,
+           !latest.needsRefresh {
+            return latest.accessToken
+        }
+
+        let result = await oauthService.refreshAccessToken(token)
+        switch result {
+        case .success(let newToken):
+            store.updateToken(id: accountID, token: newToken)
+            return newToken.accessToken
+        case .failure(.unauthorized):
+            // 若磁盘上已是另一份凭证（其他实例刷新成功），直接沿用
+            if let latest = store.freshAccount(id: accountID)?.token,
+               latest.accessToken != token.accessToken {
                 return latest.accessToken
             }
+            // 授权已被吊销：标记「登录失效」，等待用户重新授权
+            return nil
+        case .failure:
+            // 网络等原因刷新失败，先沿用旧 token 让服务端决定是否拒绝
+            return token.accessToken
+        }
+    }
 
-            let result = await oauthService.refreshAccessToken(token)
-            switch result {
-            case .success(let newToken):
-                KimiOAuthService.saveToken(newToken)
-                oauthToken = newToken
-                return newToken.accessToken
-            case .failure(.unauthorized):
-                // 若磁盘上已是另一份凭证（其他实例刷新成功），直接沿用而不是误删
-                if let latest = KimiOAuthService.loadStoredToken(),
-                   latest.accessToken != token.accessToken {
-                    oauthToken = latest
-                    return latest.accessToken
+    // MARK: - 多账号刷新
+
+    /// 并行刷新全部账号的配额。错误隔离：单账号失败（含登录失效）只标记该账号，
+    /// 不影响其他账号，也不删除任何凭证。完成后把主账号数据同步到兼容属性。
+    func refreshAllAccounts(showsLoading: Bool = true) {
+        if showsLoading {
+            isLoading = true
+        }
+        errorMessage = nil
+
+        let store = KimiAccountStore.shared
+        // 同步磁盘最新状态（含旧格式迁移、其他 Bar 实例的写入）
+        store.reload()
+        store.ensurePrimaryAccount()
+        let snapshot = store.snapshot
+        accounts = snapshot.accounts
+        primaryAccountID = snapshot.primaryAccountID
+
+        guard !snapshot.accounts.isEmpty else {
+            if showsLoading {
+                isLoading = false
+            }
+            accountQuotas = [:]
+            accountStates = [:]
+            syncPrimaryCompat()
+            return
+        }
+
+        // 清掉已删除账号的缓存（例如被其他 Bar 实例删除）
+        let validIDs = Set(snapshot.accounts.map(\.id))
+        accountQuotas = accountQuotas.filter { validIDs.contains($0.key) }
+        accountStates = accountStates.filter { validIDs.contains($0.key) }
+
+        for account in snapshot.accounts {
+            accountStates[account.id] = .loading
+        }
+
+        Task {
+            // quota 与 error 均为 nil 表示「登录失效」（resolveAccessToken 返回 nil）
+            var results: [(UUID, KimiQuota?, QuotaError?)] = []
+            await withTaskGroup(of: (UUID, KimiQuota?, QuotaError?).self) { group in
+                for account in snapshot.accounts {
+                    group.addTask {
+                        guard let accessToken = await self.resolveAccessToken(for: account.id) else {
+                            return (account.id, nil, nil)
+                        }
+                        switch await self.service.fetchQuota(token: accessToken) {
+                        case .success(let quota):
+                            return (account.id, quota, nil)
+                        case .failure(let error):
+                            return (account.id, nil, error)
+                        }
+                    }
                 }
-                // 授权已被吊销，清除本地凭证（仅 Bar 专属文件），等待用户重新授权
-                oauthToken = nil
-                KimiOAuthService.clearToken()
-                return nil
-            case .failure:
-                // 网络等原因刷新失败，先沿用旧 token 让服务端决定是否拒绝
-                return token.accessToken
+                for await item in group {
+                    results.append(item)
+                }
+            }
+
+            await MainActor.run {
+                for (id, quota, error) in results {
+                    if let quota {
+                        self.accountQuotas[id] = quota
+                        self.accountStates[id] = .loaded
+                    } else if let error {
+                        self.accountStates[id] = .failed(self.errorDescription(error))
+                    } else {
+                        self.accountStates[id] = .unauthorized
+                    }
+                }
+                // 同步一次镜像（token 可能已被刷新轮换），并清掉期间被删除账号的缓存
+                let latest = KimiAccountStore.shared.snapshot
+                self.accounts = latest.accounts
+                self.primaryAccountID = latest.primaryAccountID
+                let validIDs = Set(latest.accounts.map(\.id))
+                self.accountQuotas = self.accountQuotas.filter { validIDs.contains($0.key) }
+                self.accountStates = self.accountStates.filter { validIDs.contains($0.key) }
+                if showsLoading {
+                    self.isLoading = false
+                }
+                self.syncPrimaryCompat()
             }
         }
     }
 
-    // MARK: - OAuth 授权登录
+    /// 把主账号数据同步到兼容属性（quota / text / errorMessage），
+    /// 让现有只读这些属性的 UI 在多账号下无需修改即可工作。
+    private func syncPrimaryCompat() {
+        guard loginMethod == .oauth else { return }
+        guard let primaryID = primaryAccountID,
+              accounts.contains(where: { $0.id == primaryID }) else {
+            quota = nil
+            text = LanguageManager.tr("未登录")
+            errorMessage = nil
+            return
+        }
+        if let primaryQuota = accountQuotas[primaryID] {
+            quota = primaryQuota
+            text = LanguageManager.tr("周 %1$d%% · 5h %2$d%%", arguments: [primaryQuota.weekly.percentage, primaryQuota.fiveHour.percentage])
+        } else {
+            quota = nil
+            text = "--"
+        }
+        switch accountStates[primaryID] {
+        case .failed(let message):
+            errorMessage = message
+        case .unauthorized:
+            errorMessage = LanguageManager.tr("授权已失效，请重新登录")
+        default:
+            errorMessage = nil
+        }
+    }
 
-    /// 启动 Device Code Flow：请求设备码 → 打开浏览器 → 后台轮询直至授权完成。
+    // MARK: - OAuth 授权登录（添加账号）
+
+    /// 添加一个账号：启动 Device Code Flow → 打开浏览器 → 后台轮询直至授权完成，
+    /// 成功后尽力去重再加入账号列表。0 账号时即添加第一个账号（自动成为主账号）。
     func startOAuthLogin() {
+        runDeviceAuthorizationFlow { token in
+            await self.finishAddingAccount(token: token)
+        }
+    }
+
+    /// 设备授权流程的公共部分，成功后由 onSuccess 决定 token 的用途（添加账号 / 重新授权）。
+    private func runDeviceAuthorizationFlow(onSuccess: @escaping (KimiOAuthToken) async -> Void) {
         oauthLoginTask?.cancel()
         oauthLoginError = nil
         oauthDeviceAuth = nil
@@ -4450,15 +4793,37 @@ final class KimiCodeBarModel: ObservableObject {
             oauthDeviceAuth = nil
             switch pollResult {
             case .success(let token):
-                KimiOAuthService.saveToken(token)
-                oauthToken = token
-                refresh(showsLoading: false)
+                await onSuccess(token)
             case .failure(let error) where error != .cancelled:
                 oauthLoginError = oauthErrorDescription(error)
             case .failure:
                 break
             }
         }
+    }
+
+    /// 授权成功后收尾：拉一次 usages 尽力提取账号唯一标识做去重，
+    /// 判定重复则丢弃新 token、不新增账号；否则加入列表并刷新。
+    private func finishAddingAccount(token: KimiOAuthToken) async {
+        var identifier: String?
+        if case .success(let quota) = await service.fetchQuota(token: token.accessToken) {
+            identifier = quota.userIdentifier
+        }
+
+        let store = KimiAccountStore.shared
+        if let identifier,
+           store.snapshot.accounts.contains(where: { $0.accountIdentifier == identifier }) {
+            // 重复账号：丢弃新 token
+            oauthLoginError = LanguageManager.tr("该账号已添加，无需重复授权")
+            return
+        }
+
+        store.addAccount(KimiAccount(id: UUID(), alias: nil, token: token, accountIdentifier: identifier))
+        store.ensurePrimaryAccount()
+        let snapshot = store.snapshot
+        accounts = snapshot.accounts
+        primaryAccountID = snapshot.primaryAccountID
+        refresh(showsLoading: false)
     }
 
     func cancelOAuthLogin() {
@@ -4468,15 +4833,81 @@ final class KimiCodeBarModel: ObservableObject {
         oauthLoginInProgress = false
     }
 
-    /// 退出授权登录：取消进行中的授权流程并清除本地凭证。
+    /// 兼容旧「退出登录」语义：多账号下删除当前主账号。
+    /// 主账号被删除后顺延为列表中的下一个账号；无剩余账号时回到未登录态。
     func logoutOAuth() {
         cancelOAuthLogin()
         oauthLoginError = nil
-        oauthToken = nil
-        KimiOAuthService.clearToken()
-        quota = nil
-        text = LanguageManager.tr("未登录")
-        errorMessage = nil
+        if let primaryID = primaryAccountID {
+            removeAccount(primaryID)
+        }
+    }
+
+    // MARK: - 账号管理
+
+    /// 删除账号：移除凭证与该账号的配额/状态缓存。
+    /// 删除主账号时，主账号顺延为原列表中排在其后的账号（其后无账号则取第一个）。
+    func removeAccount(_ id: UUID) {
+        let store = KimiAccountStore.shared
+        let removedIndex = accounts.firstIndex(where: { $0.id == id })
+        let wasPrimary = (primaryAccountID == id)
+
+        store.removeAccount(id: id)
+        let remaining = store.snapshot.accounts
+        if wasPrimary, let removedIndex, remaining.indices.contains(removedIndex) {
+            store.setPrimaryAccount(remaining[removedIndex].id)
+        }
+        store.ensurePrimaryAccount()
+
+        let snapshot = store.snapshot
+        accounts = snapshot.accounts
+        primaryAccountID = snapshot.primaryAccountID
+        accountQuotas.removeValue(forKey: id)
+        accountStates.removeValue(forKey: id)
+        syncPrimaryCompat()
+    }
+
+    /// 重命名账号别名；传 nil 或空白字符串表示清除别名（回退显示「账号 N」）
+    func renameAccount(_ id: UUID, alias: String?) {
+        let trimmed = alias?.trimmingCharacters(in: .whitespacesAndNewlines)
+        KimiAccountStore.shared.setAlias(id: id, alias: (trimmed?.isEmpty == false) ? trimmed : nil)
+        accounts = KimiAccountStore.shared.snapshot.accounts
+    }
+
+    /// 设置主账号：菜单栏文字/图形与兼容属性只展示主账号用量
+    func setPrimaryAccount(_ id: UUID) {
+        guard accounts.contains(where: { $0.id == id }) else { return }
+        KimiAccountStore.shared.setPrimaryAccount(id)
+        primaryAccountID = id
+        syncPrimaryCompat()
+    }
+
+    /// 重新授权：对指定账号重走设备授权流程，成功后替换其 token 并更新账号标识。
+    /// 用于「登录失效」的账号恢复；不会删除该账号的别名等其它信息。
+    func reauthorizeAccount(_ id: UUID) {
+        runDeviceAuthorizationFlow { token in
+            var identifier: String?
+            if case .success(let quota) = await self.service.fetchQuota(token: token.accessToken) {
+                identifier = quota.userIdentifier
+            }
+            let store = KimiAccountStore.shared
+            store.updateToken(id: id, token: token)
+            if let identifier {
+                store.updateAccountIdentifier(id: id, identifier: identifier)
+            }
+            self.accounts = store.snapshot.accounts
+            self.accountStates[id] = .idle
+            self.refresh(showsLoading: false)
+        }
+    }
+
+    /// 账号显示名：优先别名，回退「账号 N」（N 为列表中的位置）
+    func displayName(for account: KimiAccount) -> String {
+        if let alias = account.alias?.trimmingCharacters(in: .whitespacesAndNewlines), !alias.isEmpty {
+            return alias
+        }
+        let index = accounts.firstIndex(where: { $0.id == account.id }) ?? 0
+        return LanguageManager.tr("账号 %1$d", arguments: [index + 1])
     }
 
     private func oauthErrorDescription(_ error: KimiOAuthError) -> String {
