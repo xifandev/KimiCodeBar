@@ -751,7 +751,7 @@ struct KimiMenu: View {
 
             // 用量卡片
             VStack(spacing: 12) {
-                if model.loginMethod == .oauth && !model.accounts.isEmpty {
+                if model.loginMethod == .oauth && model.accounts.count > 1 {
                     // OAuth 多账号：账号紧凑行列表，点击行展开对应账号的卡片组
                     AccountQuotaListView()
                 } else {
@@ -1497,13 +1497,13 @@ struct AccountQuotaRow: View {
     @ViewBuilder
     private var expandedContent: some View {
         if case .unauthorized = state {
-            // 登录失效：凭证保留，引导到设置-账号重新授权（管理操作在设置页完成）
+            // 登录失效：凭证保留，引导到设置-多账号重新授权（管理操作在设置页完成）
             HStack(spacing: 8) {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(.red)
 
-                LText("登录失效，请到设置-账号重新授权")
+                LText("登录失效，请到设置-多账号重新授权")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(.kimiTextSecondary)
 
@@ -2810,7 +2810,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .basic: return LanguageManager.tr("基本设置")
-        case .accounts: return LanguageManager.tr("账号")
+        case .accounts: return LanguageManager.tr("多账号")
         case .panelCustom: return LanguageManager.tr("面板自定义")
         case .archive: return LanguageManager.tr("自动归档")
         case .skills: return LanguageManager.tr("技能管理")

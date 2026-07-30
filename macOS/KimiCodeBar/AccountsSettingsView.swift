@@ -2,7 +2,7 @@ import SwiftUI
 
 // MARK: - 账号设置页
 
-/// 设置窗口「账号」页：管理多账号（列表 / 设主 / 重命名 / 删除 / 重新授权 / 添加账号）。
+/// 设置窗口「多账号」页：管理多账号（列表 / 设主 / 重命名 / 删除 / 重新授权 / 添加账号）。
 /// 数据全部来自 KimiCodeBarModel.shared（Phase 1 多账号数据层）。
 struct AccountsSettingsView: View {
     @StateObject private var model = KimiCodeBarModel.shared
@@ -26,7 +26,7 @@ struct AccountsSettingsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                LText("账号")
+                LText("多账号")
                     .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(.kimiTextPrimary)
 

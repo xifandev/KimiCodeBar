@@ -420,6 +420,28 @@
         }
       }
     },
+    "为该账号设置一个便于区分的别名，留空则恢复默认名称。" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set an alias to distinguish this account. Leave blank to restore the default name."
+          }
+        }
+      }
+    },
+    "主账号" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Primary"
+          }
+        }
+      }
+    },
     "今日" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -541,6 +563,39 @@
         }
       }
     },
+    "删除" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete"
+          }
+        }
+      }
+    },
+    "删除账号" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete Account"
+          }
+        }
+      }
+    },
+    "别名" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alias"
+          }
+        }
+      }
+    },
     "刷新" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -581,6 +636,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Booster Pack Card"
+          }
+        }
+      }
+    },
+    "加载中…" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading…"
           }
         }
       }
@@ -823,6 +889,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Appearance"
+          }
+        }
+      }
+    },
+    "多账号" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Multi-Account"
           }
         }
       }
@@ -1718,6 +1795,28 @@
         }
       }
     },
+    "添加账号" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add Account"
+          }
+        }
+      }
+    },
+    "添加账号后，即可在菜单栏查看各账号的配额使用情况" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add an account to view each account's quota usage in the menu bar."
+          }
+        }
+      }
+    },
     "版本 %@" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1784,6 +1883,28 @@
         }
       }
     },
+    "登录失效" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Session Expired"
+          }
+        }
+      }
+    },
+    "登录失效，请到设置-多账号重新授权" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Session expired. Go to Settings > Multi-Account to re-authorize."
+          }
+        }
+      }
+    },
     "登录方式" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1802,6 +1923,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "OK"
+          }
+        }
+      }
+    },
+    "确定删除「%1$@」吗？只会删除 Bar 中保存的授权，不影响 Kimi CLI 的登录状态。" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Are you sure you want to delete “%1$@”? This only removes the authorization saved in the Bar and does not affect Kimi CLI sign-in."
           }
         }
       }
@@ -1971,6 +2103,17 @@
         }
       }
     },
+    "设为主账号" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set as Primary"
+          }
+        }
+      }
+    },
     "设置" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1978,6 +2121,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Settings"
+          }
+        }
+      }
+    },
+    "该账号已添加，无需重复授权" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This account has already been added. No need to authorize again."
           }
         }
       }
@@ -2000,6 +2154,39 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Invalid request URL"
+          }
+        }
+      }
+    },
+    "账号 %1$d" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Account %1$d"
+          }
+        }
+      }
+    },
+    "账号仅用于在 Bar 中查看配额，不影响 Kimi CLI 的登录状态。" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accounts are only used to view quotas in the Bar and do not affect Kimi CLI sign-in."
+          }
+        }
+      }
+    },
+    "账号列表" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Account List"
           }
         }
       }
@@ -2070,6 +2257,17 @@
         }
       }
     },
+    "还没有添加账号" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No Accounts Added Yet"
+          }
+        }
+      }
+    },
     "进阶版" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2114,6 +2312,17 @@
         }
       }
     },
+    "通过浏览器授权添加一个 Kimi 账号" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Authorize in your browser to add a Kimi account."
+          }
+        }
+      }
+    },
     "重启" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2132,6 +2341,39 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Restart to Update"
+          }
+        }
+      }
+    },
+    "重命名" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rename"
+          }
+        }
+      }
+    },
+    "重命名账号" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rename Account"
+          }
+        }
+      }
+    },
+    "重新授权" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Re-authorize"
           }
         }
       }
@@ -2198,248 +2440,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Default"
-          }
-        }
-      }
-    },
-    "账号 %1$d" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Account %1$d"
-          }
-        }
-      }
-    },
-    "该账号已添加，无需重复授权" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This account has already been added. No need to authorize again."
-          }
-        }
-      }
-    },
-    "账号" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Accounts"
-          }
-        }
-      }
-    },
-    "账号列表" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Account List"
-          }
-        }
-      }
-    },
-    "主账号" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Primary"
-          }
-        }
-      }
-    },
-    "登录失效" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Session Expired"
-          }
-        }
-      }
-    },
-    "登录失效，请到设置-账号重新授权" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Session expired. Go to Settings > Accounts to re-authorize."
-          }
-        }
-      }
-    },
-    "加载中…" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Loading…"
-          }
-        }
-      }
-    },
-    "重新授权" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Re-authorize"
-          }
-        }
-      }
-    },
-    "设为主账号" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Set as Primary"
-          }
-        }
-      }
-    },
-    "重命名" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Rename"
-          }
-        }
-      }
-    },
-    "重命名账号" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Rename Account"
-          }
-        }
-      }
-    },
-    "别名" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Alias"
-          }
-        }
-      }
-    },
-    "为该账号设置一个便于区分的别名，留空则恢复默认名称。" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Set an alias to distinguish this account. Leave blank to restore the default name."
-          }
-        }
-      }
-    },
-    "删除" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Delete"
-          }
-        }
-      }
-    },
-    "删除账号" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Delete Account"
-          }
-        }
-      }
-    },
-    "确定删除「%1$@」吗？只会删除 Bar 中保存的授权，不影响 Kimi CLI 的登录状态。" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Are you sure you want to delete “%1$@”? This only removes the authorization saved in the Bar and does not affect Kimi CLI sign-in."
-          }
-        }
-      }
-    },
-    "还没有添加账号" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No Accounts Added Yet"
-          }
-        }
-      }
-    },
-    "添加账号后，即可在菜单栏查看各账号的配额使用情况" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add an account to view each account's quota usage in the menu bar."
-          }
-        }
-      }
-    },
-    "添加账号" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add Account"
-          }
-        }
-      }
-    },
-    "通过浏览器授权添加一个 Kimi 账号" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Authorize in your browser to add a Kimi account."
-          }
-        }
-      }
-    },
-    "账号仅用于在 Bar 中查看配额，不影响 Kimi CLI 的登录状态。" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Accounts are only used to view quotas in the Bar and do not affect Kimi CLI sign-in."
           }
         }
       }
