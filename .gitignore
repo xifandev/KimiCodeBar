@@ -47,3 +47,6 @@ desktop.ini
 
 # WorkBuddy workspace data (project memory & notes, not source code)
 .workbuddy/
+
+# Local troubleshooting screenshots (auxiliary, not part of the repo)
+troubleshooting/
