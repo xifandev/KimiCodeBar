@@ -17,6 +17,12 @@ struct AccountsSettingsView: View {
     @State private var accountPendingDeletion: KimiAccount?
     @State private var showDeleteConfirm = false
 
+    // CLI 切换确认弹窗状态
+    @State private var cliSwitchTarget: KimiAccount?
+    @State private var cliSwitchWarnings: [String] = []
+    @State private var showCliSwitchConfirm = false
+    @State private var cliSwitchError: String?
+
     /// 是否展示「添加账号」卡片：
     /// 有账号、授权流程进行中、或授权失败有待展示的错误时展示。
     private var showsAddAccountCard: Bool {
@@ -40,10 +46,12 @@ struct AccountsSettingsView: View {
                                 AccountRow(
                                     displayName: model.displayName(for: account),
                                     isPrimary: account.id == model.primaryAccountID,
+                                    isCliActive: account.id == model.cliActiveAccountID,
                                     state: model.accountStates[account.id] ?? .idle,
                                     membershipLevel: model.accountQuotas[account.id]?.membershipLevel,
                                     reauthorizeDisabled: model.oauthLoginInProgress,
                                     onSetPrimary: { model.setPrimaryAccount(account.id) },
+                                    onSwitchCli: { requestCliSwitch(account) },
                                     onRename: {
                                         renamingAccount = account
                                         renameText = account.alias ?? ""
@@ -86,7 +94,7 @@ struct AccountsSettingsView: View {
                 }
 
                 // 说明文案
-                LText("账号仅用于在 Bar 中查看配额，不影响 Kimi CLI 的登录状态。")
+                LText("账号用于在 Bar 中查看配额；「切换 CLI 到此账号」会把该账号的凭证写入 Kimi CLI，更换 CLI 的登录账号。")
                     .font(.system(size: 12))
                     .foregroundStyle(.kimiTextSecondary)
                     .padding(.horizontal, 4)
@@ -97,6 +105,7 @@ struct AccountsSettingsView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .background(Color.kimiPanelBackground)
+        .onAppear { model.refreshCliActiveAccount() }
         .alert(LanguageManager.tr("重命名账号"), isPresented: $showRenameAlert) {
             TextField(LanguageManager.tr("别名"), text: $renameText)
             Button(LanguageManager.tr("保存")) {
@@ -123,6 +132,65 @@ struct AccountsSettingsView: View {
                     arguments: [model.displayName(for: account)]
                 ))
             }
+        }
+        .alert(LanguageManager.tr("切换 CLI 账号"), isPresented: $showCliSwitchConfirm) {
+            Button(LanguageManager.tr("仍然切换")) {
+                if let account = cliSwitchTarget {
+                    performCliSwitch(account)
+                }
+            }
+            Button(LanguageManager.tr("取消"), role: .cancel) {}
+        } message: {
+            if let account = cliSwitchTarget {
+                Text(LanguageManager.tr(
+                    "将把「%1$@」的凭证写入 Kimi CLI，之后新启动的 CLI 会话将使用该账号。\n\n%2$@",
+                    arguments: [model.displayName(for: account), cliSwitchWarnings.joined(separator: "\n\n")]
+                ))
+            }
+        }
+        .alert(LanguageManager.tr("切换失败"), isPresented: Binding(
+            get: { cliSwitchError != nil },
+            set: { if !$0 { cliSwitchError = nil } }
+        )) {
+            Button(LanguageManager.tr("好"), role: .cancel) {}
+        } message: {
+            if let cliSwitchError {
+                Text(cliSwitchError)
+            }
+        }
+    }
+
+    // MARK: CLI 账号切换
+
+    /// 点击「切换 CLI 到此账号」：无风险时直接切换；
+    /// CLI 现有凭证未保存到 Bar、或有运行中的 CLI 会话时，先弹确认框。
+    private func requestCliSwitch(_ account: KimiAccount) {
+        var warnings: [String] = []
+
+        let cliToken = CliCredentialsService.loadToken()
+        if cliToken != nil,
+           CliCredentialsService.matchedAccountID(token: cliToken, in: model.accounts) == nil {
+            warnings.append(LanguageManager.tr("CLI 当前登录的账号未保存到 Bar，切换后其凭证将被覆盖，需要重新登录才能恢复。"))
+        }
+
+        if CliCredentialsService.isKimiCliRunning() {
+            warnings.append(LanguageManager.tr("检测到正在运行的 Kimi Code 会话：切换对它们不生效，且它们刷新登录状态时可能覆盖本次切换，建议先退出。"))
+        }
+
+        if warnings.isEmpty {
+            performCliSwitch(account)
+        } else {
+            cliSwitchTarget = account
+            cliSwitchWarnings = warnings
+            showCliSwitchConfirm = true
+        }
+    }
+
+    private func performCliSwitch(_ account: KimiAccount) {
+        do {
+            try model.switchCliAccount(to: account.id)
+        } catch {
+            cliSwitchError = LanguageManager.tr("无法写入 CLI 凭证文件：%@", arguments: [error.localizedDescription])
         }
     }
 
@@ -195,10 +263,12 @@ struct AccountsSettingsView: View {
 private struct AccountRow: View {
     let displayName: String
     let isPrimary: Bool
+    let isCliActive: Bool
     let state: KimiAccountState
     let membershipLevel: String?
     let reauthorizeDisabled: Bool
     let onSetPrimary: () -> Void
+    let onSwitchCli: () -> Void
     let onRename: () -> Void
     let onDelete: () -> Void
     let onReauthorize: () -> Void
@@ -216,6 +286,10 @@ private struct AccountRow: View {
 
                     if isPrimary {
                         StatusTag(text: languageManager.tr("主账号"), color: .kimiBlue)
+                    }
+
+                    if isCliActive {
+                        StatusTag(text: languageManager.tr("CLI 使用中"), color: .green)
                     }
 
                     if let membershipLevel, !membershipLevel.isEmpty {
@@ -240,6 +314,12 @@ private struct AccountRow: View {
                         hoveredColor: .kimiBlue,
                         disabled: reauthorizeDisabled,
                         action: onReauthorize
+                    )
+                } else {
+                    AccountActionButton(
+                        title: languageManager.tr("切换 CLI 到此账号"),
+                        disabled: isCliActive,
+                        action: onSwitchCli
                     )
                 }
 

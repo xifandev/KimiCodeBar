@@ -2169,17 +2169,6 @@
         }
       }
     },
-    "账号仅用于在 Bar 中查看配额，不影响 Kimi CLI 的登录状态。" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Accounts are only used to view quotas in the Bar and do not affect Kimi CLI sign-in."
-          }
-        }
-      }
-    },
     "账号列表" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2440,6 +2429,127 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Default"
+          }
+        }
+      }
+    },
+    "账号用于在 Bar 中查看配额；「切换 CLI 到此账号」会把该账号的凭证写入 Kimi CLI，更换 CLI 的登录账号。" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accounts are used to view quotas in Bar. \u201cUse in CLI\u201d writes the account's credentials to Kimi CLI, changing the account the CLI logs in with."
+          }
+        }
+      }
+    },
+    "CLI 使用中" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CLI Active"
+          }
+        }
+      }
+    },
+    "切换 CLI 到此账号" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use in CLI"
+          }
+        }
+      }
+    },
+    "切换 CLI 账号" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Switch CLI Account"
+          }
+        }
+      }
+    },
+    "仍然切换" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Switch Anyway"
+          }
+        }
+      }
+    },
+    "切换失败" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Switch Failed"
+          }
+        }
+      }
+    },
+    "好" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
+          }
+        }
+      }
+    },
+    "将把「%1$@」的凭证写入 Kimi CLI，之后新启动的 CLI 会话将使用该账号。\n\n%2$@" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This will write the credentials of \u201c%1$@\u201d to Kimi CLI. New CLI sessions will use this account.\n\n%2$@"
+          }
+        }
+      }
+    },
+    "CLI 当前登录的账号未保存到 Bar，切换后其凭证将被覆盖，需要重新登录才能恢复。" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The account currently logged in to the CLI is not saved in Bar. Switching will overwrite its credentials, and it will need to log in again to recover."
+          }
+        }
+      }
+    },
+    "检测到正在运行的 Kimi Code 会话：切换对它们不生效，且它们刷新登录状态时可能覆盖本次切换，建议先退出。" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Running Kimi Code sessions detected: the switch does not affect them, and they may overwrite this switch when refreshing their login. Quit them first if possible."
+          }
+        }
+      }
+    },
+    "无法写入 CLI 凭证文件：%@" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Failed to write the CLI credentials file: %@"
           }
         }
       }

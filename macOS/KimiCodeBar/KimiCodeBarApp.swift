@@ -4452,6 +4452,9 @@ final class KimiCodeBarModel: ObservableObject {
     @Published var accountQuotas: [UUID: KimiQuota] = [:]
     /// 每个账号的加载状态（错误隔离：单账号失败不影响其他账号）
     @Published var accountStates: [UUID: KimiAccountState] = [:]
+    /// CLI 活跃账号（与 CLI 凭证文件 token 匹配的账号），用于账号列表「CLI 使用中」标签；
+    /// CLI 轮换 token 后匹配失效，自动回退为 nil
+    @Published var cliActiveAccountID: UUID?
 
     /// 兼容属性：主账号的 token。现有 UI 只读它判断是否已授权。
     var oauthToken: KimiOAuthToken? {
@@ -4543,6 +4546,7 @@ final class KimiCodeBarModel: ObservableObject {
     func refresh(showsLoading: Bool = true) {
         // OAuth 模式走多账号并行刷新；以下原逻辑仅服务 API Key 模式
         guard loginMethod == .token else {
+            refreshCliActiveAccount()
             refreshAllAccounts(showsLoading: showsLoading)
             return
         }
@@ -4901,6 +4905,23 @@ final class KimiCodeBarModel: ObservableObject {
             self.accountStates[id] = .idle
             self.refresh(showsLoading: false)
         }
+    }
+
+    // MARK: - CLI 账号切换
+
+    /// 重算 CLI 活跃账号：读 CLI 凭证文件并与账号列表比对 token。
+    /// 账号列表展示「CLI 使用中」标签前调用；CLI 轮换 token 后匹配失效，标签自然消失。
+    func refreshCliActiveAccount() {
+        let token = CliCredentialsService.loadToken()
+        cliActiveAccountID = CliCredentialsService.matchedAccountID(token: token, in: accounts)
+    }
+
+    /// 切换 CLI 活跃账号：把指定账号的 token 原子写入 CLI 凭证文件。
+    /// 仅做这一次性写入，此后 Bar 与 CLI 凭证各自独立、不再同步（见 CONTEXT.md「凭证隔离原则」）。
+    func switchCliAccount(to id: UUID) throws {
+        guard let account = accounts.first(where: { $0.id == id }) else { return }
+        try CliCredentialsService.writeToken(account.token)
+        refreshCliActiveAccount()
     }
 
     /// 账号显示名：优先别名，回退「账号 N」（N 为列表中的位置）
