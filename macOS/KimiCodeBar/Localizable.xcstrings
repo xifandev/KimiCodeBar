@@ -2433,13 +2433,13 @@
         }
       }
     },
-    "账号用于在 Bar 中查看配额；「切换 CLI 到此账号」会把该账号的凭证写入 Kimi CLI，更换 CLI 的登录账号。" : {
+    "账号用于在 Bar 中查看配额；「切换账号」会把该账号的凭证写入 Kimi CLI，更换 CLI 的登录账号。" : {
       "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Accounts are used to view quotas in Bar. \u201cUse in CLI\u201d writes the account's credentials to Kimi CLI, changing the account the CLI logs in with."
+            "value" : "Accounts are used to view quotas in Bar. \u201cSwitch Account\u201d writes the account's credentials to Kimi CLI, changing the account the CLI logs in with."
           }
         }
       }
@@ -2455,13 +2455,13 @@
         }
       }
     },
-    "切换 CLI 到此账号" : {
+    "切换账号" : {
       "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Use in CLI"
+            "value" : "Switch Account"
           }
         }
       }
@@ -2550,6 +2550,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Failed to write the CLI credentials file: %@"
+          }
+        }
+      }
+    },
+    "将该账号的凭证写入 Kimi CLI，更换 CLI 的登录账号" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Write this account\u2019s credentials to Kimi CLI, changing the account the CLI logs in with."
           }
         }
       }

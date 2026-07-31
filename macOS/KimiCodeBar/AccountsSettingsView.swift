@@ -94,7 +94,7 @@ struct AccountsSettingsView: View {
                 }
 
                 // 说明文案
-                LText("账号用于在 Bar 中查看配额；「切换 CLI 到此账号」会把该账号的凭证写入 Kimi CLI，更换 CLI 的登录账号。")
+                LText("账号用于在 Bar 中查看配额；「切换账号」会把该账号的凭证写入 Kimi CLI，更换 CLI 的登录账号。")
                     .font(.system(size: 12))
                     .foregroundStyle(.kimiTextSecondary)
                     .padding(.horizontal, 4)
@@ -162,7 +162,7 @@ struct AccountsSettingsView: View {
 
     // MARK: CLI 账号切换
 
-    /// 点击「切换 CLI 到此账号」：无风险时直接切换；
+    /// 点击「切换账号」：无风险时直接切换；
     /// CLI 现有凭证未保存到 Bar、或有运行中的 CLI 会话时，先弹确认框。
     private func requestCliSwitch(_ account: KimiAccount) {
         var warnings: [String] = []
@@ -317,10 +317,11 @@ private struct AccountRow: View {
                     )
                 } else {
                     AccountActionButton(
-                        title: languageManager.tr("切换 CLI 到此账号"),
+                        title: languageManager.tr("切换账号"),
                         disabled: isCliActive,
                         action: onSwitchCli
                     )
+                    .help(languageManager.tr("将该账号的凭证写入 Kimi CLI，更换 CLI 的登录账号"))
                 }
 
                 AccountActionButton(

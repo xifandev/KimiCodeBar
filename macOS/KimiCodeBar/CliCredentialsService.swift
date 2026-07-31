@@ -5,7 +5,7 @@ import Foundation
 /// Kimi Code CLI 凭证文件（~/.kimi-code/credentials/kimi-code.json）的读写。
 ///
 /// 凭证隔离原则的唯一例外（见 CONTEXT.md「切换账号」）：
-/// - 写入仅发生在用户主动「切换 CLI 到此账号」的瞬间，此后 Bar 与 CLI 各自独立、不再同步；
+/// - 写入仅发生在用户主动「切换账号」的瞬间，此后 Bar 与 CLI 各自独立、不再同步；
 /// - 读取仅用于账号列表展示「CLI 使用中」标签，以及切换前检测 CLI 现有凭证是否已保存到 Bar。
 enum CliCredentialsService {
 
