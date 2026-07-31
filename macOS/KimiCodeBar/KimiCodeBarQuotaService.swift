@@ -40,6 +40,22 @@ struct KimiQuota: Equatable {
     /// 账号唯一标识（user 对象中的 id/phone/email，取第一个非空值；都没有则为 nil）。
     /// 仅用于多账号添加时的尽力去重，界面不展示。
     let userIdentifier: String?
+
+    /// 会员等级显示名：API 返回 LEVEL_* 枚举，映射为 Kimi 官方会员名称（音乐速度术语，不做本地化）。
+    /// 未知等级回退为去掉 LEVEL_ 前缀的原始值，避免官方新增等级时显示错误名称。
+    static func membershipDisplayName(_ level: String) -> String {
+        switch level.uppercased() {
+        case "LEVEL_FREE": return "Free"
+        case "LEVEL_BASIC": return "Adagio"
+        case "LEVEL_STANDARD": return "Moderato"
+        case "LEVEL_INTERMEDIATE": return "Allegretto"
+        case "LEVEL_ADVANCED": return "Allegro"
+        case "LEVEL_PREMIUM": return "Vivace"
+        default:
+            let trimmed = level.uppercased().replacingOccurrences(of: "LEVEL_", with: "")
+            return trimmed.isEmpty ? LanguageManager.tr("未知") : trimmed
+        }
+    }
 }
 
 /// 宽松字符串解析：兼容服务端把标识字段以数字形式返回的情况

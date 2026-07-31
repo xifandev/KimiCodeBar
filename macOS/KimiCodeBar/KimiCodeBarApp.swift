@@ -985,18 +985,6 @@ struct KimiMenu: View {
         try? task.run()
     }
 
-    private func formatMembershipLevel(_ level: String) -> String {
-        switch level.uppercased() {
-        case "LEVEL_FREE": return LanguageManager.tr("免费版")
-        case "LEVEL_BASIC": return LanguageManager.tr("基础版")
-        case "LEVEL_INTERMEDIATE": return LanguageManager.tr("进阶版")
-        case "LEVEL_ADVANCED": return LanguageManager.tr("高级版")
-        default:
-            let trimmed = level.uppercased().replacingOccurrences(of: "LEVEL_", with: "")
-            return trimmed.isEmpty ? LanguageManager.tr("未知") : trimmed
-        }
-    }
-
 }
 
 private func formatKimiVersion(_ version: String) -> String {

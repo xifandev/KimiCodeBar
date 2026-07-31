@@ -276,37 +276,32 @@ private struct AccountRow: View {
     @StateObject private var languageManager = LanguageManager.shared
 
     var body: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 6) {
-                    Text(displayName)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(.kimiTextPrimary)
-                        .lineLimit(1)
+        VStack(alignment: .leading, spacing: 10) {
+            // 第一行：账号名称 + 状态标签，右侧只保留主操作（切换账号 / 重新授权）
+            HStack(spacing: 6) {
+                Text(displayName)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.kimiTextPrimary)
+                    .lineLimit(1)
 
-                    if isPrimary {
-                        StatusTag(text: languageManager.tr("主账号"), color: .kimiBlue)
-                    }
-
-                    if isCliActive {
-                        StatusTag(text: languageManager.tr("CLI 使用中"), color: .green)
-                    }
-
-                    if let membershipLevel, !membershipLevel.isEmpty {
-                        StatusTag(text: membershipLevel, color: .purple)
-                    }
-
-                    if case .unauthorized = state {
-                        StatusTag(text: languageManager.tr("登录失效"), color: .red)
-                    }
+                if isPrimary {
+                    StatusTag(text: languageManager.tr("主账号"), color: .kimiBlue)
                 }
 
-                statusLine
-            }
+                if isCliActive {
+                    StatusTag(text: languageManager.tr("CLI 使用中"), color: .green)
+                }
 
-            Spacer()
+                if let membershipLevel, !membershipLevel.isEmpty {
+                    StatusTag(text: KimiQuota.membershipDisplayName(membershipLevel), color: .purple)
+                }
 
-            HStack(spacing: 8) {
+                if case .unauthorized = state {
+                    StatusTag(text: languageManager.tr("登录失效"), color: .red)
+                }
+
+                Spacer()
+
                 if case .unauthorized = state {
                     AccountActionButton(
                         title: languageManager.tr("重新授权"),
@@ -323,7 +318,12 @@ private struct AccountRow: View {
                     )
                     .help(languageManager.tr("将该账号的凭证写入 Kimi CLI，更换 CLI 的登录账号"))
                 }
+            }
 
+            statusLine
+
+            // 第二行：次要操作；删除右置，与常规操作拉开距离
+            HStack(spacing: 8) {
                 AccountActionButton(
                     title: languageManager.tr("设为主账号"),
                     disabled: isPrimary,
@@ -334,6 +334,8 @@ private struct AccountRow: View {
                     title: languageManager.tr("重命名"),
                     action: onRename
                 )
+
+                Spacer()
 
                 AccountActionButton(
                     title: languageManager.tr("删除"),
