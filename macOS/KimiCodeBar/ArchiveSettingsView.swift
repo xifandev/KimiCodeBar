@@ -36,6 +36,7 @@ struct ArchiveSettingsView: View {
     @State private var filter: SessionFilter = .all
     @State private var showArchiveResult = false
     @State private var archiveResultCount = 0
+    @State private var collapsedGroups: Set<String> = []
 
     private var now: Date { Date() }
 
@@ -195,21 +196,34 @@ struct ArchiveSettingsView: View {
                         } else {
                             LazyVStack(alignment: .leading, spacing: 0) {
                                 ForEach(groupedSessions) { group in
-                                    WorkspaceHeader(name: group.name, count: group.sessions.count)
-
-                                    ForEach(group.sessions) { session in
-                                        SessionRow(
-                                            session: session,
-                                            threshold: manager.autoArchiveThreshold,
-                                            isEligible: !session.isArchived && now.timeIntervalSince(session.updatedAt) > manager.autoArchiveThreshold.timeInterval
-                                        ) {
-                                            Task { await manager.unarchive(session) }
+                                    let isCollapsed = collapsedGroups.contains(group.id)
+                                    WorkspaceHeader(
+                                        name: group.name,
+                                        count: group.sessions.count,
+                                        isCollapsed: isCollapsed
+                                    ) {
+                                        if isCollapsed {
+                                            collapsedGroups.remove(group.id)
+                                        } else {
+                                            collapsedGroups.insert(group.id)
                                         }
+                                    }
 
-                                        if session.id != group.sessions.last?.id {
-                                            Divider()
-                                                .background(Color.kimiTextPrimary.opacity(0.06))
-                                                .padding(.leading, 16)
+                                    if !isCollapsed {
+                                        ForEach(group.sessions) { session in
+                                            SessionRow(
+                                                session: session,
+                                                threshold: manager.autoArchiveThreshold,
+                                                isEligible: !session.isArchived && now.timeIntervalSince(session.updatedAt) > manager.autoArchiveThreshold.timeInterval
+                                            ) {
+                                                Task { await manager.unarchive(session) }
+                                            }
+
+                                            if session.id != group.sessions.last?.id {
+                                                Divider()
+                                                    .background(Color.kimiTextPrimary.opacity(0.06))
+                                                    .padding(.leading, 16)
+                                            }
                                         }
                                     }
                                 }
@@ -298,30 +312,49 @@ private struct ArchiveActionButton: View {
 private struct WorkspaceHeader: View {
     let name: String
     let count: Int
+    let isCollapsed: Bool
+    let onToggle: () -> Void
+
+    @State private var isHovered = false
 
     var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "folder")
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(.kimiTextSecondary)
+        Button(action: onToggle) {
+            HStack(spacing: 8) {
+                Image(systemName: isCollapsed ? "chevron.right" : "chevron.down")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(.kimiTextSecondary)
+                    .frame(width: 14)
 
-            Text(name)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.kimiTextPrimary)
+                Image(systemName: "folder")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.kimiTextSecondary)
 
-            Text("\(count)")
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.kimiTextTertiary)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background(Color.kimiTextPrimary.opacity(0.08))
-                .clipShape(RoundedRectangle(cornerRadius: 4))
+                Text(name)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.kimiTextPrimary)
 
-            Spacer()
+                Text("\(count)")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.kimiTextTertiary)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.kimiTextPrimary.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(
+                isHovered
+                    ? Color.kimiTextPrimary.opacity(0.08)
+                    : Color.kimiTextPrimary.opacity(0.04)
+            )
+            .contentShape(Rectangle())
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color.kimiTextPrimary.opacity(0.04))
+        .buttonStyle(.plain)
+        .cursor(.pointingHand)
+        .onHover { isHovered = $0 }
     }
 }
 
