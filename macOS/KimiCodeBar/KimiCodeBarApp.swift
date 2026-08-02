@@ -1811,11 +1811,12 @@ private struct MinimalQuotaRow: View {
             }
             .frame(height: 3)
 
-            // 重置时间
+            // 重置时间：固定宽度，保证两行进度条长度一致
             Text(compressedReset)
                 .font(.system(size: 10))
                 .foregroundStyle(.kimiTextTertiary)
                 .lineLimit(1)
+                .frame(width: 48, alignment: .trailing)
         }
         .frame(maxWidth: .infinity)
     }
