@@ -1606,7 +1606,7 @@ private struct AccountQuotaCard: View {
                     // 极简风格：单行紧凑，短标签 + 百分比 + 进度条 + 重置时间
                     VStack(alignment: .leading, spacing: 6) {
                         MinimalQuotaRow(
-                            label: "7d",
+                            label: "7天",
                             reset: quota?.weekly.timeUntilReset,
                             percentage: quota?.weekly.percentage,
                             color: .kimiBlue,
@@ -1614,7 +1614,7 @@ private struct AccountQuotaCard: View {
                         )
 
                         MinimalQuotaRow(
-                            label: "5h",
+                            label: "5时",
                             reset: quota?.fiveHour.timeUntilReset,
                             percentage: quota?.fiveHour.percentage,
                             color: .orange,
@@ -1942,8 +1942,8 @@ private struct MultiAccountCardStylePreview: View {
 
             // 极简单行
             VStack(alignment: .leading, spacing: 4) {
-                PreviewMinimalRow(label: "7d", percentage: 56, reset: "3天2时", color: .kimiBlue)
-                PreviewMinimalRow(label: "5h", percentage: 0, reset: "2时28分", color: .orange)
+                PreviewMinimalRow(label: "7天", percentage: 56, reset: "3天2时", color: .kimiBlue)
+                PreviewMinimalRow(label: "5时", percentage: 0, reset: "2时28分", color: .orange)
             }
         }
         .padding(10)
@@ -2031,7 +2031,7 @@ private struct PreviewMinimalRow: View {
             Text(label)
                 .font(.system(size: 7, weight: .medium))
                 .foregroundStyle(.kimiTextSecondary)
-                .frame(width: 12, alignment: .leading)
+                .frame(width: 16, alignment: .leading)
 
             Text("\(percentage)%")
                 .font(.system(size: 8, weight: .bold, design: .rounded))
