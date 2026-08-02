@@ -58,6 +58,7 @@ struct AccountsSettingsView: View {
                             SettingsCard {
                                 AccountRow(
                                     displayName: model.displayName(for: account),
+                                    provider: account.provider,
                                     credential: account.credential,
                                     isPrimary: account.id == model.primaryAccountID,
                                     isCliActive: account.id == model.cliActiveAccountID,
@@ -274,6 +275,8 @@ struct AccountsSettingsView: View {
                 .font(.system(size: 22, weight: .regular))
                 .foregroundStyle(.kimiTextTertiary)
                 .frame(width: 32, height: 32)
+                .background(Color.kimiTextPrimary.opacity(0.06))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
 
             VStack(alignment: .leading, spacing: 3) {
                 LText("添加账号")
@@ -330,12 +333,17 @@ private struct AddAccountSheet: View {
         VStack(alignment: .leading, spacing: 0) {
             // 标题区
             HStack(spacing: 10) {
-                Image(systemName: "person.badge.plus")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.kimiBlue)
-                    .frame(width: 28, height: 28)
-                    .background(Color.kimiBlue.opacity(0.12))
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(providerBadgeBackground)
+
+                    Image(selectedProvider.logoImageName)
+                        .resizable()
+                        .interpolation(.high)
+                        .aspectRatio(contentMode: .fit)
+                        .padding(5)
+                }
+                .frame(width: 28, height: 28)
 
                 VStack(alignment: .leading, spacing: 1) {
                     LText("添加账号")
@@ -439,13 +447,14 @@ private struct AddAccountSheet: View {
             apiKeyError = nil
         }) {
             HStack(spacing: 10) {
-                Image(systemName: provider.iconName)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(isSelected ? .kimiBlue : .kimiTextSecondary)
-                    .frame(width: 24, height: 24)
+                Image(provider.logoImageName)
+                    .resizable()
+                    .interpolation(.high)
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 22, height: 22)
+                    .padding(3)
                     .background(
-                        Circle()
-                            .fill(isSelected ? Color.kimiBlue.opacity(0.12) : Color.kimiTextPrimary.opacity(0.06))
+                        Circle().fill(isSelected ? Color.kimiBlue.opacity(0.12) : Color.kimiTextPrimary.opacity(0.06))
                     )
 
                 Text(provider.displayName)
@@ -498,6 +507,16 @@ private struct AddAccountSheet: View {
         switch method {
         case .oauth: return languageManager.tr("浏览器授权，推荐")
         case .apiKey: return languageManager.tr("手动填写 API Key")
+        }
+    }
+
+    /// 弹窗标题图标底色：跟随平台品牌色
+    private var providerBadgeBackground: Color {
+        switch selectedProvider {
+        case .kimi:
+            return .kimiTextPrimary.opacity(0.08)
+        case .deepseek:
+            return Color(red: 0.34, green: 0.53, blue: 1.00).opacity(0.10)
         }
     }
 
@@ -576,6 +595,7 @@ private struct AddAccountSheet: View {
 
 private struct AccountRow: View {
     let displayName: String
+    let provider: AccountProvider
     let credential: AccountCredential
     let isPrimary: Bool
     let isCliActive: Bool
@@ -597,14 +617,29 @@ private struct AccountRow: View {
         return false
     }
 
-    /// 账号头像：OAuth 人像、API Key 钥匙，圆角方块底色跟随凭证类型
+    /// 账号头像：渲染对应平台官方 logo（Kimi 文字 logo / DeepSeek 鲸鱼），
+    /// 圆角方块底色沿用品牌色微调，区分主账号 / 副账号视觉重量。
     private var avatar: some View {
-        Image(systemName: isOAuth ? "person.fill" : "key.fill")
-            .font(.system(size: 13, weight: .medium))
-            .foregroundStyle(isOAuth ? Color.kimiBlue : Color.kimiTextSecondary)
-            .frame(width: 28, height: 28)
-            .background((isOAuth ? Color.kimiBlue : Color.kimiTextSecondary).opacity(0.12))
-            .clipShape(RoundedRectangle(cornerRadius: 8))
+        ZStack {
+            RoundedRectangle(cornerRadius: 8)
+                .fill(avatarBackground)
+
+            Image(provider.logoImageName)
+                .resizable()
+                .interpolation(.high)
+                .aspectRatio(contentMode: .fit)
+                .padding(5)
+        }
+        .frame(width: 28, height: 28)
+    }
+
+    private var avatarBackground: Color {
+        switch provider {
+        case .kimi:
+            return .kimiTextPrimary.opacity(0.08)
+        case .deepseek:
+            return Color(red: 0.34, green: 0.53, blue: 1.00).opacity(0.10)
+        }
     }
 
     var body: some View {

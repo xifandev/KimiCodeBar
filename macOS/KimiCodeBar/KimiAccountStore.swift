@@ -29,6 +29,16 @@ enum AccountProvider: String, Codable, CaseIterable, Identifiable {
         }
     }
 
+    /// 账号行头像 / 平台卡 / 弹窗引用的官方品牌 logo（Assets.xcassets）。
+    /// Kimi logo 自带 light/dark 双版，深浅模式自动切换。
+    /// DeepSeek logo 品牌蓝在两种背景下都可见，单版本即可。
+    var logoImageName: String {
+        switch self {
+        case .kimi: return "kimi-logo"
+        case .deepseek: return "deepseek-logo"
+        }
+    }
+
     /// 该平台支持的登录方式
     var supportedAuthMethods: [AuthMethod] {
         switch self {
