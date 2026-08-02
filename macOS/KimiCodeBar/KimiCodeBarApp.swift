@@ -957,10 +957,8 @@ struct KimiMenu: View {
             if isVisible {
                 isKimiServerRestartHintDismissed = false
                 Task { await model.refreshKimiServerState() }
-                // 面板打开立即刷新一次额度，但避免与正在进行的请求并发
-                if !model.isLoading {
-                    model.refresh(showsLoading: false)
-                }
+                // 面板打开立即刷新一次额度（refresh 内部有 isRefreshing 守卫，正在刷新时会自动跳过）
+                model.refresh(showsLoading: false)
                 // 面板打开时探测 App 新版本，只更新状态、不弹窗
                 SparkleUpdater.shared.checkForUpdateInformation()
                 // 面板打开时扫描一次本机消耗量（后台线程，3 分钟节流）
@@ -4482,6 +4480,10 @@ final class KimiCodeBarModel: ObservableObject {
     private var timer: Timer?
     private var updateTimer: Timer?
 
+    /// 正在刷新配额时置 true，防止并发 refresh() 调用。
+    /// Kimi 服务端每次刷新都会轮换 refresh_token，两次并发刷新会导致第二次被判定为 unauthorized。
+    private var isRefreshing = false
+
     /// 当前是否已配置可用凭证（决定菜单栏是否提示去设置）
     var hasCredential: Bool {
         !accounts.isEmpty
@@ -4538,7 +4540,10 @@ final class KimiCodeBarModel: ObservableObject {
     /// - Parameter showsLoading: 是否把 isLoading 置 true 触发 UI loading 态。
     ///   仅手动点「刷新」按钮时传 true；后台场景（启动、定时器、面板打开、
     ///   设置窗口 onAppear）一律传 false，避免界面无谓闪烁。
+    /// - Note: 正在刷新时直接跳过，避免并发刷新同一个 refresh_token 导致服务端轮换冲突。
     func refresh(showsLoading: Bool = true) {
+        guard !isRefreshing else { return }
+        isRefreshing = true
         refreshCliActiveAccount()
         refreshAllAccounts(showsLoading: showsLoading)
     }
@@ -4603,6 +4608,7 @@ final class KimiCodeBarModel: ObservableObject {
             if showsLoading {
                 isLoading = false
             }
+            isRefreshing = false
             accountQuotas = [:]
             accountStates = [:]
             syncPrimaryCompat()
@@ -4677,6 +4683,7 @@ final class KimiCodeBarModel: ObservableObject {
                 if showsLoading {
                     self.isLoading = false
                 }
+                self.isRefreshing = false
                 self.syncPrimaryCompat()
             }
         }
