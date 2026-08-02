@@ -1606,7 +1606,7 @@ private struct AccountQuotaCard: View {
                     // 极简风格：单行紧凑，短标签 + 百分比 + 进度条 + 重置时间
                     VStack(alignment: .leading, spacing: 6) {
                         MinimalQuotaRow(
-                            label: languageManager.tr("周"),
+                            label: "7d",
                             reset: quota?.weekly.timeUntilReset,
                             percentage: quota?.weekly.percentage,
                             color: .kimiBlue,
@@ -1772,24 +1772,27 @@ private struct MinimalQuotaRow: View {
             Text(label)
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(.kimiTextSecondary)
-                .frame(width: 18, alignment: .leading)
+                .frame(width: 20, alignment: .leading)
 
-            // 百分比
-            if !isLoading {
-                if percentage != nil {
-                    Text("\(clampedPercentage)%")
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
-                        .monospacedDigit()
-                        .foregroundStyle(.kimiTextPrimary)
+            // 百分比：固定宽度，保证两行进度条起点一致
+            Group {
+                if !isLoading {
+                    if percentage != nil {
+                        Text("\(clampedPercentage)%")
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .monospacedDigit()
+                            .foregroundStyle(.kimiTextPrimary)
+                    } else {
+                        Text("--%")
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .foregroundStyle(.kimiTextTertiary)
+                    }
                 } else {
-                    Text("--%")
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
-                        .foregroundStyle(.kimiTextTertiary)
+                    LoadingRing()
+                        .frame(width: 12, height: 12)
                 }
-            } else {
-                LoadingRing()
-                    .frame(width: 12, height: 12)
             }
+            .frame(width: 32, alignment: .leading)
 
             // 进度条
             GeometryReader { proxy in
@@ -1939,7 +1942,7 @@ private struct MultiAccountCardStylePreview: View {
 
             // 极简单行
             VStack(alignment: .leading, spacing: 4) {
-                PreviewMinimalRow(label: "周", percentage: 56, reset: "3天2时", color: .kimiBlue)
+                PreviewMinimalRow(label: "7d", percentage: 56, reset: "3天2时", color: .kimiBlue)
                 PreviewMinimalRow(label: "5h", percentage: 0, reset: "2时28分", color: .orange)
             }
         }
