@@ -1,46 +1,6 @@
 {
   "sourceLanguage" : "zh-Hans",
   "strings" : {
-    "多账号显示风格" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Multi-Account Style"
-          }
-        }
-      }
-    },
-    "经典" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Classic"
-          }
-        }
-      }
-    },
-    "极简" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Minimal"
-          }
-        }
-      }
-    },
-    "周" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wk"
-          }
-        }
-      }
-    },
     "" : {
 
     },
@@ -48,6 +8,9 @@
 
     },
     "-- · --" : {
+
+    },
+    "--%" : {
 
     },
     "·" : {
@@ -384,6 +347,17 @@
     "KimiCode CLI" : {
 
     },
+    "KimiCode CLI 检查更新" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "KimiCode CLI Update Check"
+          }
+        }
+      }
+    },
     "KimiCode CLI 版本号" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -416,6 +390,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "KimiCodeBar %1$@ is available—you're now running %2$@."
+          }
+        }
+      }
+    },
+    "KimiCodeBar 版本号" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "KimiCodeBar Version"
           }
         }
       }
@@ -675,6 +660,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "About"
+          }
+        }
+      }
+    },
+    "关闭后打开面板和后台都不再检查新版本" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When disabled, no update checks on panel open or in background"
           }
         }
       }
@@ -998,6 +994,17 @@
         }
       }
     },
+    "启用检查更新" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enable Update Check"
+          }
+        }
+      }
+    },
     "启用自动归档" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1005,6 +1012,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Enable Auto Archive"
+          }
+        }
+      }
+    },
+    "周" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wk"
           }
         }
       }
@@ -1108,7 +1126,7 @@
         }
       }
     },
-    "外观样式" : {
+    "外观主题" : {
       "extractionState" : "stale",
       "localizations" : {
         "en" : {
@@ -1119,7 +1137,7 @@
         }
       }
     },
-    "外观主题" : {
+    "外观样式" : {
       "extractionState" : "stale",
       "localizations" : {
         "en" : {
@@ -1137,6 +1155,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Multi-Account"
+          }
+        }
+      }
+    },
+    "多账号显示风格" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Multi-Account Style"
           }
         }
       }
@@ -1181,17 +1210,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Fully open source, with transparent code."
-          }
-        }
-      }
-    },
-    "欢迎 Star、提交 Issue 或参与共建，让这款工具变得更好。" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Stars, issues, and contributions are welcome—help make it better."
           }
         }
       }
@@ -1977,6 +1995,17 @@
         }
       }
     },
+    "极简" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minimal"
+          }
+        }
+      }
+    },
     "查看仓库" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2072,6 +2101,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Running Kimi Code sessions detected: the switch does not affect them, and they may overwrite this switch when refreshing their login. Quit them first if possible."
+          }
+        }
+      }
+    },
+    "欢迎 Star、提交 Issue 或参与共建，让这款工具变得更好。" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stars, issues, and contributions are welcome—help make it better."
           }
         }
       }
@@ -2413,6 +2453,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Total Token Used"
+          }
+        }
+      }
+    },
+    "经典" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Classic"
           }
         }
       }
@@ -2886,50 +2937,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Default"
-          }
-        }
-      }
-    },
-    "KimiCode CLI 检查更新" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "KimiCode CLI Update Check"
-          }
-        }
-      }
-    },
-    "启用检查更新" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enable Update Check"
-          }
-        }
-      }
-    },
-    "关闭后打开面板和后台都不再检查新版本" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "When disabled, no update checks on panel open or in background"
-          }
-        }
-      }
-    },
-    "KimiCodeBar 版本号" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "KimiCodeBar Version"
           }
         }
       }
