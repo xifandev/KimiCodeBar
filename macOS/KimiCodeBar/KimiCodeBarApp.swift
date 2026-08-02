@@ -1585,7 +1585,7 @@ struct AccountQuotaListView: View {
 // MARK: - DeepSeek 余额卡片
 
 /// DeepSeek 账号余额卡片：极简单行布局。
-/// [小 logo] 账号名 [主账号/失效标签] ............ [加载圈/充值按钮] ¥余额
+/// [小 logo] 账号名 [主账号/失效标签] ............ [加载圈/¥余额/🌐]
 ///
 /// 设计考量：DeepSeek 官方 API 仅暴露 total_balance 一个核心数字，
 /// 没有"本周用量 / 5小时用量"等分维度数据，也不提供累计消费。
@@ -1597,7 +1597,7 @@ private struct DeepSeekBalanceCard: View {
     @StateObject private var model = KimiCodeBarModel.shared
     @StateObject private var languageManager = LanguageManager.shared
 
-    @State private var isHoveredRecharge = false
+    @State private var isHoveredConsole = false
 
     private var balance: DeepSeekBalance? {
         model.accountBalances[account.id]
@@ -1649,7 +1649,7 @@ private struct DeepSeekBalanceCard: View {
                 LoadingRing()
                     .frame(width: 12, height: 12)
             } else if let balance {
-                // 正常：余额数字（主色 + semibold 强调）+ 充值按钮
+                // 正常：余额数字（主色 + semibold 强调）+ 后台入口（地球图标）
                 Text(balance.balanceWithSymbol)
                     .font(.system(size: 15, weight: .semibold, design: .rounded))
                     .monospacedDigit()
@@ -1662,24 +1662,22 @@ private struct DeepSeekBalanceCard: View {
                         .foregroundStyle(.orange)
                 }
 
+                // 后台入口：地球图标，悬停高亮，点击打开 DeepSeek 控制台
+                // 只放图标不加文字，单行横条尽量省空间，保持视觉简洁
                 Button(action: {
                     NSWorkspace.shared.open(DeepSeekBalanceService.consoleURL)
                 }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "creditcard")
-                            .font(.system(size: 10, weight: .medium))
-                        LText("充值")
-                            .font(.system(size: 12, weight: .medium))
-                    }
-                    .foregroundStyle(isHoveredRecharge ? .kimiTextPrimary : .kimiTextSecondary)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(isHoveredRecharge ? Color.kimiTextPrimary.opacity(0.14) : Color.kimiTextPrimary.opacity(0.08))
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    Image(systemName: "globe")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(isHoveredConsole ? .kimiTextPrimary : .kimiTextSecondary)
+                        .frame(width: 22, height: 22)
+                        .background(isHoveredConsole ? Color.kimiTextPrimary.opacity(0.14) : Color.kimiTextPrimary.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
                 }
                 .buttonStyle(.plain)
                 .cursor(.pointingHand)
-                .onHover { isHoveredRecharge = $0 }
+                .onHover { isHoveredConsole = $0 }
+                .help(languageManager.tr("打开 DeepSeek 控制台"))
             } else {
                 LText("暂无余额")
                     .font(.system(size: 13))

@@ -1528,6 +1528,17 @@
         }
       }
     },
+    "打开 DeepSeek 控制台" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open DeepSeek Console"
+          }
+        }
+      }
+    },
     "技能包通常位于 ~/.kimi-code/skills/" : {
       "extractionState" : "stale",
       "localizations" : {
