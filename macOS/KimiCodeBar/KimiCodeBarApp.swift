@@ -1584,12 +1584,13 @@ struct AccountQuotaListView: View {
 
 // MARK: - DeepSeek 余额卡片
 
-/// DeepSeek 账号余额卡片：预充值按量付费模型，与 Kimi 配额卡保持同一布局节奏（横条）。
-/// 标头：DeepSeek 小 logo + 账号名 + 主账号标签 + 右上角充值按钮。
-/// 分隔线。
-/// 内容：当前余额（大字） + 赠送余额 / 充值余额拆分。
-/// 与 Kimi AccountQuotaCard 视觉权重一致，避免「卡中卡」的嵌套感。
-/// 注：DeepSeek 仅支持 API Key 一种登录方式，不再贴 API Key 标签（信息冗余）。
+/// DeepSeek 账号余额卡片：极简单行布局。
+/// [小 logo] 账号名 [主账号/失效标签] ............ [加载圈/充值按钮] ¥余额
+///
+/// 设计考量：DeepSeek 官方 API 仅暴露 total_balance 一个核心数字，
+/// 没有"本周用量 / 5小时用量"等分维度数据，也不提供累计消费。
+/// 多放字段（赠送 / 充值拆分）属于信息冗余且视觉负担，按兄弟要求做成单行横条。
+/// 余额数字用主色 + semibold 视觉强调，与 Kimi 卡的百分比数字同级。
 private struct DeepSeekBalanceCard: View {
     let account: KimiAccount
 
@@ -1616,124 +1617,82 @@ private struct DeepSeekBalanceCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            // MARK: - 标头：DeepSeek 小 logo + 账号名 + 标签 + 右上角充值
-            HStack(spacing: 8) {
-                Image(account.provider.logoImageName)
-                    .resizable()
-                    .interpolation(.high)
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 16, height: 16)
+        HStack(spacing: 8) {
+            // 左：DeepSeek 小 logo
+            Image(account.provider.logoImageName)
+                .resizable()
+                .interpolation(.high)
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 16, height: 16)
 
-                Text(model.displayName(for: account))
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.kimiTextSecondary)
+            // 账号名（次级色，与 Kimi 卡标头同级）
+            Text(model.displayName(for: account))
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.kimiTextSecondary)
+                .lineLimit(1)
+
+            // 标签：仅展示有意义的「主账号」/「登录失效」
+            if isPrimary {
+                tagPill(languageManager.tr("主账号"), color: .kimiBlue)
+            }
+            if case .unauthorized = state {
+                tagPill(languageManager.tr("登录失效"), color: .red)
+            }
+
+            Spacer(minLength: 8)
+
+            // 右侧动作位 / 状态位
+            if case .unauthorized = state {
+                // 失效：不显示数字，只保留右侧动作给后续重授权入口（当前空）
+                EmptyView()
+            } else if isLoading && balance == nil {
+                LoadingRing()
+                    .frame(width: 12, height: 12)
+            } else if let balance {
+                // 正常：余额数字（主色 + semibold 强调）+ 充值按钮
+                Text(balance.balanceWithSymbol)
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(.kimiTextPrimary)
                     .lineLimit(1)
 
-                if isPrimary {
-                    tagPill(languageManager.tr("主账号"), color: .kimiBlue)
-                }
-
-                if case .unauthorized = state {
-                    tagPill(languageManager.tr("登录失效"), color: .red)
-                }
-
-                Spacer(minLength: 8)
-
-                // 右上角动作位：未失效时放充值按钮，加载中 / 失效时给加载圈 / 让位
-                if case .unauthorized = state {
-                    EmptyView()
-                } else if isLoading {
-                    LoadingRing()
-                        .frame(width: 12, height: 12)
-                } else if balance != nil {
-                    Button(action: {
-                        NSWorkspace.shared.open(DeepSeekBalanceService.consoleURL)
-                    }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "creditcard")
-                                .font(.system(size: 10, weight: .medium))
-                            LText("充值")
-                                .font(.system(size: 12, weight: .medium))
-                        }
-                        .foregroundStyle(isHoveredRecharge ? .kimiTextPrimary : .kimiTextSecondary)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(isHoveredRecharge ? Color.kimiTextPrimary.opacity(0.14) : Color.kimiTextPrimary.opacity(0.08))
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                    }
-                    .buttonStyle(.plain)
-                    .cursor(.pointingHand)
-                    .onHover { isHoveredRecharge = $0 }
-                }
-            }
-
-            // 简约分割线：与 Kimi 配额卡一致
-            Rectangle()
-                .fill(Color.kimiTextPrimary.opacity(0.06))
-                .frame(height: 1)
-
-            // MARK: - 内容：余额大数字 + 拆分 + 失效 / 加载 / 空状态分支
-            if case .unauthorized = state {
-                HStack(spacing: 6) {
+                if !balance.isAvailable {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.red)
-
-                    LText("登录失效，请到设置-账号管理处理")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.kimiTextSecondary)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.orange)
                 }
-            } else if isLoading && balance == nil {
-                HStack(spacing: 8) {
-                    ProgressView()
-                        .controlSize(.small)
-                    LText("加载中…")
-                        .font(.system(size: 13))
-                        .foregroundStyle(.kimiTextSecondary)
-                }
-            } else if let balance {
-                HStack(alignment: .center, spacing: 16) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(balance.balanceWithSymbol)
-                            .font(.system(size: 22, weight: .semibold, design: .rounded))
-                            .monospacedDigit()
-                            .foregroundStyle(.kimiTextPrimary)
 
-                        if !balance.isAvailable {
-                            LText("余额不可用，API 调用被拒绝")
-                                .font(.system(size: 11))
-                                .foregroundStyle(.orange.opacity(0.9))
-                        }
+                Button(action: {
+                    NSWorkspace.shared.open(DeepSeekBalanceService.consoleURL)
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "creditcard")
+                            .font(.system(size: 10, weight: .medium))
+                        LText("充值")
+                            .font(.system(size: 12, weight: .medium))
                     }
-
-                    Spacer(minLength: 12)
-
-                    HStack(spacing: 14) {
-                        BalanceBreakdownItem(
-                            label: languageManager.tr("赠送余额"),
-                            amount: balance.grantedBalance,
-                            currency: balance.currency
-                        )
-                        BalanceBreakdownItem(
-                            label: languageManager.tr("充值余额"),
-                            amount: balance.toppedUpBalance,
-                            currency: balance.currency
-                        )
-                    }
+                    .foregroundStyle(isHoveredRecharge ? .kimiTextPrimary : .kimiTextSecondary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(isHoveredRecharge ? Color.kimiTextPrimary.opacity(0.14) : Color.kimiTextPrimary.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
                 }
+                .buttonStyle(.plain)
+                .cursor(.pointingHand)
+                .onHover { isHoveredRecharge = $0 }
             } else {
-                LText("暂无余额数据")
+                LText("暂无余额")
                     .font(.system(size: 13))
-                    .foregroundStyle(.kimiTextSecondary)
+                    .foregroundStyle(.kimiTextTertiary)
             }
         }
-        .padding(14)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
         .background(Color.kimiCardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
-    /// 与 Kimi AccountQuotaCard 同步的小号标签样式，保证卡片间视觉一致
+    /// 与 Kimi AccountQuotaCard 同步的小号标签样式
     private func tagPill(_ text: String, color: Color) -> some View {
         Text(text)
             .font(.system(size: 9, weight: .medium))
@@ -1742,29 +1701,6 @@ private struct DeepSeekBalanceCard: View {
             .padding(.vertical, 1)
             .background(color.opacity(0.12))
             .clipShape(RoundedRectangle(cornerRadius: 4))
-    }
-}
-
-private struct BalanceBreakdownItem: View {
-    let label: String
-    let amount: Double
-    let currency: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label)
-                .font(.system(size: 11))
-                .foregroundStyle(.kimiTextTertiary)
-            Text(formattedAmount)
-                .font(.system(size: 13, weight: .medium, design: .rounded))
-                .monospacedDigit()
-                .foregroundStyle(.kimiTextSecondary)
-        }
-    }
-
-    private var formattedAmount: String {
-        let symbol = currency == "CNY" ? "¥" : "$"
-        return "\(symbol)\(String(format: "%.2f", amount))"
     }
 }
 
