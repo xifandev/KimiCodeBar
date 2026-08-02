@@ -227,6 +227,31 @@ enum MenuBarDisplayScheme: String, CaseIterable, Identifiable {
     }
 }
 
+// MARK: - 多账号卡片显示风格
+
+enum MultiAccountCardStyle: String, CaseIterable, Identifiable {
+    /// 经典风格：大百分比 + 分割线 + 进度条 + 标题/重置时间分列
+    case classic
+    /// 极简风格：标签 + 百分比 + 进度条 + 重置时间，单行紧凑
+    case minimal
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .classic: return LanguageManager.tr("经典")
+        case .minimal: return LanguageManager.tr("极简")
+        }
+    }
+
+    var iconName: String {
+        switch self {
+        case .classic: return "rectangle.split.3x1"
+        case .minimal: return "rectangle.righthalf.inset.filled"
+        }
+    }
+}
+
 @MainActor
 enum MenuBarTextRenderer {
     // 模板图只读取 alpha 通道，实际染色由系统按菜单栏明暗外观决定，此处颜色只需保证不透明
@@ -1490,7 +1515,7 @@ private struct AccountQuotaCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            // 头部：账号名 + 标签行（主账号 / 会员等级 / 登录失效）
+            // MARK: - 标头：账号名 + 标签行（主账号 / 会员等级 / 登录失效）
             // 账号名刻意用次级色弱化：整张卡片唯一的高亮元素是配额大数字，保证第一眼聚焦额度
             HStack(spacing: 6) {
                 Text(model.displayName(for: account))
@@ -1523,6 +1548,12 @@ private struct AccountQuotaCard: View {
                 }
             }
 
+            // 简约分割线：标头与内容之间的视觉分区
+            Rectangle()
+                .fill(Color.kimiTextPrimary.opacity(0.06))
+                .frame(height: 1)
+
+            // MARK: - 内容
             if case .unauthorized = state {
                 // 凭证保留，引导到设置-账号管理处理（管理操作在设置页完成）
                 HStack(spacing: 6) {
@@ -1543,29 +1574,53 @@ private struct AccountQuotaCard: View {
                         .lineLimit(1)
                 }
 
-                // 左右双列：本周 / 5小时，复刻单账号 UsageCard 的并排布局（深度压缩版）
-                HStack(spacing: 12) {
-                    CompactQuotaColumn(
-                        title: languageManager.tr("本周用量"),
-                        reset: quota?.weekly.timeUntilReset,
-                        percentage: quota?.weekly.percentage,
-                        color: .kimiBlue,
-                        isLoading: isLoadingState
-                    )
+                // 根据用户选择的显示风格渲染限额区域
+                switch model.multiAccountCardStyle {
+                case .classic:
+                    // 经典风格：左右双列，大百分比 + 进度条 + 标题/重置时间分列
+                    HStack(spacing: 12) {
+                        CompactQuotaColumn(
+                            title: languageManager.tr("本周用量"),
+                            reset: quota?.weekly.timeUntilReset,
+                            percentage: quota?.weekly.percentage,
+                            color: .kimiBlue,
+                            isLoading: isLoadingState
+                        )
 
-                    // 两列之间的细分隔线，呼应「一边是周限额、一边是5小时限额」的分区感
-                    Rectangle()
-                        .fill(Color.kimiTextPrimary.opacity(0.08))
-                        .frame(width: 1)
-                        .padding(.vertical, 2)
+                        // 两列之间的细分隔线，呼应「一边是周限额、一边是5小时限额」的分区感
+                        Rectangle()
+                            .fill(Color.kimiTextPrimary.opacity(0.08))
+                            .frame(width: 1)
+                            .padding(.vertical, 2)
 
-                    CompactQuotaColumn(
-                        title: languageManager.tr("5小时用量"),
-                        reset: quota?.fiveHour.timeUntilReset,
-                        percentage: quota?.fiveHour.percentage,
-                        color: .orange,
-                        isLoading: isLoadingState
-                    )
+                        CompactQuotaColumn(
+                            title: languageManager.tr("5小时用量"),
+                            reset: quota?.fiveHour.timeUntilReset,
+                            percentage: quota?.fiveHour.percentage,
+                            color: .orange,
+                            isLoading: isLoadingState
+                        )
+                    }
+
+                case .minimal:
+                    // 极简风格：单行紧凑，短标签 + 百分比 + 进度条 + 重置时间
+                    VStack(alignment: .leading, spacing: 6) {
+                        MinimalQuotaRow(
+                            label: languageManager.tr("周"),
+                            reset: quota?.weekly.timeUntilReset,
+                            percentage: quota?.weekly.percentage,
+                            color: .kimiBlue,
+                            isLoading: isLoadingState
+                        )
+
+                        MinimalQuotaRow(
+                            label: "5h",
+                            reset: quota?.fiveHour.timeUntilReset,
+                            percentage: quota?.fiveHour.percentage,
+                            color: .orange,
+                            isLoading: isLoadingState
+                        )
+                    }
                 }
 
                 // 加油包按官方后台开通状态自动显示：已开通才展示，未开通不占位
@@ -1610,18 +1665,24 @@ private struct CompactQuotaColumn: View {
         min(percentage ?? 0, 100)
     }
 
+    /// 压缩重置时间文本：去掉「后重置」，「小时」→「时」，「分钟」→「分」
+    /// 例："20小时38分钟后重置"→"20时38分"，"1小时38分钟后重置"→"1时38分"，"38分钟后重置"→"38分"
+    private var compressedReset: String {
+        guard let reset else { return "--" }
+        // "后重置" 去掉
+        var s = reset
+        s = s.replacingOccurrences(of: "后重置", with: "")
+        s = s.replacingOccurrences(of: "小时", with: "时")
+        s = s.replacingOccurrences(of: "分钟", with: "分")
+        return s.isEmpty ? reset : s
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            // 标题行：主色小字压到 0.85 透明度，亮度比大百分比低一丢丢
-            Text(title)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.kimiTextPrimary.opacity(0.85))
-                .lineLimit(1)
-
-            // 大百分比：整列唯一的全亮元素（数字与 % 同亮），第一眼聚焦额度
-            ZStack(alignment: .leading) {
+            // 百分比靠左，重置时间靠右
+            HStack(alignment: .firstTextBaseline, spacing: 5) {
                 if !isLoading {
-                    if let percentage {
+                    if percentage != nil {
                         Text("\(clampedPercentage)")
                             .font(.system(size: 24, weight: .bold, design: .rounded))
                             .monospacedDigit()
@@ -1640,6 +1701,13 @@ private struct CompactQuotaColumn: View {
                     LoadingRing()
                         .frame(width: 18, height: 18)
                 }
+
+                Spacer(minLength: 4)
+
+                Text(compressedReset)
+                    .font(.system(size: 10))
+                    .foregroundStyle(.kimiTextTertiary)
+                    .lineLimit(1)
             }
             .frame(height: 28)
 
@@ -1663,12 +1731,270 @@ private struct CompactQuotaColumn: View {
             }
             .frame(height: 4)
 
-            Text(reset ?? "--")
+            Text(title)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.kimiTextSecondary)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+// MARK: - 极简限额行
+
+/// 多账号卡片「极简」风格的单行限额：短标签 + 百分比 + 进度条 + 重置时间，全在一行。
+/// 每个元素尺寸收敛到最小：标签 11pt、百分比 13pt、进度条 3pt、重置时间 10pt。
+private struct MinimalQuotaRow: View {
+    /// 短标签，如「周」「5h」
+    let label: String
+    let reset: String?
+    let percentage: Int?
+    let color: Color
+    let isLoading: Bool
+
+    private var clampedPercentage: Int {
+        min(percentage ?? 0, 100)
+    }
+
+    /// 压缩重置时间文本（与 CompactQuotaColumn 同逻辑）
+    private var compressedReset: String {
+        guard let reset else { return "--" }
+        var s = reset
+        s = s.replacingOccurrences(of: "后重置", with: "")
+        s = s.replacingOccurrences(of: "小时", with: "时")
+        s = s.replacingOccurrences(of: "分钟", with: "分")
+        return s.isEmpty ? reset : s
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            // 短标签
+            Text(label)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(.kimiTextSecondary)
+                .frame(width: 18, alignment: .leading)
+
+            // 百分比
+            if !isLoading {
+                if percentage != nil {
+                    Text("\(clampedPercentage)%")
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(.kimiTextPrimary)
+                } else {
+                    Text("--%")
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundStyle(.kimiTextTertiary)
+                }
+            } else {
+                LoadingRing()
+                    .frame(width: 12, height: 12)
+            }
+
+            // 进度条
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .frame(height: 3)
+                        .foregroundStyle(Color.kimiTextPrimary.opacity(0.10))
+
+                    Capsule()
+                        .frame(width: proxy.size.width * CGFloat(clampedPercentage) / 100, height: 3)
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [color, color.opacity(0.55)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                }
+            }
+            .frame(height: 3)
+
+            // 重置时间
+            Text(compressedReset)
                 .font(.system(size: 10))
                 .foregroundStyle(.kimiTextTertiary)
                 .lineLimit(1)
         }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+// MARK: - 多账号卡片风格预览
+
+/// 设置页「多账号显示风格」的模拟预览：用假数据渲染一个缩小版卡片，
+/// 让用户直观看到每种风格的视觉效果。非实时、非交互。
+private struct MultiAccountCardStylePreview: View {
+    let style: MultiAccountCardStyle
+
+    var body: some View {
+        switch style {
+        case .classic:
+            classicPreview
+        case .minimal:
+            minimalPreview
+        }
+    }
+
+    // 经典风格预览：标头 + 分割线 + 左右双列
+    private var classicPreview: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            // 标头
+            HStack(spacing: 4) {
+                Text("Kimi")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.kimiTextSecondary)
+                PreviewTagPill("主账号", color: .kimiBlue)
+            }
+
+            Rectangle()
+                .fill(Color.kimiTextPrimary.opacity(0.06))
+                .frame(height: 1)
+
+            // 双列
+            HStack(spacing: 8) {
+                PreviewCompactQuotaColumn(title: "本周用量", percentage: 56, reset: "20时38分", color: .kimiBlue)
+                Rectangle()
+                    .fill(Color.kimiTextPrimary.opacity(0.08))
+                    .frame(width: 1)
+                PreviewCompactQuotaColumn(title: "5小时用量", percentage: 0, reset: "1时38分", color: .orange)
+            }
+        }
+        .padding(10)
+        .background(Color.kimiCardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .frame(maxWidth: 320)
+    }
+
+    // 极简风格预览：标头 + 分割线 + 两行紧凑行
+    private var minimalPreview: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            // 标头
+            HStack(spacing: 4) {
+                Text("Kimi")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.kimiTextSecondary)
+                PreviewTagPill("主账号", color: .kimiBlue)
+            }
+
+            Rectangle()
+                .fill(Color.kimiTextPrimary.opacity(0.06))
+                .frame(height: 1)
+
+            // 极简单行
+            VStack(alignment: .leading, spacing: 4) {
+                PreviewMinimalRow(label: "周", percentage: 56, reset: "3天2时", color: .kimiBlue)
+                PreviewMinimalRow(label: "5h", percentage: 0, reset: "2时28分", color: .orange)
+            }
+        }
+        .padding(10)
+        .background(Color.kimiCardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .frame(maxWidth: 320)
+    }
+}
+
+/// 预览用的缩小版标签胶囊
+private struct PreviewTagPill: View {
+    let text: String
+    let color: Color
+
+    init(_ text: String, color: Color) {
+        self.text = text
+        self.color = color
+    }
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 7, weight: .medium))
+            .foregroundStyle(color)
+            .padding(.horizontal, 3)
+            .padding(.vertical, 1)
+            .background(color.opacity(0.12))
+            .clipShape(RoundedRectangle(cornerRadius: 3))
+    }
+}
+
+/// 预览用的缩小版 CompactQuotaColumn
+private struct PreviewCompactQuotaColumn: View {
+    let title: String
+    let percentage: Int
+    let reset: String
+    let color: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(alignment: .firstTextBaseline, spacing: 3) {
+                Text("\(percentage)")
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundStyle(.kimiTextPrimary)
+                + Text("%")
+                    .font(.system(size: 8, weight: .bold, design: .rounded))
+                    .foregroundStyle(.kimiTextPrimary)
+
+                Spacer(minLength: 2)
+
+                Text(reset)
+                    .font(.system(size: 6))
+                    .foregroundStyle(.kimiTextTertiary)
+            }
+            .frame(height: 16)
+
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .frame(height: 2)
+                        .foregroundStyle(Color.kimiTextPrimary.opacity(0.10))
+                    Capsule()
+                        .frame(width: proxy.size.width * CGFloat(percentage) / 100, height: 2)
+                        .foregroundStyle(color)
+                }
+            }
+            .frame(height: 2)
+
+            Text(title)
+                .font(.system(size: 7, weight: .medium))
+                .foregroundStyle(.kimiTextSecondary)
+        }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// 预览用的缩小版 MinimalQuotaRow
+private struct PreviewMinimalRow: View {
+    let label: String
+    let percentage: Int
+    let reset: String
+    let color: Color
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Text(label)
+                .font(.system(size: 7, weight: .medium))
+                .foregroundStyle(.kimiTextSecondary)
+                .frame(width: 12, alignment: .leading)
+
+            Text("\(percentage)%")
+                .font(.system(size: 8, weight: .bold, design: .rounded))
+                .foregroundStyle(.kimiTextPrimary)
+
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .frame(height: 2)
+                        .foregroundStyle(Color.kimiTextPrimary.opacity(0.10))
+                    Capsule()
+                        .frame(width: proxy.size.width * CGFloat(percentage) / 100, height: 2)
+                        .foregroundStyle(color)
+                }
+            }
+            .frame(height: 2)
+
+            Text(reset)
+                .font(.system(size: 6))
+                .foregroundStyle(.kimiTextTertiary)
+        }
     }
 }
 
@@ -3510,6 +3836,50 @@ struct PanelCustomSettingsView: View {
                     }
                 }
 
+                // 多账号显示风格
+                SettingsCard(title: languageManager.tr("多账号显示风格")) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(MultiAccountCardStyle.allCases) { style in
+                            let isSelected = model.multiAccountCardStyle == style
+
+                            // 风格选项行
+                            HStack(spacing: 10) {
+                                Image(systemName: style.iconName)
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundStyle(isSelected ? .kimiBlue : .kimiTextSecondary)
+                                    .frame(width: 24, alignment: .center)
+
+                                Text(style.displayName)
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(.kimiTextPrimary)
+
+                                Spacer(minLength: 4)
+
+                                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                                    .font(.system(size: 15, weight: .medium))
+                                    .foregroundStyle(isSelected ? .kimiBlue : .kimiTextTertiary)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                            .contentShape(Rectangle())
+                            .cursor(.pointingHand)
+                            .onTapGesture {
+                                model.multiAccountCardStyle = style
+                            }
+
+                            // 风格预览（模拟数据，非实时）
+                            MultiAccountCardStylePreview(style: style)
+                                .padding(.leading, 16)
+                                .padding(.trailing, 16)
+                                .padding(.bottom, style == MultiAccountCardStyle.allCases.last ? 12 : 12)
+
+                            if style != MultiAccountCardStyle.allCases.last {
+                                SettingsCardDivider()
+                            }
+                        }
+                    }
+                }
+
                 // 外观主题
                 SettingsCard(title: languageManager.tr("外观主题")) {
                     HStack(spacing: 10) {
@@ -4418,6 +4788,9 @@ final class KimiCodeBarModel: ObservableObject {
     @AppStorage("showKimiServerCard") var showKimiServerCard: Bool = true
     @AppStorage("showKimiVersionRow") var showKimiVersionRow: Bool = false
     @AppStorage("showAppUpdateRow") var showAppUpdateRow: Bool = false
+
+    // MARK: - 多账号卡片显示风格
+    @AppStorage("multiAccountCardStyle") var multiAccountCardStyle: MultiAccountCardStyle = .classic
 
     @Published var text = "-- · --"
     @Published var quota: KimiQuota?
