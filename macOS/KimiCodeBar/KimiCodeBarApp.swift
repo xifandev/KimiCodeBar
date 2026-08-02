@@ -1127,7 +1127,9 @@ struct KimiMenu: View {
         .onChange(of: isMenuVisible) { _, isVisible in
             if isVisible {
                 isKimiServerRestartHintDismissed = false
-                Task { await model.refreshKimiServerState() }
+                // Kimi Web UI 已临时屏蔽，面板打开不再探测 58627 端口（Kimi Web 未运行时
+                // 会刷大量 Connection refused 日志）。恢复 KimiServerCard 时取消注释即可。
+                // Task { await model.refreshKimiServerState() }
                 // 面板打开立即刷新一次额度（refresh 内部有 isRefreshing 守卫，正在刷新时会自动跳过）
                 model.refresh(showsLoading: false)
                 // 面板打开时探测 App 新版本，只更新状态、不弹窗
@@ -5768,7 +5770,8 @@ final class KimiCodeBarModel: ObservableObject {
         Task {
             await checkForKimiCLIUpdate()
             await checkForAppUpdate()
-            await refreshKimiServerState()
+            // Kimi Web UI 已临时屏蔽，手动刷新不再探测 58627 端口。恢复时取消注释即可。
+            // await refreshKimiServerState()
         }
     }
 
