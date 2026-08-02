@@ -5711,10 +5711,13 @@ final class KimiCodeBarModel: ObservableObject {
                 }) {
                     return LanguageManager.tr("该 API Key 已添加，无需重复添加")
                 }
+                // DeepSeek 账号不像 Kimi 能从接口拿到身份信息，别名留空时默认填 "DeepSeek"，
+                // 避免列表里出现 "账号 1" 这种无辨识度的名字；用户可随时在设置里改。
                 let cleanAlias = alias?.trimmingCharacters(in: .whitespacesAndNewlines)
+                let resolvedAlias = (cleanAlias?.isEmpty == false) ? cleanAlias : "DeepSeek"
                 store.addAccount(KimiAccount(
                     id: UUID(),
-                    alias: (cleanAlias?.isEmpty == false) ? cleanAlias : nil,
+                    alias: resolvedAlias,
                     provider: .deepseek,
                     credential: .apiKey(trimmed),
                     accountIdentifier: nil
@@ -5796,6 +5799,10 @@ final class KimiCodeBarModel: ObservableObject {
     func displayName(for account: KimiAccount) -> String {
         if let alias = account.alias?.trimmingCharacters(in: .whitespacesAndNewlines), !alias.isEmpty {
             return alias
+        }
+        // 无别名兜底：DeepSeek 账号默认叫 "DeepSeek"，Kimi 走"账号 N"
+        if account.provider == .deepseek {
+            return "DeepSeek"
         }
         let index = accounts.firstIndex(where: { $0.id == account.id }) ?? 0
         return LanguageManager.tr("账号 %1$d", arguments: [index + 1])
