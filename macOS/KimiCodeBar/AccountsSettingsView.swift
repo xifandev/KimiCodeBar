@@ -24,8 +24,9 @@ struct AccountsSettingsView: View {
     @State private var showCliSwitchConfirm = false
     @State private var cliSwitchError: String?
 
-    // 添加账号：方式选择 / API Key 表单状态
+    // 添加账号：平台选择 / 方式选择 / API Key 表单状态
     @State private var showsMethodChooser = false
+    @State private var selectedProvider: AccountProvider = .kimi
     @State private var showsApiKeyForm = false
     @State private var apiKeyInput = ""
     @State private var apiKeyAlias = ""
@@ -176,7 +177,7 @@ struct AccountsSettingsView: View {
             }
         }
         .alert(LanguageManager.tr("修改 API Key"), isPresented: $showEditKeyAlert) {
-            SecureField(LanguageManager.tr("sk-kimi-..."), text: $editKeyInput)
+            SecureField(editingKeyAccount?.provider == .deepseek ? "sk-..." : "sk-kimi-...", text: $editKeyInput)
             Button(LanguageManager.tr("保存")) {
                 if let account = editingKeyAccount {
                     let key = editKeyInput
@@ -242,8 +243,10 @@ struct AccountsSettingsView: View {
     private func submitApiKey() {
         isAddingApiKey = true
         apiKeyError = nil
+        let provider = selectedProvider
         Task {
             let error = await model.addApiKeyAccount(
+                provider: provider,
                 key: apiKeyInput,
                 alias: apiKeyAlias.isEmpty ? nil : apiKeyAlias
             )
@@ -323,11 +326,12 @@ struct AccountsSettingsView: View {
 
     // MARK: 添加账号：方式选择
 
-    /// 点击「添加账号」后先让用户选择登录方式：浏览器授权（OAuth）或手动填写 API Key。
+    /// 点击「添加账号」后先选平台，再选该平台的登录方式。
+    /// 平台切换用顶部 segmented，下方动态出方式卡片，避免嵌套弹层。
     private var methodChooser: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 10) {
-                LText("选择添加方式")
+                LText("选择平台")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(.kimiTextPrimary)
 
@@ -342,30 +346,67 @@ struct AccountsSettingsView: View {
 
             SettingsCardDivider()
 
-            HStack(spacing: 10) {
-                SettingsOptionCard(
-                    title: languageManager.tr("授权登录"),
-                    subtitle: languageManager.tr("浏览器授权，推荐"),
-                    iconName: "person.badge.key",
-                    isSelected: false
-                ) {
-                    showsMethodChooser = false
-                    model.startOAuthLogin()
+            // 平台切换 segmented
+            HStack(spacing: 6) {
+                ForEach(AccountProvider.allCases) { provider in
+                    providerTab(provider)
                 }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
 
-                SettingsOptionCard(
-                    title: languageManager.tr("API Key 登录"),
-                    subtitle: languageManager.tr("手动填写 API Key"),
-                    iconName: "key",
-                    isSelected: false
-                ) {
-                    showsMethodChooser = false
-                    showsApiKeyForm = true
+            SettingsCardDivider()
+
+            // 下方动态出该平台的添加方式
+            HStack(spacing: 10) {
+                ForEach(selectedProvider.supportedAuthMethods, id: \.self) { method in
+                    switch method {
+                    case .oauth:
+                        SettingsOptionCard(
+                            title: languageManager.tr("授权登录"),
+                            subtitle: languageManager.tr("浏览器授权，推荐"),
+                            iconName: "person.badge.key",
+                            isSelected: false
+                        ) {
+                            showsMethodChooser = false
+                            model.startOAuthLogin()
+                        }
+                    case .apiKey:
+                        SettingsOptionCard(
+                            title: languageManager.tr("API Key 登录"),
+                            subtitle: languageManager.tr("手动填写 API Key"),
+                            iconName: "key",
+                            isSelected: false
+                        ) {
+                            showsMethodChooser = false
+                            showsApiKeyForm = true
+                        }
+                    }
                 }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 13)
         }
+    }
+
+    /// 平台切换标签
+    private func providerTab(_ provider: AccountProvider) -> some View {
+        let isSelected = selectedProvider == provider
+        return Button(action: {
+            selectedProvider = provider
+        }) {
+            Text(provider.displayName)
+                .font(.system(size: 13, weight: isSelected ? .semibold : .medium))
+                .foregroundStyle(isSelected ? .kimiTextPrimary : .kimiTextSecondary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 7)
+                .background(
+                    RoundedRectangle(cornerRadius: 7)
+                        .fill(isSelected ? Color.kimiTextPrimary.opacity(0.10) : .clear)
+                )
+        }
+        .buttonStyle(.plain)
+        .cursor(.pointingHand)
     }
 
     // MARK: 添加账号：API Key 表单
@@ -392,7 +433,7 @@ struct AccountsSettingsView: View {
             SettingsCardDivider()
 
             VStack(alignment: .leading, spacing: 10) {
-                SecureField(LanguageManager.tr("sk-kimi-..."), text: $apiKeyInput)
+                SecureField(selectedProvider == .kimi ? "sk-kimi-..." : "sk-...", text: $apiKeyInput)
                     .textFieldStyle(.plain)
                     .font(.system(size: 13))
                     .foregroundStyle(.kimiTextPrimary)

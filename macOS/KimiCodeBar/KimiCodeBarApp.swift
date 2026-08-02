@@ -180,7 +180,17 @@ struct KimiLabel: View {
     @StateObject private var languageManager = LanguageManager.shared
 
     var body: some View {
-        if let quota = model.quota {
+        if model.primaryAccount?.provider == .deepseek {
+            // DeepSeek 主账号：鲸鱼图标 + 余额数字
+            if let primary = model.primaryAccount,
+               let balance = model.accountBalances[primary.id] {
+                Image(nsImage: MenuBarTextRenderer.deepseekImage(balanceText: balance.balanceText))
+            } else {
+                Text(model.text)
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .monospacedDigit()
+            }
+        } else if let quota = model.quota {
             Image(nsImage: MenuBarTextRenderer.image(
                 scheme: model.menuBarDisplayScheme,
                 weekly: quota.weekly.percentage,
@@ -268,6 +278,24 @@ enum MenuBarTextRenderer {
         case .singleLine:
             return singleLineImage(weekly: weekly, fiveHour: fiveHour)
         }
+    }
+
+    /// DeepSeek 鲸鱼图标 + 余额数字（不带货币符号，余额显示两位小数）。
+    /// 鲸鱼图标 adapted from CodexBar (MIT)，渲染为 template 图由系统按菜单栏明暗染色。
+    static func deepseekImage(balanceText: String) -> NSImage {
+        let content = HStack(spacing: 3) {
+            WhaleShape()
+                .fill(textColor)
+                .frame(width: 18, height: 18)
+            Text(balanceText)
+                .font(.system(size: 12, weight: .medium, design: .default))
+                .monospacedDigit()
+        }
+        .foregroundStyle(textColor)
+        .frame(height: 20)
+        .fixedSize(horizontal: true, vertical: false)
+
+        return render(content)
     }
 
     /// 原始紧凑样式：48pt 宽，两行 7D/5H。
@@ -360,6 +388,119 @@ enum MenuBarTextRenderer {
         }
         nsImage.isTemplate = true
         return nsImage
+    }
+}
+
+// MARK: - SVG path 解析
+
+extension CGPath {
+    /// 解析 SVG path data 字符串为 CGPath。支持 M/m, L/l, C/c, Z/z 命令。
+    /// 用于把 CodexBar 的 DeepSeek 鲸鱼 SVG 图标渲染为菜单栏 template 图。
+    static func parseSVGPath(_ data: String) -> CGPath {
+        let path = CGMutablePath()
+        let chars = Array(data)
+        var i = 0
+        var current = CGPoint.zero
+        var start = CGPoint.zero
+        var cmd: Character = "M"
+
+        func skipSeparators() {
+            while i < chars.count, chars[i] == " " || chars[i] == "," || chars[i] == "\n" || chars[i] == "\t" {
+                i += 1
+            }
+        }
+
+        func scanNumber() -> CGFloat {
+            skipSeparators()
+            var s = ""
+            if i < chars.count, chars[i] == "-" || chars[i] == "+" {
+                s.append(chars[i]); i += 1
+            }
+            while i < chars.count {
+                let c = chars[i]
+                if c.isNumber || c == "." {
+                    s.append(c); i += 1
+                } else {
+                    break
+                }
+            }
+            return CGFloat(Double(s) ?? 0)
+        }
+
+        func scanCommand() -> Character? {
+            skipSeparators()
+            if i < chars.count, chars[i].isLetter {
+                let c = chars[i]; i += 1
+                return c
+            }
+            return nil
+        }
+
+        while i < chars.count {
+            if let c = scanCommand() {
+                cmd = c
+            }
+
+            switch cmd {
+            case "M":
+                let x = scanNumber(); let y = scanNumber()
+                current = CGPoint(x: x, y: y); start = current
+                path.move(to: current)
+                cmd = "L"
+            case "m":
+                let x = scanNumber(); let y = scanNumber()
+                current = CGPoint(x: current.x + x, y: current.y + y); start = current
+                path.move(to: current)
+                cmd = "l"
+            case "L":
+                let x = scanNumber(); let y = scanNumber()
+                current = CGPoint(x: x, y: y)
+                path.addLine(to: current)
+            case "l":
+                let x = scanNumber(); let y = scanNumber()
+                current = CGPoint(x: current.x + x, y: current.y + y)
+                path.addLine(to: current)
+            case "C":
+                let x1 = scanNumber(); let y1 = scanNumber()
+                let x2 = scanNumber(); let y2 = scanNumber()
+                let x = scanNumber(); let y = scanNumber()
+                path.addCurve(to: CGPoint(x: x, y: y), control1: CGPoint(x: x1, y: y1), control2: CGPoint(x: x2, y: y2))
+                current = CGPoint(x: x, y: y)
+            case "c":
+                let x1 = scanNumber(); let y1 = scanNumber()
+                let x2 = scanNumber(); let y2 = scanNumber()
+                let x = scanNumber(); let y = scanNumber()
+                let p1 = CGPoint(x: current.x + x1, y: current.y + y1)
+                let p2 = CGPoint(x: current.x + x2, y: current.y + y2)
+                let p = CGPoint(x: current.x + x, y: current.y + y)
+                path.addCurve(to: p, control1: p1, control2: p2)
+                current = p
+            case "Z", "z":
+                path.closeSubpath()
+                current = start
+            default:
+                i += 1
+            }
+        }
+        return path
+    }
+}
+
+// MARK: - DeepSeek 鲸鱼图标
+
+/// DeepSeek 鲸鱼图标 Shape：从 SVG path data 渲染。
+/// path data adapted from CodexBar (MIT License)。
+struct WhaleShape: Shape {
+    /// 鲸鱼 SVG path（viewBox 0 0 30 30）
+    private static let pathData = "M27.501 8.46875C27.249 8.3457 27.1406 8.58008 26.9932 8.69922C26.9434 8.73828 26.9004 8.78906 26.8584 8.83398C26.4902 9.22852 26.0605 9.48633 25.5 9.45508C24.6787 9.41016 23.9785 9.66797 23.3594 10.2969C23.2275 9.52148 22.79 9.05859 22.125 8.76172C21.7764 8.60742 21.4238 8.45312 21.1807 8.11719C21.0098 7.87891 20.9639 7.61328 20.8779 7.35156C20.8242 7.19336 20.7695 7.03125 20.5879 7.00391C20.3906 6.97266 20.3135 7.13867 20.2363 7.27734C19.9258 7.84375 19.8066 8.46875 19.8174 9.10156C19.8447 10.5234 20.4453 11.6562 21.6367 12.4629C21.7725 12.5547 21.8076 12.6484 21.7646 12.7832C21.6836 13.0605 21.5869 13.3301 21.501 13.6074C21.4473 13.7852 21.3662 13.8242 21.1768 13.7461C20.5225 13.4727 19.957 13.0684 19.458 12.5781C18.6104 11.7578 17.8438 10.8516 16.8877 10.1426C16.6631 9.97656 16.4395 9.82227 16.207 9.67578C15.2314 8.72656 16.335 7.94727 16.5898 7.85547C16.8574 7.75977 16.6826 7.42773 15.8193 7.43164C14.957 7.43555 14.167 7.72461 13.1611 8.10938C13.0137 8.16797 12.8594 8.21094 12.7002 8.24414C11.7871 8.07227 10.8389 8.0332 9.84766 8.14453C7.98242 8.35352 6.49219 9.23633 5.39648 10.7441C4.08105 12.5547 3.77148 14.6133 4.15039 16.7617C4.54883 19.0234 5.70215 20.8984 7.47559 22.3633C9.31348 23.8809 11.4307 24.625 13.8457 24.4824C15.3125 24.3984 16.9463 24.2012 18.7881 22.6406C19.2529 22.8711 19.7402 22.9629 20.5498 23.0332C21.1729 23.0918 21.7725 23.002 22.2373 22.9062C22.9648 22.752 22.9141 22.0781 22.6514 21.9531C20.5186 20.959 20.9863 21.3633 20.5605 21.0371C21.6445 19.752 23.2783 18.418 23.917 14.0977C23.9668 13.7539 23.9238 13.5391 23.917 13.2598C23.9131 13.0918 23.9512 13.0254 24.1445 13.0059C24.6787 12.9453 25.1973 12.7988 25.6738 12.5352C27.0557 11.7793 27.6123 10.5391 27.7441 9.05078C27.7637 8.82422 27.7402 8.58789 27.501 8.46875ZM15.46 21.8613C13.3926 20.2344 12.3906 19.6992 11.9766 19.7227C11.5898 19.7441 11.6592 20.1875 11.7441 20.4766C11.833 20.7617 11.9492 20.959 12.1123 21.209C12.2246 21.375 12.3018 21.623 12 21.8066C11.334 22.2207 10.1768 21.668 10.1221 21.6406C8.77539 20.8477 7.64941 19.7988 6.85547 18.3652C6.08984 16.9844 5.64453 15.5039 5.57129 13.9238C5.55176 13.541 5.66406 13.4062 6.04297 13.3379C6.54199 13.2461 7.05762 13.2266 7.55664 13.2988C9.66602 13.6074 11.4619 14.5527 12.9668 16.0469C13.8262 16.9004 14.4766 17.918 15.1465 18.9121C15.8584 19.9688 16.625 20.9746 17.6006 21.7988C17.9443 22.0879 18.2197 22.3086 18.4824 22.4707C17.6895 22.5586 16.3652 22.5781 15.46 21.8613ZM16.4502 15.4805C16.4502 15.3105 16.5859 15.1758 16.7568 15.1758C16.7949 15.1758 16.8301 15.1836 16.8613 15.1953C16.9033 15.2109 16.9424 15.2344 16.9727 15.2695C17.0273 15.3223 17.0586 15.4004 17.0586 15.4805C17.0586 15.6504 16.9229 15.7852 16.7529 15.7852C16.582 15.7852 16.4502 15.6504 16.4502 15.4805ZM19.5273 17.0625C19.3301 17.1426 19.1328 17.2129 18.9434 17.2207C18.6494 17.2344 18.3281 17.1152 18.1533 16.9688C17.8828 16.7422 17.6895 16.6152 17.6074 16.2168C17.5732 16.0469 17.5928 15.7852 17.623 15.6348C17.6934 15.3105 17.6152 15.1035 17.3877 14.9141C17.2012 14.7598 16.9658 14.7188 16.7061 14.7188C16.6094 14.7188 16.5205 14.6758 16.4541 14.6406C16.3457 14.5859 16.2568 14.4512 16.3418 14.2852C16.3691 14.2324 16.501 14.1016 16.5322 14.0781C16.8838 13.877 17.29 13.9434 17.666 14.0938C18.0146 14.2363 18.2773 14.498 18.6562 14.8672C19.0439 15.3145 19.1133 15.4395 19.334 15.7734C19.5078 16.0371 19.667 16.3066 19.7754 16.6152C19.8408 16.8066 19.7559 16.9648 19.5273 17.0625Z"
+
+    func path(in rect: CGRect) -> Path {
+        let cgPath = CGPath.parseSVGPath(Self.pathData)
+        // 原始 viewBox 30×30，按比例缩放到 rect
+        let scale = min(rect.width / 30, rect.height / 30)
+        var transform = CGAffineTransform(scaleX: scale, y: scale)
+        let scaled = cgPath.copy(using: &transform) ?? cgPath
+        return Path(scaled)
     }
 }
 
@@ -843,8 +984,9 @@ struct KimiMenu: View {
                 // 账号配额区：单账号直接出大卡片，多账号每账号一张紧凑卡片（内部左右双列压缩布局）
                 AccountQuotaListView()
 
-                // 本机消耗量卡片：扫描本地会话记录（wire.jsonl usage.record）得出 Token 消耗
-                if model.showLocalUsageCard {
+                // 本机消耗量卡片：扫描本地会话记录（wire.jsonl usage.record）得出 Token 消耗。
+                // 仅 Kimi 平台有本地会话记录，DeepSeek 主账号时不显示。
+                if model.showLocalUsageCard, model.primaryAccount?.provider != .deepseek {
                     LocalUsageCard()
                 }
 
@@ -858,10 +1000,14 @@ struct KimiMenu: View {
             HStack(spacing: 8) {
                 ActionButton(
                     title: languageManager.tr("控制台"),
-                    textIcon: "KIMI",
+                    textIcon: model.primaryAccount?.provider == .deepseek ? "DS" : "KIMI",
                     action: {
                         dismissMenuBarPanel()
-                        NSWorkspace.shared.open(consoleURL)
+                        if model.primaryAccount?.provider == .deepseek {
+                            NSWorkspace.shared.open(DeepSeekBalanceService.consoleURL)
+                        } else {
+                            NSWorkspace.shared.open(consoleURL)
+                        }
                     }
                 )
 
@@ -886,8 +1032,8 @@ struct KimiMenu: View {
                 )
             }
 
-            // KimiCode CLI 版本行：点击跳转官方更新日志；检测到新版本时无视设置强制显示
-            if shouldShowKimiVersionRow {
+            // KimiCode CLI 版本行：仅 Kimi 平台时显示；检测到新版本时无视设置强制显示
+            if shouldShowKimiVersionRow, model.primaryAccount?.provider != .deepseek {
                 HStack(alignment: .center, spacing: 10) {
                     Text("KimiCode CLI")
                         .font(.system(size: 13, weight: .medium))
@@ -1405,24 +1551,165 @@ struct BoosterWalletCard: View {
 
 // MARK: - 账号配额区（OAuth 多账号）
 
-/// OAuth 账号配额区：单账号直接展示完整用量卡片组（本周/5小时用量 + 加油包）；
-/// 多账号时每个账号一张紧凑卡片纵向罗列（内部为左右双列压缩布局），无展开/收起交互。
+/// 账号配额区：按平台渲染对应卡片。Kimi 走用量卡片体系（单账号大卡片 / 多账号紧凑列表），
+/// DeepSeek 走余额卡片（预充值按量付费，与 Kimi 订阅额度模型不同，各自独立卡片）。
 struct AccountQuotaListView: View {
     @StateObject private var model = KimiCodeBarModel.shared
 
     var body: some View {
         VStack(spacing: 8) {
             if model.accounts.count <= 1, let account = model.accounts.first {
-                SingleAccountQuotaCards(account: account)
+                if account.provider == .deepseek {
+                    DeepSeekBalanceCard(account: account)
+                } else {
+                    SingleAccountQuotaCards(account: account)
+                }
             } else {
                 ForEach(model.accounts) { account in
-                    AccountQuotaCard(
-                        account: account,
-                        isPrimary: account.id == model.primaryAccountID
-                    )
+                    if account.provider == .deepseek {
+                        DeepSeekBalanceCard(account: account)
+                    } else {
+                        AccountQuotaCard(
+                            account: account,
+                            isPrimary: account.id == model.primaryAccountID
+                        )
+                    }
                 }
             }
         }
+    }
+}
+
+// MARK: - DeepSeek 余额卡片
+
+/// DeepSeek 账号余额卡片：预充值按量付费模型，展示剩余余额 + 赠送/充值拆分 + 充值入口。
+/// 与 Kimi 用量卡片各自独立，不做统一抽象。
+private struct DeepSeekBalanceCard: View {
+    let account: KimiAccount
+
+    @StateObject private var model = KimiCodeBarModel.shared
+    @StateObject private var languageManager = LanguageManager.shared
+
+    @State private var isHoveredRecharge = false
+
+    private var balance: DeepSeekBalance? {
+        model.accountBalances[account.id]
+    }
+
+    private var state: KimiAccountState {
+        model.accountStates[account.id] ?? .idle
+    }
+
+    private var isLoading: Bool {
+        if case .loading = state { return true }
+        return false
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // 标头：账号名
+            Text(model.displayName(for: account))
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.kimiTextSecondary)
+                .lineLimit(1)
+
+            if case .unauthorized = state {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.orange)
+                    LText("API Key 已失效，请在设置中修改")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.orange)
+                }
+            } else if let balance {
+                // 余额大数字
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(balance.balanceWithSymbol)
+                        .font(.system(size: 34, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(.kimiTextPrimary)
+
+                    if !balance.isAvailable {
+                        LText("余额不可用，API 调用被拒绝")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.orange.opacity(0.9))
+                    }
+                }
+
+                // 赠送 / 充值拆分
+                HStack(spacing: 16) {
+                    BalanceBreakdownItem(
+                        label: languageManager.tr("赠送余额"),
+                        amount: balance.grantedBalance,
+                        currency: balance.currency
+                    )
+                    BalanceBreakdownItem(
+                        label: languageManager.tr("充值余额"),
+                        amount: balance.toppedUpBalance,
+                        currency: balance.currency
+                    )
+                }
+
+                // 充值按钮
+                Button(action: {
+                    NSWorkspace.shared.open(DeepSeekBalanceService.consoleURL)
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "creditcard")
+                            .font(.system(size: 11, weight: .medium))
+                        LText("充值")
+                            .font(.system(size: 12, weight: .medium))
+                    }
+                    .foregroundStyle(isHoveredRecharge ? .kimiTextPrimary : .kimiTextSecondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(isHoveredRecharge ? Color.kimiTextPrimary.opacity(0.14) : Color.kimiTextPrimary.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                }
+                .buttonStyle(.plain)
+                .cursor(.pointingHand)
+                .onHover { isHoveredRecharge = $0 }
+            } else if isLoading {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .controlSize(.small)
+                    LText("加载中…")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.kimiTextSecondary)
+                }
+            } else {
+                LText("暂无余额数据")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.kimiTextSecondary)
+            }
+        }
+        .padding(16)
+        .background(Color.kimiCardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+}
+
+private struct BalanceBreakdownItem: View {
+    let label: String
+    let amount: Double
+    let currency: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label)
+                .font(.system(size: 11))
+                .foregroundStyle(.kimiTextTertiary)
+            Text(formattedAmount)
+                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(.kimiTextSecondary)
+        }
+    }
+
+    private var formattedAmount: String {
+        let symbol = currency == "CNY" ? "¥" : "$"
+        return "\(symbol)\(String(format: "%.2f", amount))"
     }
 }
 
@@ -4837,13 +5124,21 @@ final class KimiCodeBarModel: ObservableObject {
     @Published var accounts: [KimiAccount] = []
     /// 主账号 ID：菜单栏文字/图形与面板只展示主账号用量
     @Published var primaryAccountID: UUID?
-    /// 每个账号最近一次拉取成功的配额（失败时保留旧值）
+    /// 每个账号最近一次拉取成功的配额（失败时保留旧值）。仅 Kimi 账号有值。
     @Published var accountQuotas: [UUID: KimiQuota] = [:]
+    /// 每个账号最近一次拉取成功的余额（失败时保留旧值）。仅 DeepSeek 账号有值。
+    @Published var accountBalances: [UUID: DeepSeekBalance] = [:]
     /// 每个账号的加载状态（错误隔离：单账号失败不影响其他账号）
     @Published var accountStates: [UUID: KimiAccountState] = [:]
     /// CLI 活跃账号（与 CLI 凭证文件 token 匹配的账号），用于账号列表「CLI 使用中」标签；
     /// CLI 轮换 token 后匹配失效，自动回退为 nil
     @Published var cliActiveAccountID: UUID?
+
+    /// 当前主账号（便捷访问）：面板按其 provider 决定渲染哪种卡片
+    var primaryAccount: KimiAccount? {
+        guard let id = primaryAccountID else { return nil }
+        return accounts.first(where: { $0.id == id })
+    }
 
     /// 兼容属性：主账号的 OAuth token（API Key 主账号为 nil）。现有 UI 只读它判断是否已授权。
     var oauthToken: KimiOAuthToken? {
@@ -4878,6 +5173,7 @@ final class KimiCodeBarModel: ObservableObject {
     }
 
     private let service = KimiCodeBarQuotaService()
+    private let deepseekService = DeepSeekBalanceService()
     private let oauthService = KimiOAuthService()
     private var oauthLoginTask: Task<Void, Never>?
     private var timer: Timer?
@@ -5013,6 +5309,7 @@ final class KimiCodeBarModel: ObservableObject {
             }
             isRefreshing = false
             accountQuotas = [:]
+            accountBalances = [:]
             accountStates = [:]
             syncPrimaryCompat()
             return
@@ -5021,6 +5318,7 @@ final class KimiCodeBarModel: ObservableObject {
         // 清掉已删除账号的缓存（例如被其他 Bar 实例删除）
         let validIDs = Set(snapshot.accounts.map(\.id))
         accountQuotas = accountQuotas.filter { validIDs.contains($0.key) }
+        accountBalances = accountBalances.filter { validIDs.contains($0.key) }
         accountStates = accountStates.filter { validIDs.contains($0.key) }
 
         for account in snapshot.accounts {
@@ -5028,28 +5326,38 @@ final class KimiCodeBarModel: ObservableObject {
         }
 
         Task {
-            // quota 与 error 均为 nil 表示「登录失效」（resolveAccessToken 返回 nil）
-            var results: [(UUID, KimiQuota?, QuotaError?)] = []
-            await withTaskGroup(of: (UUID, KimiQuota?, QuotaError?).self) { group in
+            // result 与 error 均为 nil 表示「登录失效」（resolveAccessToken 返回 nil / Key 无效）
+            var results: [(UUID, AccountFetchResult?, QuotaError?)] = []
+            await withTaskGroup(of: (UUID, AccountFetchResult?, QuotaError?).self) { group in
                 for account in snapshot.accounts {
                     group.addTask {
-                        // 按凭证类型分派：OAuth 走 token 刷新链路，API Key 直接当 Bearer token 用。
-                        // 扩展新平台（如 DeepSeek）时在此按 account.provider 分派对应平台的配额服务。
-                        switch account.credential {
-                        case .oauth:
-                            guard let accessToken = await self.resolveAccessToken(for: account.id) else {
+                        switch account.provider {
+                        case .kimi:
+                            // Kimi：OAuth 走 token 刷新链路，API Key 直接当 Bearer token 用
+                            let token: String?
+                            switch account.credential {
+                            case .oauth:
+                                token = await self.resolveAccessToken(for: account.id)
+                            case .apiKey(let key):
+                                token = key
+                            }
+                            guard let accessToken = token else {
                                 return (account.id, nil, nil)
                             }
                             switch await self.service.fetchQuota(token: accessToken) {
                             case .success(let quota):
-                                return (account.id, quota, nil)
+                                return (account.id, .kimi(quota), nil)
                             case .failure(let error):
                                 return (account.id, nil, error)
                             }
-                        case .apiKey(let key):
-                            switch await self.service.fetchQuota(token: key) {
-                            case .success(let quota):
-                                return (account.id, quota, nil)
+                        case .deepseek:
+                            // DeepSeek：仅 API Key，无 OAuth
+                            guard case .apiKey(let key) = account.credential else {
+                                return (account.id, nil, nil)
+                            }
+                            switch await self.deepseekService.fetchBalance(apiKey: key) {
+                            case .success(let balance):
+                                return (account.id, .deepseek(balance), nil)
                             case .failure(let error):
                                 // Key 无效（401/403）按「登录失效」处理，引导用户修改 Key
                                 if case .httpError(let statusCode, _) = error, statusCode == 401 || statusCode == 403 {
@@ -5066,9 +5374,14 @@ final class KimiCodeBarModel: ObservableObject {
             }
 
             await MainActor.run {
-                for (id, quota, error) in results {
-                    if let quota {
-                        self.accountQuotas[id] = quota
+                for (id, result, error) in results {
+                    if let result {
+                        switch result {
+                        case .kimi(let quota):
+                            self.accountQuotas[id] = quota
+                        case .deepseek(let balance):
+                            self.accountBalances[id] = balance
+                        }
                         self.accountStates[id] = .loaded
                     } else if let error {
                         self.accountStates[id] = .failed(self.errorDescription(error))
@@ -5082,6 +5395,7 @@ final class KimiCodeBarModel: ObservableObject {
                 self.primaryAccountID = latest.primaryAccountID
                 let validIDs = Set(latest.accounts.map(\.id))
                 self.accountQuotas = self.accountQuotas.filter { validIDs.contains($0.key) }
+                self.accountBalances = self.accountBalances.filter { validIDs.contains($0.key) }
                 self.accountStates = self.accountStates.filter { validIDs.contains($0.key) }
                 if showsLoading {
                     self.isLoading = false
@@ -5096,18 +5410,29 @@ final class KimiCodeBarModel: ObservableObject {
     /// 让现有只读这些属性的 UI 在多账号下无需修改即可工作。
     private func syncPrimaryCompat() {
         guard let primaryID = primaryAccountID,
-              accounts.contains(where: { $0.id == primaryID }) else {
+              let primaryAccount = accounts.first(where: { $0.id == primaryID }) else {
             quota = nil
             text = LanguageManager.tr("未登录")
             errorMessage = nil
             return
         }
-        if let primaryQuota = accountQuotas[primaryID] {
-            quota = primaryQuota
-            text = LanguageManager.tr("周 %1$d%% · 5h %2$d%%", arguments: [primaryQuota.weekly.percentage, primaryQuota.fiveHour.percentage])
-        } else {
+        switch primaryAccount.provider {
+        case .kimi:
+            if let primaryQuota = accountQuotas[primaryID] {
+                quota = primaryQuota
+                text = LanguageManager.tr("周 %1$d%% · 5h %2$d%%", arguments: [primaryQuota.weekly.percentage, primaryQuota.fiveHour.percentage])
+            } else {
+                quota = nil
+                text = "--"
+            }
+        case .deepseek:
+            // DeepSeek 主账号：quota 置 nil（Kimi 用量视图不渲染），余额走 accountBalances
             quota = nil
-            text = "--"
+            if let balance = accountBalances[primaryID] {
+                text = balance.balanceText
+            } else {
+                text = "--"
+            }
         }
         switch accountStates[primaryID] {
         case .failed(let message):
@@ -5233,6 +5558,7 @@ final class KimiCodeBarModel: ObservableObject {
         accounts = snapshot.accounts
         primaryAccountID = snapshot.primaryAccountID
         accountQuotas.removeValue(forKey: id)
+        accountBalances.removeValue(forKey: id)
         accountStates.removeValue(forKey: id)
         syncPrimaryCompat()
     }
@@ -5273,43 +5599,77 @@ final class KimiCodeBarModel: ObservableObject {
 
     // MARK: - API Key 账号
 
-    /// 添加 API Key 账号：先拉一次 usages 验证 Key 并提取账号标识去重，成功则落库。
+    /// 添加 API Key 账号：先拉一次接口验证 Key，成功则落库。
+    /// provider 决定走哪个验证服务（Kimi → usages，DeepSeek → balance）。
     /// 返回 nil 表示成功；否则返回面向用户的错误文案。
     @discardableResult
-    func addApiKeyAccount(key: String, alias: String?) async -> String? {
+    func addApiKeyAccount(provider: AccountProvider, key: String, alias: String?) async -> String? {
         let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             return LanguageManager.tr("请输入 API Key")
         }
 
-        switch await service.fetchQuota(token: trimmed) {
-        case .success(let quota):
-            let store = KimiAccountStore.shared
-            if let identifier = quota.userIdentifier,
-               store.snapshot.accounts.contains(where: { $0.accountIdentifier == identifier }) {
-                return LanguageManager.tr("该账号已添加，无需重复添加")
+        switch provider {
+        case .kimi:
+            switch await service.fetchQuota(token: trimmed) {
+            case .success(let quota):
+                let store = KimiAccountStore.shared
+                if let identifier = quota.userIdentifier,
+                   store.snapshot.accounts.contains(where: { $0.accountIdentifier == identifier }) {
+                    return LanguageManager.tr("该账号已添加，无需重复添加")
+                }
+                let cleanAlias = alias?.trimmingCharacters(in: .whitespacesAndNewlines)
+                store.addAccount(KimiAccount(
+                    id: UUID(),
+                    alias: (cleanAlias?.isEmpty == false) ? cleanAlias : nil,
+                    provider: .kimi,
+                    credential: .apiKey(trimmed),
+                    accountIdentifier: quota.userIdentifier
+                ))
+                store.ensurePrimaryAccount()
+                let snapshot = store.snapshot
+                accounts = snapshot.accounts
+                primaryAccountID = snapshot.primaryAccountID
+                refresh(showsLoading: false)
+                return nil
+            case .failure(let error):
+                return errorDescription(error)
             }
-            let cleanAlias = alias?.trimmingCharacters(in: .whitespacesAndNewlines)
-            store.addAccount(KimiAccount(
-                id: UUID(),
-                alias: (cleanAlias?.isEmpty == false) ? cleanAlias : nil,
-                provider: .kimi,
-                credential: .apiKey(trimmed),
-                accountIdentifier: quota.userIdentifier
-            ))
-            store.ensurePrimaryAccount()
-            let snapshot = store.snapshot
-            accounts = snapshot.accounts
-            primaryAccountID = snapshot.primaryAccountID
-            refresh(showsLoading: false)
-            return nil
-        case .failure(let error):
-            return errorDescription(error)
+        case .deepseek:
+            switch await deepseekService.fetchBalance(apiKey: trimmed) {
+            case .success:
+                let store = KimiAccountStore.shared
+                // DeepSeek balance API 不返回账号身份信息，按 API Key 去重
+                if store.snapshot.accounts.contains(where: {
+                    if case .apiKey(let existingKey) = $0.credential, $0.provider == .deepseek {
+                        return existingKey == trimmed
+                    }
+                    return false
+                }) {
+                    return LanguageManager.tr("该 API Key 已添加，无需重复添加")
+                }
+                let cleanAlias = alias?.trimmingCharacters(in: .whitespacesAndNewlines)
+                store.addAccount(KimiAccount(
+                    id: UUID(),
+                    alias: (cleanAlias?.isEmpty == false) ? cleanAlias : nil,
+                    provider: .deepseek,
+                    credential: .apiKey(trimmed),
+                    accountIdentifier: nil
+                ))
+                store.ensurePrimaryAccount()
+                let snapshot = store.snapshot
+                accounts = snapshot.accounts
+                primaryAccountID = snapshot.primaryAccountID
+                refresh(showsLoading: false)
+                return nil
+            case .failure(let error):
+                return errorDescription(error)
+            }
         }
     }
 
     /// 修改 API Key 账号的密钥（「登录失效」后的恢复入口）：验证通过才落盘。
-    /// 返回 nil 表示成功；否则返回面向用户的错误文案。
+    /// 按账号 provider 走对应验证服务。返回 nil 表示成功；否则返回面向用户的错误文案。
     @discardableResult
     func updateApiKey(for id: UUID, key: String) async -> String? {
         let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -5317,19 +5677,36 @@ final class KimiCodeBarModel: ObservableObject {
             return LanguageManager.tr("请输入 API Key")
         }
 
-        switch await service.fetchQuota(token: trimmed) {
-        case .success(let quota):
-            let store = KimiAccountStore.shared
-            store.updateApiKey(id: id, key: trimmed)
-            if let identifier = quota.userIdentifier {
-                store.updateAccountIdentifier(id: id, identifier: identifier)
+        guard let account = accounts.first(where: { $0.id == id }) else { return nil }
+
+        switch account.provider {
+        case .kimi:
+            switch await service.fetchQuota(token: trimmed) {
+            case .success(let quota):
+                let store = KimiAccountStore.shared
+                store.updateApiKey(id: id, key: trimmed)
+                if let identifier = quota.userIdentifier {
+                    store.updateAccountIdentifier(id: id, identifier: identifier)
+                }
+                accounts = store.snapshot.accounts
+                accountStates[id] = .idle
+                refresh(showsLoading: false)
+                return nil
+            case .failure(let error):
+                return errorDescription(error)
             }
-            accounts = store.snapshot.accounts
-            accountStates[id] = .idle
-            refresh(showsLoading: false)
-            return nil
-        case .failure(let error):
-            return errorDescription(error)
+        case .deepseek:
+            switch await deepseekService.fetchBalance(apiKey: trimmed) {
+            case .success:
+                let store = KimiAccountStore.shared
+                store.updateApiKey(id: id, key: trimmed)
+                accounts = store.snapshot.accounts
+                accountStates[id] = .idle
+                refresh(showsLoading: false)
+                return nil
+            case .failure(let error):
+                return errorDescription(error)
+            }
         }
     }
 

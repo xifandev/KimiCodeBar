@@ -3,12 +3,14 @@ import Foundation
 // MARK: - 账号平台
 
 /// 账号所属平台。
-/// 扩展新平台（如 DeepSeek 余额监控）时的接入点：
+/// 扩展新平台时的接入点：
 /// 1. 这里加 case 并填 displayName / iconName；
-/// 2. KimiCodeBarModel.fetchQuota(for:) 中按 provider 分派对应平台的配额服务；
-/// 3. 设置页账号行与面板卡片按 provider 渲染（当前只有 kimi 分支）。
+/// 2. KimiCodeBarModel.refreshAllAccounts 中按 provider 分派对应平台的配额服务
+///    （kimi → service.fetchQuota，deepseek → deepseekService.fetchBalance）；
+/// 3. 设置页账号行与面板卡片按 provider 渲染。
 enum AccountProvider: String, Codable, CaseIterable, Identifiable {
     case kimi
+    case deepseek
 
     var id: String { rawValue }
 
@@ -16,14 +18,37 @@ enum AccountProvider: String, Codable, CaseIterable, Identifiable {
     var displayName: String {
         switch self {
         case .kimi: return "Kimi"
+        case .deepseek: return "DeepSeek"
         }
     }
 
     var iconName: String {
         switch self {
         case .kimi: return "k.circle"
+        case .deepseek: return "d.circle"
         }
     }
+
+    /// 该平台支持的登录方式
+    var supportedAuthMethods: [AuthMethod] {
+        switch self {
+        case .kimi: return [.oauth, .apiKey]
+        case .deepseek: return [.apiKey]
+        }
+    }
+}
+
+/// 账号登录方式
+enum AuthMethod {
+    case oauth
+    case apiKey
+}
+
+/// 账号数据拉取结果：按平台区分，避免 KimiQuota 与 DeepSeekBalance 强行统一抽象。
+/// refreshAllAccounts 的 task group 用它汇总各账号拉取结果。
+enum AccountFetchResult: Sendable {
+    case kimi(KimiQuota)
+    case deepseek(DeepSeekBalance)
 }
 
 // MARK: - 账号凭证

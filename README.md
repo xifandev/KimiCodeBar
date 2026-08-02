@@ -65,3 +65,7 @@
 ## 📄 开源协议
 
 本项目采用 [MIT License](LICENSE) 开源。你可以自由使用、复制、修改和分发本项目，但需要保留版权声明 [@xifandev](https://github.com/xifandev)
+
+## 🙏 致谢
+
+DeepSeek 鲸鱼菜单栏图标 adapted from [CodexBar](https://github.com/AidenYang1/CodexBar) (MIT License)。

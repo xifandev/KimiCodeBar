@@ -2940,6 +2940,86 @@
           }
         }
       }
+    },
+    "选择平台" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select Platform"
+          }
+        }
+      }
+    },
+    "赠送余额" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Granted Balance"
+          }
+        }
+      }
+    },
+    "充值余额" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Topped-up Balance"
+          }
+        }
+      }
+    },
+    "充值" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Top Up"
+          }
+        }
+      }
+    },
+    "API Key 已失效，请在设置中修改" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "API Key invalid, please update in Settings"
+          }
+        }
+      }
+    },
+    "余额不可用，API 调用被拒绝" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Balance unavailable, API calls rejected"
+          }
+        }
+      }
+    },
+    "暂无余额数据" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No balance data"
+          }
+        }
+      }
+    },
+    "该 API Key 已添加，无需重复添加" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This API Key has already been added"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"
