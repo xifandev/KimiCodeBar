@@ -617,6 +617,16 @@ private struct AccountRow: View {
         return false
     }
 
+    /// API Key 脱敏展示：长 Key 取首尾各 4 位 + 4 颗星，短 Key 原样显示
+    private var maskedApiKey: String? {
+        guard case .apiKey(let key) = credential else { return nil }
+        let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count > 12 else { return trimmed }
+        let head = trimmed.prefix(4)
+        let tail = trimmed.suffix(4)
+        return "\(head)****\(tail)"
+    }
+
     /// 账号头像：渲染对应平台官方 logo（Kimi 文字 logo / DeepSeek 鲸鱼），
     /// 圆角方块底色沿用品牌色微调，区分主账号 / 副账号视觉重量。
     private var avatar: some View {
@@ -661,6 +671,16 @@ private struct AccountRow: View {
 
                         if !isOAuth {
                             StatusTag(text: "API Key", color: .kimiTextSecondary)
+                        }
+
+                        // API Key 账号在「API Key」标签后追加脱敏缩写（前 4 + 4 星 + 后 4），
+                        // 多账号场景下便于一眼区分不同 Key。短 Key（≤12 字符）原样显示避免遮蔽后无法辨认。
+                        if !isOAuth, let masked = maskedApiKey {
+                            Text(masked)
+                                .font(.system(size: 11, design: .monospaced))
+                                .foregroundStyle(.kimiTextTertiary)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
                         }
 
                         if isCliActive {
