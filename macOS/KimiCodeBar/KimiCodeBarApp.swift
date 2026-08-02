@@ -1821,6 +1821,60 @@ private struct MinimalQuotaRow: View {
     }
 }
 
+// MARK: - 多账号风格选择卡片
+
+/// 设置页「多账号显示风格」的可选卡片：标题 + 勾选 + 内嵌小预览，一行排列两个。
+/// 视觉风格对齐 SettingsOptionCard，但内嵌预览替代了 subtitle。
+private struct MultiAccountStyleOptionCard: View {
+    let style: MultiAccountCardStyle
+    let isSelected: Bool
+    let action: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 8) {
+                // 标题行：图标 + 名称 + 勾选
+                HStack(spacing: 8) {
+                    Image(systemName: style.iconName)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(isSelected ? .kimiBlue : .kimiTextSecondary)
+
+                    Text(style.displayName)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.kimiTextPrimary)
+
+                    Spacer(minLength: 4)
+
+                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(isSelected ? .kimiBlue : .kimiTextTertiary)
+                }
+
+                // 内嵌预览
+                MultiAccountCardStylePreview(style: style)
+                    .frame(maxWidth: .infinity)
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(isSelected
+                          ? Color.kimiBlue.opacity(0.10)
+                          : (isHovered ? Color.kimiTextPrimary.opacity(0.06) : Color.kimiTextPrimary.opacity(0.03)))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(isSelected ? Color.kimiBlue.opacity(0.6) : Color.kimiTextPrimary.opacity(0.08), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .cursor(.pointingHand)
+        .onHover { isHovered = $0 }
+    }
+}
+
 // MARK: - 多账号卡片风格预览
 
 /// 设置页「多账号显示风格」的模拟预览：用假数据渲染一个缩小版卡片，
@@ -3838,46 +3892,18 @@ struct PanelCustomSettingsView: View {
 
                 // 多账号显示风格
                 SettingsCard(title: languageManager.tr("多账号显示风格")) {
-                    VStack(alignment: .leading, spacing: 0) {
+                    HStack(spacing: 10) {
                         ForEach(MultiAccountCardStyle.allCases) { style in
-                            let isSelected = model.multiAccountCardStyle == style
-
-                            // 风格选项行
-                            HStack(spacing: 10) {
-                                Image(systemName: style.iconName)
-                                    .font(.system(size: 14, weight: .medium))
-                                    .foregroundStyle(isSelected ? .kimiBlue : .kimiTextSecondary)
-                                    .frame(width: 24, alignment: .center)
-
-                                Text(style.displayName)
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundStyle(.kimiTextPrimary)
-
-                                Spacer(minLength: 4)
-
-                                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                                    .font(.system(size: 15, weight: .medium))
-                                    .foregroundStyle(isSelected ? .kimiBlue : .kimiTextTertiary)
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 10)
-                            .contentShape(Rectangle())
-                            .cursor(.pointingHand)
-                            .onTapGesture {
+                            MultiAccountStyleOptionCard(
+                                style: style,
+                                isSelected: model.multiAccountCardStyle == style
+                            ) {
                                 model.multiAccountCardStyle = style
-                            }
-
-                            // 风格预览（模拟数据，非实时）
-                            MultiAccountCardStylePreview(style: style)
-                                .padding(.leading, 16)
-                                .padding(.trailing, 16)
-                                .padding(.bottom, style == MultiAccountCardStyle.allCases.last ? 12 : 12)
-
-                            if style != MultiAccountCardStyle.allCases.last {
-                                SettingsCardDivider()
                             }
                         }
                     }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 13)
                 }
 
                 // 外观主题
