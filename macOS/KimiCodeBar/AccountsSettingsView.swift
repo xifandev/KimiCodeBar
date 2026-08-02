@@ -24,14 +24,8 @@ struct AccountsSettingsView: View {
     @State private var showCliSwitchConfirm = false
     @State private var cliSwitchError: String?
 
-    // 添加账号：平台选择 / 方式选择 / API Key 表单状态
-    @State private var showsMethodChooser = false
-    @State private var selectedProvider: AccountProvider = .kimi
-    @State private var showsApiKeyForm = false
-    @State private var apiKeyInput = ""
-    @State private var apiKeyAlias = ""
-    @State private var isAddingApiKey = false
-    @State private var apiKeyError: String?
+    // 添加账号：弹窗触发（弹窗内部自管平台选择 / API Key 表单 / 提交状态）
+    @State private var showAddAccountSheet = false
 
     // 修改 API Key 弹窗状态
     @State private var editingKeyAccount: KimiAccount?
@@ -40,10 +34,10 @@ struct AccountsSettingsView: View {
     @State private var editKeyError: String?
 
     /// 是否展示「添加账号」卡片：
-    /// 有账号、授权流程进行中、授权失败有待展示的错误、或正在选择添加方式 / 填写 API Key 时展示。
+    /// 有账号、授权流程进行中、或授权失败有待展示的错误时展示。
+    /// 平台 / Key 表单全部移到 sheet 内，主面板不再承担表单态。
     private var showsAddAccountCard: Bool {
         !model.accounts.isEmpty || model.oauthLoginInProgress || model.oauthLoginError != nil
-            || showsMethodChooser || showsApiKeyForm
     }
 
     var body: some View {
@@ -99,10 +93,6 @@ struct AccountsSettingsView: View {
                         VStack(alignment: .leading, spacing: 0) {
                             if model.oauthLoginInProgress, let auth = model.oauthDeviceAuth {
                                 AddAccountAuthorizingView(auth: auth)
-                            } else if showsApiKeyForm {
-                                apiKeyForm
-                            } else if showsMethodChooser {
-                                methodChooser
                             } else {
                                 addAccountRow
                             }
@@ -124,6 +114,16 @@ struct AccountsSettingsView: View {
         }
         .background(Color.kimiPanelBackground)
         .onAppear { model.refreshCliActiveAccount() }
+        .sheet(isPresented: $showAddAccountSheet) {
+            AddAccountSheet(
+                onOAuthStart: {
+                    showAddAccountSheet = false
+                    model.startOAuthLogin()
+                },
+                onDismiss: { showAddAccountSheet = false }
+            )
+            .environmentObject(model)
+        }
         .alert(LanguageManager.tr("重命名账号"), isPresented: $showRenameAlert) {
             TextField(LanguageManager.tr("别名"), text: $renameText)
             Button(LanguageManager.tr("保存")) {
@@ -238,29 +238,6 @@ struct AccountsSettingsView: View {
         }
     }
 
-    // MARK: 添加账号提交
-
-    private func submitApiKey() {
-        isAddingApiKey = true
-        apiKeyError = nil
-        let provider = selectedProvider
-        Task {
-            let error = await model.addApiKeyAccount(
-                provider: provider,
-                key: apiKeyInput,
-                alias: apiKeyAlias.isEmpty ? nil : apiKeyAlias
-            )
-            isAddingApiKey = false
-            if let error {
-                apiKeyError = error
-            } else {
-                apiKeyInput = ""
-                apiKeyAlias = ""
-                showsApiKeyForm = false
-            }
-        }
-    }
-
     // MARK: 空状态
 
     private var emptyState: some View {
@@ -281,7 +258,7 @@ struct AccountsSettingsView: View {
                 title: languageManager.tr("添加账号"),
                 disabled: model.oauthLoginInProgress
             ) {
-                showsMethodChooser = true
+                showAddAccountSheet = true
             }
             .padding(.top, 4)
         }
@@ -316,163 +293,280 @@ struct AccountsSettingsView: View {
                     .controlSize(.small)
             } else {
                 AccountPrimaryButton(title: languageManager.tr("添加账号")) {
-                    showsMethodChooser = true
+                    showAddAccountSheet = true
                 }
             }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 13)
     }
+}
 
-    // MARK: 添加账号：方式选择
+// MARK: - 添加账号弹窗
 
-    /// 点击「添加账号」后先选平台，再选该平台的登录方式。
-    /// 平台切换用顶部 segmented，下方动态出方式卡片，避免嵌套弹层。
-    private var methodChooser: some View {
+/// 「添加账号」独立弹窗：一页铺开，不分步导航。
+/// 上方选平台（当前 Kimi Code / DeepSeek，预留扩展位），下方按平台动态渲染：
+/// - Kimi Code：OAuth 授权 / API Key 两种方式卡片，选 API Key 后展开 Key 输入区
+/// - DeepSeek：仅 API Key，跳过方式选择直接给 Key 输入区
+/// 提交成功或取消都关闭弹窗；OAuth 触发后由父视图接管（弹窗先关闭）。
+private struct AddAccountSheet: View {
+    /// OAuth 触发：父视图关闭弹窗 + 启动 OAuth 流程
+    let onOAuthStart: () -> Void
+    /// 取消 / 提交成功后关闭
+    let onDismiss: () -> Void
+
+    @EnvironmentObject private var model: KimiCodeBarModel
+    @StateObject private var languageManager = LanguageManager.shared
+
+    @State private var selectedProvider: AccountProvider = .kimi
+    /// Kimi Code 选中「API Key 登录」方式后展开输入区；DeepSeek 始终展开
+    @State private var kimiMethodSelected: AuthMethod? = nil
+    @State private var apiKeyInput = ""
+    @State private var apiKeyAlias = ""
+    @State private var isAddingApiKey = false
+    @State private var apiKeyError: String?
+
+    var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+            // 标题区
             HStack(spacing: 10) {
-                LText("选择平台")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.kimiTextPrimary)
+                Image(systemName: "person.badge.plus")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.kimiBlue)
+                    .frame(width: 28, height: 28)
+                    .background(Color.kimiBlue.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                VStack(alignment: .leading, spacing: 1) {
+                    LText("添加账号")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.kimiTextPrimary)
+
+                    LText("选择平台与登录方式")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.kimiTextSecondary)
+                }
 
                 Spacer()
 
-                CancelChipButton(title: languageManager.tr("取消")) {
-                    showsMethodChooser = false
+                Button(action: onDismiss) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.kimiTextSecondary)
+                        .frame(width: 24, height: 24)
+                        .background(Color.kimiTextPrimary.opacity(0.06))
+                        .clipShape(Circle())
                 }
+                .buttonStyle(.plain)
+                .cursor(.pointingHand)
+                .keyboardShortcut(.cancelAction)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 13)
+            .padding(.horizontal, 20)
+            .padding(.top, 18)
+            .padding(.bottom, 14)
 
             SettingsCardDivider()
 
-            // 平台切换 segmented
-            HStack(spacing: 6) {
-                ForEach(AccountProvider.allCases) { provider in
-                    providerTab(provider)
+            // 平台选择区
+            VStack(alignment: .leading, spacing: 8) {
+                LText("选择平台")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.kimiTextSecondary)
+
+                HStack(spacing: 10) {
+                    ForEach(AccountProvider.allCases) { provider in
+                        providerCard(provider)
+                    }
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 14)
 
             SettingsCardDivider()
 
-            // 下方动态出该平台的添加方式
-            HStack(spacing: 10) {
-                ForEach(selectedProvider.supportedAuthMethods, id: \.self) { method in
-                    switch method {
-                    case .oauth:
-                        SettingsOptionCard(
-                            title: languageManager.tr("授权登录"),
-                            subtitle: languageManager.tr("浏览器授权，推荐"),
-                            iconName: "person.badge.key",
-                            isSelected: false
-                        ) {
-                            showsMethodChooser = false
-                            model.startOAuthLogin()
+            // 动态内容区：按平台切换
+            VStack(alignment: .leading, spacing: 10) {
+                LText(selectedProvider == .deepseek ? "输入 DeepSeek API Key" : "选择登录方式")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.kimiTextSecondary)
+
+                if selectedProvider == .deepseek {
+                    apiKeyInputArea
+                } else {
+                    // Kimi Code：方式卡片 + 选中 API Key 时展开输入区
+                    VStack(spacing: 8) {
+                        ForEach(selectedProvider.supportedAuthMethods, id: \.self) { method in
+                            SettingsOptionCard(
+                                title: methodTitle(method),
+                                subtitle: methodSubtitle(method),
+                                iconName: method == .oauth ? "person.badge.key" : "key",
+                                isSelected: kimiMethodSelected == method
+                            ) {
+                                handleKimiMethodTap(method)
+                            }
                         }
-                    case .apiKey:
-                        SettingsOptionCard(
-                            title: languageManager.tr("API Key 登录"),
-                            subtitle: languageManager.tr("手动填写 API Key"),
-                            iconName: "key",
-                            isSelected: false
-                        ) {
-                            showsMethodChooser = false
-                            showsApiKeyForm = true
+
+                        if kimiMethodSelected == .apiKey {
+                            apiKeyInputArea
+                                .padding(.top, 4)
                         }
                     }
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 13)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 14)
+
+            if let apiKeyError {
+                SettingsCardDivider()
+                ErrorMessageView(message: apiKeyError)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+            }
         }
+        .frame(width: 440)
+        .background(Color.kimiCardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 
-    /// 平台切换标签
-    private func providerTab(_ provider: AccountProvider) -> some View {
+    // MARK: 平台卡片
+
+    private func providerCard(_ provider: AccountProvider) -> some View {
         let isSelected = selectedProvider == provider
         return Button(action: {
             selectedProvider = provider
+            // 切换平台时重置 Kimi 的方式选择与错误
+            kimiMethodSelected = nil
+            apiKeyError = nil
         }) {
-            Text(provider.displayName)
-                .font(.system(size: 13, weight: isSelected ? .semibold : .medium))
-                .foregroundStyle(isSelected ? .kimiTextPrimary : .kimiTextSecondary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 7)
-                .background(
-                    RoundedRectangle(cornerRadius: 7)
-                        .fill(isSelected ? Color.kimiTextPrimary.opacity(0.10) : .clear)
-                )
+            HStack(spacing: 10) {
+                Image(systemName: provider.iconName)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(isSelected ? .kimiBlue : .kimiTextSecondary)
+                    .frame(width: 24, height: 24)
+                    .background(
+                        Circle()
+                            .fill(isSelected ? Color.kimiBlue.opacity(0.12) : Color.kimiTextPrimary.opacity(0.06))
+                    )
+
+                Text(provider.displayName)
+                    .font(.system(size: 13, weight: isSelected ? .semibold : .medium))
+                    .foregroundStyle(.kimiTextPrimary)
+
+                Spacer(minLength: 4)
+
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(isSelected ? .kimiBlue : .kimiTextTertiary)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(isSelected
+                          ? Color.kimiBlue.opacity(0.08)
+                          : Color.kimiTextPrimary.opacity(0.03))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(isSelected ? Color.kimiBlue.opacity(0.5) : Color.kimiTextPrimary.opacity(0.08), lineWidth: 1)
+            )
         }
         .buttonStyle(.plain)
         .cursor(.pointingHand)
     }
 
-    // MARK: 添加账号：API Key 表单
+    // MARK: Kimi 方式处理
 
-    private var apiKeyForm: some View {
-        VStack(alignment: .leading, spacing: 0) {
+    private func handleKimiMethodTap(_ method: AuthMethod) {
+        if method == .oauth {
+            onOAuthStart()
+        } else {
+            kimiMethodSelected = .apiKey
+            apiKeyError = nil
+        }
+    }
+
+    private func methodTitle(_ method: AuthMethod) -> String {
+        switch method {
+        case .oauth: return languageManager.tr("授权登录")
+        case .apiKey: return languageManager.tr("API Key 登录")
+        }
+    }
+
+    private func methodSubtitle(_ method: AuthMethod) -> String {
+        switch method {
+        case .oauth: return languageManager.tr("浏览器授权，推荐")
+        case .apiKey: return languageManager.tr("手动填写 API Key")
+        }
+    }
+
+    // MARK: API Key 输入区
+
+    private var apiKeyInputArea: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SecureField(selectedProvider == .kimi ? "sk-kimi-..." : "sk-...", text: $apiKeyInput)
+                .textFieldStyle(.plain)
+                .font(.system(size: 13))
+                .foregroundStyle(.kimiTextPrimary)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .background(Color.kimiTextPrimary.opacity(0.06))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+
+            TextField(LanguageManager.tr("别名（可选）"), text: $apiKeyAlias)
+                .textFieldStyle(.plain)
+                .font(.system(size: 13))
+                .foregroundStyle(.kimiTextPrimary)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .background(Color.kimiTextPrimary.opacity(0.06))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+
             HStack(spacing: 10) {
-                LText("API Key 登录")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.kimiTextPrimary)
+                AccountPrimaryButton(
+                    title: isAddingApiKey ? languageManager.tr("验证中…") : languageManager.tr("确认新增"),
+                    disabled: apiKeyInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isAddingApiKey
+                ) {
+                    submitApiKey()
+                }
+
+                if isAddingApiKey {
+                    ProgressView()
+                        .controlSize(.small)
+                }
 
                 Spacer()
 
-                CancelChipButton(title: languageManager.tr("取消")) {
-                    showsApiKeyForm = false
-                    apiKeyInput = ""
-                    apiKeyAlias = ""
-                    apiKeyError = nil
+                Button(action: onDismiss) {
+                    Text(languageManager.tr("取消"))
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.kimiTextSecondary)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
                 }
+                .buttonStyle(.plain)
+                .cursor(.pointingHand)
+                .disabled(isAddingApiKey)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 13)
+        }
+    }
 
-            SettingsCardDivider()
+    // MARK: 提交
 
-            VStack(alignment: .leading, spacing: 10) {
-                SecureField(selectedProvider == .kimi ? "sk-kimi-..." : "sk-...", text: $apiKeyInput)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 13))
-                    .foregroundStyle(.kimiTextPrimary)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 8)
-                    .background(Color.kimiTextPrimary.opacity(0.06))
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-
-                TextField(LanguageManager.tr("别名（可选）"), text: $apiKeyAlias)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 13))
-                    .foregroundStyle(.kimiTextPrimary)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 8)
-                    .background(Color.kimiTextPrimary.opacity(0.06))
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-
-                HStack(spacing: 10) {
-                    AccountPrimaryButton(
-                        title: isAddingApiKey ? languageManager.tr("验证中…") : languageManager.tr("保存"),
-                        disabled: apiKeyInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isAddingApiKey
-                    ) {
-                        submitApiKey()
-                    }
-
-                    if isAddingApiKey {
-                        ProgressView()
-                            .controlSize(.small)
-                    }
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 13)
-
-            if let apiKeyError {
-                SettingsCardDivider()
-                ErrorMessageView(message: apiKeyError)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
+    private func submitApiKey() {
+        isAddingApiKey = true
+        apiKeyError = nil
+        let provider = selectedProvider
+        let key = apiKeyInput
+        let alias = apiKeyAlias.isEmpty ? nil : apiKeyAlias
+        Task {
+            let error = await model.addApiKeyAccount(provider: provider, key: key, alias: alias)
+            isAddingApiKey = false
+            if let error {
+                apiKeyError = error
+            } else {
+                onDismiss()
             }
         }
     }

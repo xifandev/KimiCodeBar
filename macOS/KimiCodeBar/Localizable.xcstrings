@@ -145,6 +145,17 @@
         }
       }
     },
+    "API Key 已失效，请在设置中修改" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "API Key invalid, please update in Settings"
+          }
+        }
+      }
+    },
     "API Key 格式错误，应以 sk-kimi- 开头" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -419,6 +430,12 @@
     "Open Source" : {
 
     },
+    "sk-..." : {
+
+    },
+    "sk-kimi-..." : {
+
+    },
     "Token 登录" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -565,6 +582,17 @@
         }
       }
     },
+    "余额不可用，API 调用被拒绝" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Balance unavailable, API calls rejected"
+          }
+        }
+      }
+    },
     "保存" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -627,6 +655,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Stop"
+          }
+        }
+      }
+    },
+    "充值" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Top Up"
+          }
+        }
+      }
+    },
+    "充值余额" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Topped-up Balance"
           }
         }
       }
@@ -1786,6 +1836,17 @@
         }
       }
     },
+    "暂无余额数据" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No balance data"
+          }
+        }
+      }
+    },
     "暂无已安装技能" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2545,6 +2606,17 @@
         }
       }
     },
+    "该 API Key 已添加，无需重复添加" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This API Key has already been added"
+          }
+        }
+      }
+    },
     "该账号已添加，无需重复授权" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2651,6 +2723,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Account"
+          }
+        }
+      }
+    },
+    "赠送余额" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Granted Balance"
           }
         }
       }
@@ -2783,6 +2866,61 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Select a skill above to preview its content"
+          }
+        }
+      }
+    },
+    "选择平台" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select Platform"
+          }
+        }
+      }
+    },
+    "选择平台与登录方式" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select platform and sign-in method"
+          }
+        }
+      }
+    },
+    "选择登录方式" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select Sign-in Method"
+          }
+        }
+      }
+    },
+    "确认新增" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirm Add"
+          }
+        }
+      }
+    },
+    "输入 DeepSeek API Key" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter DeepSeek API Key"
           }
         }
       }
@@ -2937,86 +3075,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Default"
-          }
-        }
-      }
-    },
-    "选择平台" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Select Platform"
-          }
-        }
-      }
-    },
-    "赠送余额" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Granted Balance"
-          }
-        }
-      }
-    },
-    "充值余额" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Topped-up Balance"
-          }
-        }
-      }
-    },
-    "充值" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Top Up"
-          }
-        }
-      }
-    },
-    "API Key 已失效，请在设置中修改" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "API Key invalid, please update in Settings"
-          }
-        }
-      }
-    },
-    "余额不可用，API 调用被拒绝" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Balance unavailable, API calls rejected"
-          }
-        }
-      }
-    },
-    "暂无余额数据" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No balance data"
-          }
-        }
-      }
-    },
-    "该 API Key 已添加，无需重复添加" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This API Key has already been added"
           }
         }
       }

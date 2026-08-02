@@ -17,7 +17,7 @@ enum AccountProvider: String, Codable, CaseIterable, Identifiable {
     /// 品牌名，不做本地化
     var displayName: String {
         switch self {
-        case .kimi: return "Kimi"
+        case .kimi: return "Kimi Code"
         case .deepseek: return "DeepSeek"
         }
     }
