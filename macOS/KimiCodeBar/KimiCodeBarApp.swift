@@ -1585,10 +1585,11 @@ struct AccountQuotaListView: View {
 // MARK: - DeepSeek 余额卡片
 
 /// DeepSeek 账号余额卡片：预充值按量付费模型，与 Kimi 配额卡保持同一布局节奏（横条）。
-/// 标头：DeepSeek 小 logo + 账号名 + 主账号 / API Key 标签 + 右上角充值按钮。
+/// 标头：DeepSeek 小 logo + 账号名 + 主账号标签 + 右上角充值按钮。
 /// 分隔线。
 /// 内容：当前余额（大字） + 赠送余额 / 充值余额拆分。
 /// 与 Kimi AccountQuotaCard 视觉权重一致，避免「卡中卡」的嵌套感。
+/// 注：DeepSeek 仅支持 API Key 一种登录方式，不再贴 API Key 标签（信息冗余）。
 private struct DeepSeekBalanceCard: View {
     let account: KimiAccount
 
@@ -1614,11 +1615,6 @@ private struct DeepSeekBalanceCard: View {
         account.id == model.primaryAccountID
     }
 
-    private var isApiKey: Bool {
-        if case .apiKey = account.credential { return true }
-        return false
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             // MARK: - 标头：DeepSeek 小 logo + 账号名 + 标签 + 右上角充值
@@ -1636,10 +1632,6 @@ private struct DeepSeekBalanceCard: View {
 
                 if isPrimary {
                     tagPill(languageManager.tr("主账号"), color: .kimiBlue)
-                }
-
-                if isApiKey {
-                    tagPill("API Key", color: .kimiTextSecondary)
                 }
 
                 if case .unauthorized = state {
