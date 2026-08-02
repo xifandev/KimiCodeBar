@@ -1555,8 +1555,14 @@ struct BoosterWalletCard: View {
 
 /// 账号配额区：按平台渲染对应卡片。Kimi 走用量卡片体系（单账号大卡片 / 多账号紧凑列表），
 /// DeepSeek 走余额卡片（预充值按量付费，与 Kimi 订阅额度模型不同，各自独立卡片）。
+///
+/// 多账号场景下：鼠标悬停某张卡 → 手型光标 + 轻蓝色描边；点击 → 设为主账号。
+/// 单账号不挂交互（无需切换）。
 struct AccountQuotaListView: View {
     @StateObject private var model = KimiCodeBarModel.shared
+
+    /// 当前鼠标悬停的账号 ID（同一时刻最多一张卡高亮）
+    @State private var hoveredAccountID: UUID?
 
     var body: some View {
         VStack(spacing: 8) {
@@ -1568,17 +1574,56 @@ struct AccountQuotaListView: View {
                 }
             } else {
                 ForEach(model.accounts) { account in
-                    if account.provider == .deepseek {
-                        DeepSeekBalanceCard(account: account)
-                    } else {
-                        AccountQuotaCard(
-                            account: account,
-                            isPrimary: account.id == model.primaryAccountID
-                        )
+                    Group {
+                        if account.provider == .deepseek {
+                            DeepSeekBalanceCard(account: account)
+                        } else {
+                            AccountQuotaCard(
+                                account: account,
+                                isPrimary: account.id == model.primaryAccountID
+                            )
+                        }
                     }
+                    .modifier(AccountCardHover(
+                        accountID: account.id,
+                        isPrimary: account.id == model.primaryAccountID,
+                        hoveredID: $hoveredAccountID,
+                        onTap: { model.setPrimaryAccount(account.id) }
+                    ))
                 }
             }
         }
+    }
+}
+
+/// 多账号卡片悬停 / 选中修饰器：
+/// - 鼠标进入 → 手型光标 + 轻蓝色描边
+/// - 主账号卡片本身就有视觉区分（标签 + 数字主色），此处只额外加描边，避免再加重背景
+/// - 点击 → 调用 onTap，由调用方切主账号
+private struct AccountCardHover: ViewModifier {
+    let accountID: UUID
+    let isPrimary: Bool
+    @Binding var hoveredID: UUID?
+    let onTap: () -> Void
+
+    func body(content: Content) -> some View {
+        let isHovered = hoveredID == accountID
+        return content
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    // 主账号描边略深一档、悬停时轻蓝；非主账号只在悬停时出描边
+                    .stroke(
+                        Color.kimiBlue.opacity(isPrimary ? 0.45 : 0.32),
+                        lineWidth: isHovered ? 1.5 : (isPrimary ? 1 : 0)
+                    )
+                    .animation(.easeOut(duration: 0.12), value: isHovered)
+            )
+            .contentShape(Rectangle())
+            .onHover { hovering in
+                hoveredID = hovering ? accountID : (hoveredID == accountID ? nil : hoveredID)
+            }
+            .onTapGesture { onTap() }
+            .cursor(.pointingHand)
     }
 }
 
