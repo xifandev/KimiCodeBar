@@ -451,7 +451,14 @@ private struct AddAccountSheet: View {
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(.kimiTextSecondary)
 
-                HStack(spacing: 10) {
+                // 2 列网格布局，超过 2 个平台自动换行；当前 3 个 → 2×2，第三格留空
+                LazyVGrid(
+                    columns: [
+                        GridItem(.flexible(), spacing: 10),
+                        GridItem(.flexible(), spacing: 10)
+                    ],
+                    spacing: 10
+                ) {
                     ForEach(AccountProvider.allCases) { provider in
                         providerCard(provider)
                     }
@@ -532,6 +539,8 @@ private struct AddAccountSheet: View {
                 Text(provider.displayName)
                     .font(.system(size: 13, weight: isSelected ? .semibold : .medium))
                     .foregroundStyle(.kimiTextPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
 
                 Spacer(minLength: 4)
 
