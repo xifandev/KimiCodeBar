@@ -1001,14 +1001,10 @@ struct KimiMenu: View {
             HStack(spacing: 8) {
                 ActionButton(
                     title: languageManager.tr("控制台"),
-                    textIcon: model.primaryAccount?.provider == .deepseek ? "DS" : "KIMI",
+                    textIcon: "KIMI",
                     action: {
                         dismissMenuBarPanel()
-                        if model.primaryAccount?.provider == .deepseek {
-                            NSWorkspace.shared.open(DeepSeekBalanceService.consoleURL)
-                        } else {
-                            NSWorkspace.shared.open(consoleURL)
-                        }
+                        NSWorkspace.shared.open(consoleURL)
                     }
                 )
 
