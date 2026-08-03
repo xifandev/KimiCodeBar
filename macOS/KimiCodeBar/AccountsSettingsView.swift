@@ -87,6 +87,55 @@ struct AccountsSettingsView: View {
                     }
                 }
 
+                // WorkBuddy 账号管理（独立于 Kimi/DeepSeek 账号体系，从本地 auth 文件读取）
+                if !model.workBuddyAccounts.isEmpty {
+                    SettingsCard {
+                        VStack(alignment: .leading, spacing: 0) {
+                            // 标头
+                            HStack(spacing: 8) {
+                                Image("workbuddy-logo")
+                                    .resizable()
+                                    .interpolation(.high)
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(width: 16, height: 16)
+
+                                LText("WorkBuddy")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(.kimiTextPrimary)
+
+                                Spacer()
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+
+                            SettingsCardDivider()
+
+                            // 账号列表
+                            ForEach(model.workBuddyAccounts) { wbAccount in
+                                WorkBuddyAccountRow(account: wbAccount)
+                            }
+
+                            SettingsCardDivider()
+
+                            // 添加按钮
+                            Button(action: { addWorkBuddyAccount() }) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "plus.circle")
+                                        .font(.system(size: 12, weight: .medium))
+                                    LText("从本地 WorkBuddy 添加")
+                                        .font(.system(size: 13, weight: .medium))
+                                }
+                                .foregroundStyle(.kimiBlue)
+                                .frame(maxWidth: .infinity)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 12)
+                            }
+                            .buttonStyle(.plain)
+                            .cursor(.pointingHand)
+                        }
+                    }
+                }
+
                 // 添加账号 / 授权引导
                 if showsAddAccountCard {
                     SettingsCard {
@@ -201,6 +250,28 @@ struct AccountsSettingsView: View {
             if let editKeyError {
                 Text(editKeyError)
             }
+        }
+        .alert(LanguageManager.tr("添加失败"), isPresented: Binding(
+            get: { workBuddyError != nil },
+            set: { if !$0 { workBuddyError = nil } }
+        )) {
+            Button(LanguageManager.tr("好"), role: .cancel) {}
+        } message: {
+            if let workBuddyError {
+                Text(workBuddyError)
+            }
+        }
+    }
+
+    // MARK: WorkBuddy 账号添加
+
+    /// 从本地 auth 文件读取当前 WorkBuddy 登录账号并添加。
+    /// 失败时弹 alert 提示（auth 文件不存在 / 未登录）。
+    @State private var workBuddyError: String?
+
+    private func addWorkBuddyAccount() {
+        if let error = model.addWorkBuddyAccount() {
+            workBuddyError = error
         }
     }
 
@@ -991,5 +1062,76 @@ private struct AccountActionButton: View {
         if disabled { return Color.kimiTextPrimary.opacity(0.04) }
         if destructive { return isHovered ? Color.red.opacity(0.18) : Color.red.opacity(0.12) }
         return isHovered ? Color.kimiTextPrimary.opacity(0.14) : Color.kimiTextPrimary.opacity(0.08)
+    }
+}
+
+// MARK: - WorkBuddy 账号行
+
+/// WorkBuddy 账号行：logo + 昵称 + 当前标签 + 删除按钮。
+/// 独立于 AccountRow（不共享 KimiAccount 数据结构），但视觉风格保持一致。
+private struct WorkBuddyAccountRow: View {
+    let account: WorkBuddyAccount
+
+    @StateObject private var model = KimiCodeBarModel.shared
+    @StateObject private var languageManager = LanguageManager.shared
+
+    @State private var isHoveredDelete = false
+
+    private var isActive: Bool {
+        model.workBuddyActiveUID == account.uid
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // 小 logo
+            Image("workbuddy-logo")
+                .resizable()
+                .interpolation(.high)
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 20, height: 20)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(account.nickname)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.kimiTextPrimary)
+                    .lineLimit(1)
+
+                if let credits = model.workBuddyCredits[account.uid] {
+                    HStack(spacing: 3) {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 9))
+                            .foregroundStyle(.yellow)
+                        Text("\(credits.remainingText) 积分")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.kimiTextTertiary)
+                    }
+                }
+            }
+
+            if isActive {
+                Text(languageManager.tr("当前"))
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(.kimiBlue)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 1)
+                    .background(Color.kimiBlue.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+            }
+
+            Spacer()
+
+            // 删除按钮
+            Button(action: { model.removeWorkBuddyAccount(uid: account.uid) }) {
+                Image(systemName: "trash")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(isHoveredDelete ? .red : .kimiTextTertiary)
+                    .frame(width: 24, height: 24)
+            }
+            .buttonStyle(.plain)
+            .cursor(.pointingHand)
+            .onHover { isHoveredDelete = $0 }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
     }
 }

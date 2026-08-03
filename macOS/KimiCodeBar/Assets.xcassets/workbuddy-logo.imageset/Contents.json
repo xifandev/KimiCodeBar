@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "workbuddy-logo.svg",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

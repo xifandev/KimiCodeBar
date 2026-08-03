@@ -1836,6 +1836,72 @@
         }
       }
     },
+    "未检测到 WorkBuddy 登录信息，请先在 WorkBuddy 中登录" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No WorkBuddy login found. Please sign in to WorkBuddy first."
+          }
+        }
+      }
+    },
+    "从本地 WorkBuddy 添加" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add from local WorkBuddy"
+          }
+        }
+      }
+    },
+    "重启 WorkBuddy" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restart WorkBuddy"
+          }
+        }
+      }
+    },
+    "启动 WorkBuddy" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Launch WorkBuddy"
+          }
+        }
+      }
+    },
+    "当前" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Active"
+          }
+        }
+      }
+    },
+    "添加失败" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add Failed"
+          }
+        }
+      }
+    },
     "暂无会话记录" : {
       "extractionState" : "stale",
       "localizations" : {
