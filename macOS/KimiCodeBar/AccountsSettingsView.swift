@@ -464,11 +464,13 @@ private struct AddAccountSheet: View {
 
             // 动态内容区：按平台切换
             VStack(alignment: .leading, spacing: 10) {
-                LText(selectedProvider == .deepseek ? "输入 DeepSeek API Key" : "选择登录方式")
+                Text(dynamicSectionTitle)
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(.kimiTextSecondary)
 
-                if selectedProvider == .deepseek {
+                if selectedProvider == .workbuddy {
+                    workBuddyAddEntry
+                } else if selectedProvider == .deepseek {
                     apiKeyInputArea
                 } else {
                     // Kimi Code：方式卡片 + 选中 API Key 时展开输入区
@@ -570,6 +572,7 @@ private struct AddAccountSheet: View {
         switch method {
         case .oauth: return languageManager.tr("授权登录")
         case .apiKey: return languageManager.tr("API Key 登录")
+        case .localRead: return languageManager.tr("读取本地")
         }
     }
 
@@ -577,6 +580,7 @@ private struct AddAccountSheet: View {
         switch method {
         case .oauth: return languageManager.tr("浏览器授权，推荐")
         case .apiKey: return languageManager.tr("手动填写 API Key")
+        case .localRead: return languageManager.tr("无需输入，自动读取")
         }
     }
 
@@ -587,6 +591,80 @@ private struct AddAccountSheet: View {
             return .kimiTextPrimary.opacity(0.08)
         case .deepseek:
             return Color(red: 0.34, green: 0.53, blue: 1.00).opacity(0.10)
+        case .workbuddy:
+            return Color(red: 0.42, green: 0.30, blue: 1.00).opacity(0.10)
+        }
+    }
+
+    /// 动态内容区的章节标题
+    private var dynamicSectionTitle: String {
+        switch selectedProvider {
+        case .deepseek: return languageManager.tr("输入 DeepSeek API Key")
+        case .workbuddy: return languageManager.tr("从本地 WorkBuddy 添加")
+        case .kimi: return languageManager.tr("选择登录方式")
+        }
+    }
+
+    // MARK: WorkBuddy 添加入口
+
+    /// WorkBuddy 平台添加入口：说明文案 + 立即读取按钮。
+    /// 点击 → 调用 model.addWorkBuddyAccount() 读本地 auth 文件，成功关闭弹窗。
+    @State private var isReadingWorkBuddy = false
+
+    private var workBuddyAddEntry: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: "info.circle")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.kimiTextTertiary)
+                LText("请先在 WorkBuddy 客户端登录账号，再点击下方按钮读取本地登录信息。")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.kimiTextSecondary)
+            }
+            .padding(10)
+            .background(Color.kimiTextPrimary.opacity(0.04))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+
+            HStack(spacing: 10) {
+                AccountPrimaryButton(
+                    title: isReadingWorkBuddy ? languageManager.tr("读取中…") : languageManager.tr("确认新增"),
+                    action: { submitWorkBuddyAdd() }
+                )
+
+                if isReadingWorkBuddy {
+                    ProgressView()
+                        .controlSize(.small)
+                }
+
+                Spacer()
+
+                Button(action: onDismiss) {
+                    Text(languageManager.tr("取消"))
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.kimiTextSecondary)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
+                }
+                .buttonStyle(.plain)
+                .cursor(.pointingHand)
+                .disabled(isReadingWorkBuddy)
+            }
+        }
+    }
+
+    private func submitWorkBuddyAdd() {
+        isReadingWorkBuddy = true
+        Task {
+            // addWorkBuddyAccount 是 MainActor 方法，在 SwiftUI Task 里调用
+            let error = await MainActor.run {
+                KimiCodeBarModel.shared.addWorkBuddyAccount()
+            }
+            isReadingWorkBuddy = false
+            if let error {
+                apiKeyError = error
+            } else {
+                onDismiss()
+            }
         }
     }
 
@@ -718,6 +796,8 @@ private struct AccountRow: View {
             return .kimiTextPrimary.opacity(0.08)
         case .deepseek:
             return Color(red: 0.34, green: 0.53, blue: 1.00).opacity(0.10)
+        case .workbuddy:
+            return Color(red: 0.42, green: 0.30, blue: 1.00).opacity(0.10)
         }
     }
 

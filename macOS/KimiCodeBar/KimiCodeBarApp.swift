@@ -5540,6 +5540,9 @@ final class KimiCodeBarModel: ObservableObject {
                                 }
                                 return (account.id, nil, error)
                             }
+                        case .workbuddy:
+                            // WorkBuddy 账号不走 KimiAccount 体系，由 WorkBuddyCardListView 独立渲染
+                            return (account.id, nil, nil)
                         }
                     }
                 }
@@ -5608,6 +5611,10 @@ final class KimiCodeBarModel: ObservableObject {
             } else {
                 text = "--"
             }
+        case .workbuddy:
+            // WorkBuddy 不在 KimiAccount 体系，理论上不应作为主账号，兜底显示
+            quota = nil
+            text = "--"
         }
         switch accountStates[primaryID] {
         case .failed(let message):
@@ -5843,6 +5850,9 @@ final class KimiCodeBarModel: ObservableObject {
             case .failure(let error):
                 return errorDescription(error)
             }
+        case .workbuddy:
+            // WorkBuddy 走独立 addWorkBuddyAccount()（读本地 auth 文件），这里兜底返回错误
+            return LanguageManager.tr("WorkBuddy 账号请用本地读取方式添加")
         }
     }
 
@@ -5885,6 +5895,9 @@ final class KimiCodeBarModel: ObservableObject {
             case .failure(let error):
                 return errorDescription(error)
             }
+        case .workbuddy:
+            // WorkBuddy Key 不可修改（认证态由 WorkBuddy 客户端管理）
+            return LanguageManager.tr("WorkBuddy 账号 Key 由 WorkBuddy 客户端管理")
         }
     }
 

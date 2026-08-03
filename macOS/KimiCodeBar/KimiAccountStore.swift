@@ -4,13 +4,15 @@ import Foundation
 
 /// 账号所属平台。
 /// 扩展新平台时的接入点：
-/// 1. 这里加 case 并填 displayName / iconName；
+/// 1. 这里加 case 并填 displayName / iconName / logoImageName / supportedAuthMethods；
 /// 2. KimiCodeBarModel.refreshAllAccounts 中按 provider 分派对应平台的配额服务
 ///    （kimi → service.fetchQuota，deepseek → deepseekService.fetchBalance）；
 /// 3. 设置页账号行与面板卡片按 provider 渲染。
+/// 4. WorkBuddy 不走 KimiAccount 体系，独立渲染（WorkBuddyCardListView），AccountQuotaListView 跳过。
 enum AccountProvider: String, Codable, CaseIterable, Identifiable {
     case kimi
     case deepseek
+    case workbuddy
 
     var id: String { rawValue }
 
@@ -19,6 +21,7 @@ enum AccountProvider: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .kimi: return "Kimi Code"
         case .deepseek: return "DeepSeek"
+        case .workbuddy: return "WorkBuddy"
         }
     }
 
@@ -26,16 +29,19 @@ enum AccountProvider: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .kimi: return "k.circle"
         case .deepseek: return "d.circle"
+        case .workbuddy: return "w.circle"
         }
     }
 
     /// 账号行头像 / 平台卡 / 弹窗引用的官方品牌 logo（Assets.xcassets）。
     /// Kimi logo 自带 light/dark 双版，深浅模式自动切换。
     /// DeepSeek logo 品牌蓝在两种背景下都可见，单版本即可。
+    /// WorkBuddy logo 紫色两种背景下都可见，单版本即可。
     var logoImageName: String {
         switch self {
         case .kimi: return "kimi-logo"
         case .deepseek: return "deepseek-logo"
+        case .workbuddy: return "workbuddy-logo"
         }
     }
 
@@ -44,6 +50,7 @@ enum AccountProvider: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .kimi: return [.oauth, .apiKey]
         case .deepseek: return [.apiKey]
+        case .workbuddy: return [.localRead]
         }
     }
 }
@@ -52,6 +59,8 @@ enum AccountProvider: String, Codable, CaseIterable, Identifiable {
 enum AuthMethod {
     case oauth
     case apiKey
+    /// 本地文件读取（WorkBuddy：从 auth 文件读取，无需用户输入任何东西）
+    case localRead
 }
 
 /// 账号数据拉取结果：按平台区分，避免 KimiQuota 与 DeepSeekBalance 强行统一抽象。
