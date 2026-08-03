@@ -65,7 +65,6 @@ struct AccountsSettingsView: View {
                                     state: model.accountStates[account.id] ?? .idle,
                                     membershipLevel: model.accountQuotas[account.id]?.membershipLevel,
                                     reauthorizeDisabled: model.oauthLoginInProgress,
-                                    onSetPrimary: { model.setPrimaryAccount(account.id) },
                                     onSwitchCli: { requestCliSwitch(account) },
                                     onRename: {
                                         renamingAccount = account
@@ -602,7 +601,6 @@ private struct AccountRow: View {
     let state: KimiAccountState
     let membershipLevel: String?
     let reauthorizeDisabled: Bool
-    let onSetPrimary: () -> Void
     let onSwitchCli: () -> Void
     let onRename: () -> Void
     let onDelete: () -> Void
@@ -707,12 +705,6 @@ private struct AccountRow: View {
 
                 // 下部：全部操作按钮横排展开
                 HStack(spacing: 8) {
-                    AccountActionButton(
-                        title: languageManager.tr("设为主账号"),
-                        disabled: isPrimary,
-                        action: onSetPrimary
-                    )
-
                     AccountActionButton(
                         title: languageManager.tr("重命名"),
                         action: onRename

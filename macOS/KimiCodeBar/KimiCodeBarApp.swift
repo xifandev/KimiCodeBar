@@ -985,8 +985,9 @@ struct KimiMenu: View {
                 AccountQuotaListView()
 
                 // 本机消耗量卡片：扫描本地会话记录（wire.jsonl usage.record）得出 Token 消耗。
-                // 仅 Kimi 平台有本地会话记录，DeepSeek 主账号时不显示。
-                if model.showLocalUsageCard, model.primaryAccount?.provider != .deepseek {
+                // Kimi Code CLI 本身可以调用其他模型（如 DeepSeek），本地会话记录跟当前主账号是哪个平台无关，
+                // 因此切换主账号时不影响此卡片显示与否，只看用户开关 showLocalUsageCard。
+                if model.showLocalUsageCard {
                     LocalUsageCard()
                 }
 
