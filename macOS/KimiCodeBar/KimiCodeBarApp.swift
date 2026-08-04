@@ -1810,11 +1810,11 @@ private struct WorkBuddyCard: View {
                 LoadingRing()
                     .frame(width: 12, height: 12)
             } else if let credits {
-                // 积分（星星图标 + 数字）
+                // 积分（sparkle 图标 + 数字）
                 HStack(spacing: 3) {
-                    Image(systemName: "star.fill")
+                    Image(systemName: "sparkle")
                         .font(.system(size: 10))
-                        .foregroundStyle(.yellow)
+                        .foregroundStyle(.kimiTextSecondary)
                     Text(credits.remainingText)
                         .font(.system(size: 15, weight: .semibold, design: .rounded))
                         .monospacedDigit()

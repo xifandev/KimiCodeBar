@@ -1195,9 +1195,9 @@ private struct WorkBuddyAccountRow: View {
 
                 if let credits = model.workBuddyCredits[account.uid] {
                     HStack(spacing: 3) {
-                        Image(systemName: "star.fill")
+                        Image(systemName: "sparkle")
                             .font(.system(size: 9))
-                            .foregroundStyle(.yellow)
+                            .foregroundStyle(.kimiTextSecondary)
                         LText("%@ 积分", credits.remainingText)
                             .font(.system(size: 11))
                             .foregroundStyle(.kimiTextTertiary)
