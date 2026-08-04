@@ -5438,6 +5438,7 @@ final class KimiCodeBarModel: ObservableObject {
         accounts = snapshot.accounts
         primaryAccountID = snapshot.primaryAccountID
         refresh(showsLoading: false)
+        refreshWorkBuddy()   // 同步加载 WorkBuddy 账号列表 + 积分 + 运行状态
         Task { await loadKimiVersion() }
         startQuotaTimer()
         startUpdateTimer()
