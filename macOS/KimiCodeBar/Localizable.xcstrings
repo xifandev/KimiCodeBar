@@ -54,6 +54,7 @@
       }
     },
     "%@ 积分" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -459,6 +460,28 @@
     },
     "v%@" : {
 
+    },
+    "WorkBuddy 账号 Key 由 WorkBuddy 客户端管理" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "WorkBuddy keys are managed by the WorkBuddy client"
+          }
+        }
+      }
+    },
+    "WorkBuddy 账号请用本地读取方式添加" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "WorkBuddy accounts use the local-read flow"
+          }
+        }
+      }
     },
     "一个月以后" : {
       "extractionState" : "stale",
@@ -1417,6 +1440,16 @@
         }
       }
     },
+    "已签到" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Checked in"
+          }
+        }
+      }
+    },
     "开启后，KimiCodeBar 会每小时检查一次本地 Kimi Code 会话，将超过保留期限且未归档的会话自动标记为归档。" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1824,6 +1857,17 @@
         }
       }
     },
+    "无需输入，自动读取" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No input needed, auto-detect"
+          }
+        }
+      }
+    },
     "日志接口请求失败：%@" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1869,6 +1913,7 @@
       }
     },
     "显示 API Key" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2484,6 +2529,7 @@
       }
     },
     "确定删除「%1$@」吗？只会从 Bar 中移除该账号，不影响 WorkBuddy 客户端的登录状态。" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2779,6 +2825,28 @@
         }
       }
     },
+    "读取中…" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reading..."
+          }
+        }
+      }
+    },
+    "读取本地" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Read locally"
+          }
+        }
+      }
+    },
     "贡献者" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2874,61 +2942,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "System"
-          }
-        }
-      }
-    },
-    "读取本地" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Read locally"
-          }
-        }
-      }
-    },
-    "无需输入，自动读取" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No input needed, auto-detect"
-          }
-        }
-      }
-    },
-    "WorkBuddy 账号请用本地读取方式添加" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "WorkBuddy accounts use the local-read flow"
-          }
-        }
-      }
-    },
-    "WorkBuddy 账号 Key 由 WorkBuddy 客户端管理" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "WorkBuddy keys are managed by the WorkBuddy client"
-          }
-        }
-      }
-    },
-    "读取中…" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reading..."
           }
         }
       }
@@ -3187,6 +3200,7 @@
       }
     },
     "隐藏 API Key" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

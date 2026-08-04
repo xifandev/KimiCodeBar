@@ -13,6 +13,8 @@ struct WorkBuddyAccount: Codable, Identifiable, Equatable {
     var domain: String
     /// 用户自定义别名；为空时界面回退显示客户端昵称 nickname
     var alias: String? = nil
+    /// 最近签到日期（北京时间 yyyy-MM-dd），nil 表示今日未签到；刷新时若已等于今日则跳过签到 API
+    var lastCheckinDate: String? = nil
 
     /// auth 文件里完整的 account 块原始 JSON（含 uin/phoneNumber/deployStatus 等）。
     /// 切换账号时整体写回，避免字段丢失。老数据无此字段时为 nil。
@@ -143,6 +145,53 @@ final class WorkBuddyService {
         saveAccounts(accounts)
     }
 
+    // MARK: - 每日签到
+
+    /// 今日日期字符串（北京时间 yyyy-MM-dd）
+    static func todayString() -> String {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        f.timeZone = TimeZone(identifier: "Asia/Shanghai")
+        return f.string(from: Date())
+    }
+
+    /// 每日签到（幂等）。Token 快过期时自动刷新。
+    /// 返回 (success, already)：success=true 表示签到成功或今日已签到，already=true 表示今日已签过。
+    func checkin(account: WorkBuddyAccount) async -> (success: Bool, already: Bool) {
+        var working = account
+        if isTokenExpiringSoon(working.accessToken) {
+            if let refreshed = await refreshToken(account: working) {
+                working = refreshed
+                updateAccount(refreshed)
+            }
+        }
+
+        guard let (data, _) = try? await session.data(for: makeRequest(path: "/v2/billing/meter/daily-checkin", account: working)),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return (false, false)
+        }
+
+        let code = (json["code"] as? NSNumber)?.intValue ?? (json["code"] as? Int) ?? -1
+        let msg = (json["msg"] as? String) ?? ""
+
+        if code == 0 { return (true, false) }
+        if code == 10001 { return (true, true) }
+        // 关键词兜底（兼容服务端返回的不同错误码）
+        let lowerMsg = msg.lowercased()
+        if lowerMsg.contains("already") || msg.contains("已签") || msg.contains("已领") || msg.contains("今日已") {
+            return (true, true)
+        }
+        return (false, false)
+    }
+
+    /// 更新账号签到日期并落盘
+    func setCheckinDate(uid: String, date: String) {
+        var accounts = loadAccounts()
+        guard let idx = accounts.firstIndex(where: { $0.uid == uid }) else { return }
+        accounts[idx].lastCheckinDate = date
+        saveAccounts(accounts)
+    }
+
     // MARK: - 查积分
 
     /// 查询指定账号的剩余积分 + 套餐名。失败返回 nil。
@@ -219,6 +268,7 @@ final class WorkBuddyService {
             nickname: account.nickname, uid: account.uid,
             accessToken: newAT, refreshToken: newRT, domain: account.domain,
             alias: account.alias,
+            lastCheckinDate: account.lastCheckinDate,
             accountSnapshot: account.accountSnapshot, authSnapshot: account.authSnapshot
         )
     }

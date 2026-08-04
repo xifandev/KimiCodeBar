@@ -1801,6 +1801,11 @@ private struct WorkBuddyCard: View {
         model.workBuddyActiveUID == account.uid
     }
 
+    /// 今日是否已签到
+    private var isCheckedInToday: Bool {
+        model.workBuddyCheckinDates[account.uid] == WorkBuddyService.todayString()
+    }
+
     var body: some View {
         HStack(spacing: 8) {
             // 左：WorkBuddy 小 logo
@@ -1816,9 +1821,12 @@ private struct WorkBuddyCard: View {
                 .foregroundStyle(.kimiTextSecondary)
                 .lineLimit(1)
 
-            // 标签：仅展示有意义的「当前」
+            // 标签：当前 / 已签到
             if isActive {
                 tagPill(languageManager.tr("当前"), color: .kimiBlue)
+            }
+            if isCheckedInToday {
+                tagPill(languageManager.tr("已签到"), color: .green)
             }
 
             Spacer(minLength: 8)
@@ -5329,6 +5337,8 @@ final class KimiCodeBarModel: ObservableObject {
     @Published var workBuddyCredits: [String: WorkBuddyCredits] = [:]
     /// 每个账号的加载状态
     @Published var workBuddyStates: [String: KimiAccountState] = [:]
+    /// 每个账号的签到日期（uid → "yyyy-MM-dd"），驱动 UI 显示「已签到」标签
+    @Published var workBuddyCheckinDates: [String: String] = [:]
     /// WorkBuddy 客户端是否在运行
     @Published var isWorkBuddyRunning = false
     /// 当前在 WorkBuddy 中登录的账号 uid（读 auth 文件得到）
@@ -6059,12 +6069,29 @@ final class KimiCodeBarModel: ObservableObject {
         guard !workBuddyAccounts.isEmpty else { return }
 
         Task {
+            let today = WorkBuddyService.todayString()
+
             for account in workBuddyAccounts {
                 // 标记加载中
                 await MainActor.run {
                     workBuddyStates[account.uid] = .loading
                 }
-                let credits = await WorkBuddyService.shared.fetchCredits(account: account)
+
+                // 签到：今日未签到才调 API（幂等接口），已签到则跳过
+                if account.lastCheckinDate != today {
+                    let result = await WorkBuddyService.shared.checkin(account: account)
+                    if result.success {
+                        WorkBuddyService.shared.setCheckinDate(uid: account.uid, date: today)
+                        await MainActor.run { workBuddyCheckinDates[account.uid] = today }
+                    }
+                } else {
+                    await MainActor.run { workBuddyCheckinDates[account.uid] = today }
+                }
+
+                // 重新加载账号（签到时可能刷新了 token），再查积分
+                let refreshed = WorkBuddyService.shared.loadAccounts()
+                    .first { $0.uid == account.uid } ?? account
+                let credits = await WorkBuddyService.shared.fetchCredits(account: refreshed)
                 await MainActor.run {
                     if let credits {
                         workBuddyCredits[account.uid] = credits
@@ -6072,6 +6099,11 @@ final class KimiCodeBarModel: ObservableObject {
                     } else {
                         workBuddyStates[account.uid] = .failed("积分获取失败")
                     }
+                }
+
+                // 账号间隔 1 秒（防 API 限流）
+                if account.uid != workBuddyAccounts.last?.uid {
+                    try? await Task.sleep(nanoseconds: 1_000_000_000)
                 }
             }
         }
