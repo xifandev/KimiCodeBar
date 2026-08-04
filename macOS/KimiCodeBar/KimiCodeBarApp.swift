@@ -1598,19 +1598,21 @@ struct AccountQuotaListView: View {
                 }
             } else {
                 ForEach(model.accounts) { account in
+                    // workBuddyPrimaryUID 被选中时，Kimi/DeepSeek 卡片不显示选中描边（互斥）
+                    let isPrimary = account.id == model.primaryAccountID && model.workBuddyPrimaryUID == nil
                     Group {
                         if account.provider == .deepseek {
                             DeepSeekBalanceCard(account: account)
                         } else {
                             AccountQuotaCard(
                                 account: account,
-                                isPrimary: account.id == model.primaryAccountID
+                                isPrimary: isPrimary
                             )
                         }
                     }
                     .modifier(AccountCardHover(
                         accountID: account.id,
-                        isPrimary: account.id == model.primaryAccountID,
+                        isPrimary: isPrimary,
                         hoveredID: $hoveredAccountID,
                         onTap: { model.setPrimaryAccount(account.id) }
                     ))
