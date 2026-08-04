@@ -8,7 +8,7 @@ import Foundation
 /// 2. KimiCodeBarModel.refreshAllAccounts 中按 provider 分派对应平台的配额服务
 ///    （kimi → service.fetchQuota，deepseek → deepseekService.fetchBalance）；
 /// 3. 设置页账号行与面板卡片按 provider 渲染。
-/// 4. WorkBuddy 不走 KimiAccount 体系，独立渲染（WorkBuddyCardListView），AccountQuotaListView 跳过。
+/// 4. WorkBuddy 走 KimiAccount 统一体系，积分由 refreshWorkBuddyAccounts() 独立刷新。
 enum AccountProvider: String, Codable, CaseIterable, Identifiable {
     case kimi
     case deepseek
@@ -68,6 +68,7 @@ enum AuthMethod {
 enum AccountFetchResult: Sendable {
     case kimi(KimiQuota)
     case deepseek(DeepSeekBalance)
+    case workbuddy(WorkBuddyCredits)
 }
 
 // MARK: - 账号凭证
@@ -76,6 +77,28 @@ enum AccountFetchResult: Sendable {
 enum AccountCredential: Codable, Equatable {
     case oauth(KimiOAuthToken)
     case apiKey(String)
+    case workbuddy(WorkBuddyCredential)
+}
+
+/// WorkBuddy 账号凭证：token 对 + 快照 + 签到日期。
+/// 与 Kimi OAuth / DeepSeek API Key 并列，作为 AccountCredential 的一个 case。
+struct WorkBuddyCredential: Codable, Equatable {
+    /// WorkBuddy 用户 ID（用于 auth 文件读写、API 调用）
+    var uid: String
+    /// 客户端昵称（别名 alias 为空时的回退显示名）
+    var nickname: String
+    var accessToken: String
+    var refreshToken: String
+    var domain: String
+    /// auth 文件里完整的 account 块原始 JSON（切换账号时整体写回）
+    var accountSnapshot: Data?
+    /// auth 文件里完整的 auth 块原始 JSON
+    var authSnapshot: Data?
+    /// 最近签到日期（北京时间 yyyy-MM-dd），nil 表示今日未签到
+    var lastCheckinDate: String?
+
+    var isApiKeyMode: Bool { accessToken.hasPrefix("ck_") }
+    var hasSnapshot: Bool { accountSnapshot != nil && authSnapshot != nil }
 }
 
 // MARK: - 账号模型
@@ -93,6 +116,12 @@ struct KimiAccount: Codable, Equatable, Identifiable {
     /// CLI 切换等只认 OAuth token 对的场景使用；API Key 账号为 nil
     var oauthToken: KimiOAuthToken? {
         if case .oauth(let token) = credential { return token }
+        return nil
+    }
+
+    /// WorkBuddy 凭证便捷访问
+    var workBuddyCredential: WorkBuddyCredential? {
+        if case .workbuddy(let cred) = credential { return cred }
         return nil
     }
 
@@ -218,6 +247,24 @@ final class KimiAccountStore {
         mutate { format in
             guard let index = format.accounts.firstIndex(where: { $0.id == id }) else { return }
             format.accounts[index].credential = .apiKey(key)
+        }
+    }
+
+    /// 更新 WorkBuddy 账号的凭证（token 刷新后落盘）
+    func updateWorkBuddyCredential(id: UUID, credential: WorkBuddyCredential) {
+        mutate { format in
+            guard let index = format.accounts.firstIndex(where: { $0.id == id }) else { return }
+            format.accounts[index].credential = .workbuddy(credential)
+        }
+    }
+
+    /// 更新 WorkBuddy 账号的签到日期
+    func updateWorkBuddyCheckinDate(id: UUID, date: String) {
+        mutate { format in
+            guard let index = format.accounts.firstIndex(where: { $0.id == id }),
+                  case .workbuddy(var cred) = format.accounts[index].credential else { return }
+            cred.lastCheckinDate = date
+            format.accounts[index].credential = .workbuddy(cred)
         }
     }
 

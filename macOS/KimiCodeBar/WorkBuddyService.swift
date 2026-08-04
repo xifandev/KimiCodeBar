@@ -1,31 +1,6 @@
 import Foundation
 import AppKit
 
-// MARK: - WorkBuddy 账号模型
-
-/// WorkBuddy 账号：从本地 auth 文件读取，包含 token 对 + 完整快照（用于切换时写回）。
-struct WorkBuddyAccount: Codable, Identifiable, Equatable {
-    var id: String { uid }
-    var nickname: String
-    var uid: String
-    var accessToken: String
-    var refreshToken: String
-    var domain: String
-    /// 用户自定义别名；为空时界面回退显示客户端昵称 nickname
-    var alias: String? = nil
-    /// 最近签到日期（北京时间 yyyy-MM-dd），nil 表示今日未签到；刷新时若已等于今日则跳过签到 API
-    var lastCheckinDate: String? = nil
-
-    /// auth 文件里完整的 account 块原始 JSON（含 uin/phoneNumber/deployStatus 等）。
-    /// 切换账号时整体写回，避免字段丢失。老数据无此字段时为 nil。
-    var accountSnapshot: Data?
-    /// auth 文件里完整的 auth 块原始 JSON（含 expiresAt/refreshExpiresAt/tokenType 等）。
-    var authSnapshot: Data?
-
-    var isApiKeyMode: Bool { accessToken.hasPrefix("ck_") }
-    var hasSnapshot: Bool { accountSnapshot != nil && authSnapshot != nil }
-}
-
 // MARK: - WorkBuddy 积分
 
 /// WorkBuddy 积分查询结果：剩余积分 + 套餐名（如"免费版"/"付费版"）。
@@ -43,12 +18,14 @@ struct WorkBuddyCredits: Equatable {
 
 /// WorkBuddy 集成服务：
 /// 1. 从本地 auth 文件读取当前登录账号（添加账号入口）
-/// 2. 调 API 查积分
+/// 2. 调 API 查积分 + 每日签到
 /// 3. 切换账号（写快照回 auth 文件）
 /// 4. 启动 / 重启 WorkBuddy 客户端
 ///
+/// 账号数据统一存储在 KimiAccountStore（credentials.json），
+/// 本服务只负责 WorkBuddy 特有的 API 调用和 auth 文件操作。
+///
 /// auth 文件路径：~/Library/Application Support/CodeBuddyExtension/Data/Public/auth/workbuddy-desktop.info
-/// 账号存储路径：~/.kimi-code-bar/workbuddy-accounts.json（与 Kimi/DeepSeek 账号隔离）
 final class WorkBuddyService {
     static let shared = WorkBuddyService()
 
@@ -56,50 +33,22 @@ final class WorkBuddyService {
     let authFileURL: URL = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent("Library/Application Support/CodeBuddyExtension/Data/Public/auth/workbuddy-desktop.info")
 
-    /// 本地账号存储目录（与 KimiCodeBar 主账号体系隔离，避免 Codable 冲突）
-    private let storeDir: URL = {
-        let dir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".kimi-code-bar")
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        return dir
-    }()
-
-    private let storeFileURL: URL?
     private let session: URLSession
     private let baseURL = "https://copilot.tencent.com"
     private let refreshURL = "https://www.codebuddy.cn/auth/realms/copilot/protocol/openid-connect/token"
 
     private init() {
-        storeFileURL = storeDir.appendingPathComponent("workbuddy-accounts.json")
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 30
         config.connectionProxyDictionary = [:]  // 禁用系统代理，直连
         session = URLSession(configuration: config)
     }
 
-    // MARK: - 账号存储
-
-    /// 读取本地存储的 WorkBuddy 账号列表
-    func loadAccounts() -> [WorkBuddyAccount] {
-        guard let url = storeFileURL,
-              let data = try? Data(contentsOf: url),
-              let decoded = try? JSONDecoder().decode([WorkBuddyAccount].self, from: data) else {
-            return []
-        }
-        return decoded
-    }
-
-    private func saveAccounts(_ accounts: [WorkBuddyAccount]) {
-        guard let url = storeFileURL,
-              let data = try? JSONEncoder().encode(accounts) else { return }
-        try? data.write(to: url, options: [.atomic])
-    }
-
     // MARK: - 从本地 auth 文件添加账号
 
-    /// 读取当前 WorkBuddy auth 文件，抓取当前登录账号信息并存储。
-    /// 成功返回账号，失败返回 nil（auth 文件不存在或格式不符）。
-    @discardableResult
-    func addCurrentAccount() -> WorkBuddyAccount? {
+    /// 读取当前 WorkBuddy auth 文件，构建一个 KimiAccount（provider=.workbuddy）。
+    /// 调用方负责去重后存入 KimiAccountStore。失败返回 nil。
+    func addCurrentAccount() -> KimiAccount? {
         guard let data = try? Data(contentsOf: authFileURL),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let accountInfo = json["account"] as? [String: Any],
@@ -114,35 +63,64 @@ final class WorkBuddyService {
         let accountSnapshot = try? JSONSerialization.data(withJSONObject: accountInfo, options: [.sortedKeys])
         let authSnapshot = try? JSONSerialization.data(withJSONObject: authInfo, options: [.sortedKeys])
 
-        let newAccount = WorkBuddyAccount(
-            nickname: nickname, uid: uid,
+        let cred = WorkBuddyCredential(
+            uid: uid, nickname: nickname,
             accessToken: accessToken, refreshToken: refreshToken,
             domain: "www.codebuddy.cn",
-            accountSnapshot: accountSnapshot, authSnapshot: authSnapshot
+            accountSnapshot: accountSnapshot, authSnapshot: authSnapshot,
+            lastCheckinDate: nil
         )
+        return KimiAccount(
+            id: UUID(), alias: nil, provider: .workbuddy,
+            credential: .workbuddy(cred), accountIdentifier: uid
+        )
+    }
 
-        var accounts = loadAccounts()
-        if let idx = accounts.firstIndex(where: { $0.uid == uid }) {
-            accounts[idx] = newAccount
-        } else {
-            accounts.append(newAccount)
+    // MARK: - 迁移旧格式
+
+    /// 旧 workbuddy-accounts.json 的格式（迁移用）
+    private struct OldWorkBuddyAccount: Codable {
+        var nickname: String
+        var uid: String
+        var accessToken: String
+        var refreshToken: String
+        var domain: String
+        var alias: String?
+        var lastCheckinDate: String?
+        var accountSnapshot: Data?
+        var authSnapshot: Data?
+    }
+
+    /// 迁移旧 workbuddy-accounts.json → KimiAccountStore。
+    /// 已迁移过的（accountIdentifier 匹配）跳过，迁移后重命名旧文件。
+    static func migrateOldAccounts() {
+        let oldFile = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".kimi-code-bar/workbuddy-accounts.json")
+        guard FileManager.default.fileExists(atPath: oldFile.path),
+              let data = try? Data(contentsOf: oldFile),
+              let oldAccounts = try? JSONDecoder().decode([OldWorkBuddyAccount].self, from: data),
+              !oldAccounts.isEmpty else { return }
+
+        let store = KimiAccountStore.shared
+        for old in oldAccounts {
+            // 已迁移则跳过
+            if store.snapshot.accounts.contains(where: { $0.accountIdentifier == old.uid }) { continue }
+            let cred = WorkBuddyCredential(
+                uid: old.uid, nickname: old.nickname,
+                accessToken: old.accessToken, refreshToken: old.refreshToken,
+                domain: old.domain,
+                accountSnapshot: old.accountSnapshot, authSnapshot: old.authSnapshot,
+                lastCheckinDate: old.lastCheckinDate
+            )
+            store.addAccount(KimiAccount(
+                id: UUID(), alias: old.alias, provider: .workbuddy,
+                credential: .workbuddy(cred), accountIdentifier: old.uid
+            ))
         }
-        saveAccounts(accounts)
-        return newAccount
-    }
-
-    func removeAccount(uid: String) {
-        var accounts = loadAccounts()
-        accounts.removeAll { $0.uid == uid }
-        saveAccounts(accounts)
-    }
-
-    /// 设置账号别名；传 nil 清除别名（回退显示客户端昵称）
-    func setAlias(uid: String, alias: String?) {
-        var accounts = loadAccounts()
-        guard let idx = accounts.firstIndex(where: { $0.uid == uid }) else { return }
-        accounts[idx].alias = alias
-        saveAccounts(accounts)
+        store.ensurePrimaryAccount()
+        // 重命名旧文件防止重复迁移
+        let migrated = oldFile.appendingPathExtension("migrated")
+        try? FileManager.default.moveItem(at: oldFile, to: migrated)
     }
 
     // MARK: - 每日签到
@@ -157,16 +135,16 @@ final class WorkBuddyService {
 
     /// 每日签到（幂等）。Token 快过期时自动刷新。
     /// 返回 (success, already)：success=true 表示签到成功或今日已签到，already=true 表示今日已签过。
-    func checkin(account: WorkBuddyAccount) async -> (success: Bool, already: Bool) {
-        var working = account
-        if isTokenExpiringSoon(working.accessToken) {
-            if let refreshed = await refreshToken(account: working) {
-                working = refreshed
-                updateAccount(refreshed)
+    func checkin(account: KimiAccount) async -> (success: Bool, already: Bool) {
+        guard var cred = account.workBuddyCredential else { return (false, false) }
+        if isTokenExpiringSoon(cred.accessToken) {
+            if let refreshed = await refreshToken(cred: cred) {
+                cred = refreshed
+                KimiAccountStore.shared.updateWorkBuddyCredential(id: account.id, credential: refreshed)
             }
         }
 
-        guard let (data, _) = try? await session.data(for: makeRequest(path: "/v2/billing/meter/daily-checkin", account: working)),
+        guard let (data, _) = try? await session.data(for: makeRequest(path: "/v2/billing/meter/daily-checkin", cred: cred)),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             return (false, false)
         }
@@ -176,7 +154,6 @@ final class WorkBuddyService {
 
         if code == 0 { return (true, false) }
         if code == 10001 { return (true, true) }
-        // 关键词兜底（兼容服务端返回的不同错误码）
         let lowerMsg = msg.lowercased()
         if lowerMsg.contains("already") || msg.contains("已签") || msg.contains("已领") || msg.contains("今日已") {
             return (true, true)
@@ -184,32 +161,23 @@ final class WorkBuddyService {
         return (false, false)
     }
 
-    /// 更新账号签到日期并落盘
-    func setCheckinDate(uid: String, date: String) {
-        var accounts = loadAccounts()
-        guard let idx = accounts.firstIndex(where: { $0.uid == uid }) else { return }
-        accounts[idx].lastCheckinDate = date
-        saveAccounts(accounts)
-    }
-
     // MARK: - 查积分
 
     /// 查询指定账号的剩余积分 + 套餐名。失败返回 nil。
     /// Token 快过期时自动刷新。
-    func fetchCredits(account: WorkBuddyAccount) async -> WorkBuddyCredits? {
-        var working = account
+    func fetchCredits(account: KimiAccount) async -> WorkBuddyCredits? {
+        guard var cred = account.workBuddyCredential else { return nil }
 
-        // Token 快过期 → 自动刷新
-        if isTokenExpiringSoon(working.accessToken) {
-            if let refreshed = await refreshToken(account: working) {
-                working = refreshed
-                updateAccount(refreshed)
+        if isTokenExpiringSoon(cred.accessToken) {
+            if let refreshed = await refreshToken(cred: cred) {
+                cred = refreshed
+                KimiAccountStore.shared.updateWorkBuddyCredential(id: account.id, credential: refreshed)
             } else {
                 return nil
             }
         }
 
-        guard let (data, _) = try? await session.data(for: makeRequest(path: "/v2/billing/meter/get-user-resource", account: working)),
+        guard let (data, _) = try? await session.data(for: makeRequest(path: "/v2/billing/meter/get-user-resource", cred: cred)),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let code = (json["code"] as? NSNumber)?.intValue ?? (json["code"] as? Int),
               code == 0 else {
@@ -251,49 +219,38 @@ final class WorkBuddyService {
 
     // MARK: - 刷新 Token
 
-    func refreshToken(account: WorkBuddyAccount) async -> WorkBuddyAccount? {
-        guard !account.refreshToken.isEmpty else { return nil }
+    func refreshToken(cred: WorkBuddyCredential) async -> WorkBuddyCredential? {
+        guard !cred.refreshToken.isEmpty else { return nil }
         var req = URLRequest(url: URL(string: refreshURL)!)
         req.httpMethod = "POST"
         req.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        req.httpBody = "grant_type=refresh_token&refresh_token=\(account.refreshToken)&client_id=console".data(using: .utf8)
+        req.httpBody = "grant_type=refresh_token&refresh_token=\(cred.refreshToken)&client_id=console".data(using: .utf8)
 
         guard let (data, _) = try? await session.data(for: req),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let newAT = json["access_token"] as? String else {
             return nil
         }
-        let newRT = json["refresh_token"] as? String ?? account.refreshToken
-        return WorkBuddyAccount(
-            nickname: account.nickname, uid: account.uid,
-            accessToken: newAT, refreshToken: newRT, domain: account.domain,
-            alias: account.alias,
-            lastCheckinDate: account.lastCheckinDate,
-            accountSnapshot: account.accountSnapshot, authSnapshot: account.authSnapshot
-        )
-    }
-
-    private func updateAccount(_ updated: WorkBuddyAccount) {
-        var accounts = loadAccounts()
-        if let idx = accounts.firstIndex(where: { $0.uid == updated.uid }) {
-            accounts[idx] = updated
-            saveAccounts(accounts)
-        }
+        let newRT = json["refresh_token"] as? String ?? cred.refreshToken
+        var refreshed = cred
+        refreshed.accessToken = newAT
+        refreshed.refreshToken = newRT
+        return refreshed
     }
 
     // MARK: - 构建请求
 
-    private func makeRequest(path: String, account: WorkBuddyAccount) -> URLRequest {
+    private func makeRequest(path: String, cred: WorkBuddyCredential) -> URLRequest {
         let url = URL(string: baseURL + path)!
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.setValue("Bearer \(account.accessToken)", forHTTPHeaderField: "Authorization")
+        req.setValue("Bearer \(cred.accessToken)", forHTTPHeaderField: "Authorization")
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue("application/json", forHTTPHeaderField: "Accept")
 
-        if !account.isApiKeyMode {
-            req.setValue(account.uid, forHTTPHeaderField: "X-User-Id")
-            req.setValue(account.domain, forHTTPHeaderField: "X-Domain")
+        if !cred.isApiKeyMode {
+            req.setValue(cred.uid, forHTTPHeaderField: "X-User-Id")
+            req.setValue(cred.domain, forHTTPHeaderField: "X-Domain")
             req.setValue("zh-CN,zh;q=0.9", forHTTPHeaderField: "Accept-Language")
             req.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent")
         }
@@ -318,46 +275,40 @@ final class WorkBuddyService {
     /// 将指定账号的 token 对 + 快照写回 auth 文件，使下次启动 WorkBuddy 时使用该账号。
     /// 逻辑迁移自 wbSwitch 项目。返回是否成功写入。
     @discardableResult
-    func switchTo(uid: String) -> Bool {
-        guard let target = loadAccounts().first(where: { $0.uid == uid }) else { return false }
+    func switchTo(account: KimiAccount) -> Bool {
+        guard let cred = account.workBuddyCredential else { return false }
 
-        // 1. 读当前文件（带重试，防止与 WorkBuddy 并发写时瞬态失败）
         guard var curJson = readAuthJSONWithRetry() else { return false }
 
-        // 2. 若目标账号已是当前账号，无需切换
-        if let curUid = (curJson["account"] as? [String: Any])?["uid"] as? String, curUid == uid {
+        // 若目标账号已是当前账号，无需切换
+        if let curUid = (curJson["account"] as? [String: Any])?["uid"] as? String, curUid == cred.uid {
             return true
         }
 
-        // 3. 构建目标 account 和 auth 块
         var accountObj: [String: Any]
         var authObj: [String: Any]
 
-        if let accountData = target.accountSnapshot,
-           let authData = target.authSnapshot,
+        if let accountData = cred.accountSnapshot,
+           let authData = cred.authSnapshot,
            let snapAccount = try? JSONSerialization.jsonObject(with: accountData) as? [String: Any],
            let snapAuth = try? JSONSerialization.jsonObject(with: authData) as? [String: Any] {
-            // 有快照：整体替换
             accountObj = snapAccount
             authObj = snapAuth
         } else {
-            // 无快照：降级 patch —— 以当前 auth 文件结构为模板，补入已知字段
             accountObj = (curJson["account"] as? [String: Any]) ?? [:]
             authObj = (curJson["auth"] as? [String: Any]) ?? [:]
-            accountObj["uid"] = target.uid
-            accountObj["nickname"] = target.nickname
-            authObj["accessToken"] = target.accessToken
-            authObj["refreshToken"] = target.refreshToken
-            authObj["domain"] = target.domain
+            accountObj["uid"] = cred.uid
+            accountObj["nickname"] = cred.nickname
+            authObj["accessToken"] = cred.accessToken
+            authObj["refreshToken"] = cred.refreshToken
+            authObj["domain"] = cred.domain
             if authObj["tokenType"] == nil {
                 authObj["tokenType"] = "Bearer"
             }
         }
 
-        // 4. 备份当前文件
         backupAuthFile()
 
-        // 5. 替换顶层 account 和 auth，原子写回
         curJson["account"] = accountObj
         curJson["auth"] = authObj
 
@@ -372,7 +323,6 @@ final class WorkBuddyService {
         }
     }
 
-    /// 带重试的 auth 文件读取（防止与 WorkBuddy 客户端并发写时瞬态失败）
     private func readAuthJSONWithRetry() -> [String: Any]? {
         for attempt in 0..<3 {
             if let data = try? Data(contentsOf: authFileURL),
@@ -386,7 +336,6 @@ final class WorkBuddyService {
         return nil
     }
 
-    /// 切换前备份当前 auth 文件
     private func backupAuthFile() {
         let backupDir = authFileURL.deletingLastPathComponent()
             .appendingPathComponent("auth-backups", isDirectory: true)
@@ -399,15 +348,12 @@ final class WorkBuddyService {
 
     // MARK: - 启动 / 重启 WorkBuddy
 
-    /// WorkBuddy 进程是否在运行
     func isWorkBuddyRunning() -> Bool {
         NSWorkspace.shared.runningApplications.contains {
             $0.bundleIdentifier == "com.tencent.WorkBuddy" || $0.bundleURL?.lastPathComponent == "WorkBuddy.app"
         }
     }
 
-    /// 重启 WorkBuddy 客户端。⚠️ 会断开当前对话。
-    /// 旧进程退出 → 延迟 1.2s → 重新启动 → 延迟 0.5s → 回调运行状态。
     func restartWorkBuddy(completion: (@MainActor () -> Void)? = nil) {
         let apps = NSWorkspace.shared.runningApplications.filter {
             $0.bundleIdentifier == "com.tencent.WorkBuddy" || $0.bundleURL?.lastPathComponent == "WorkBuddy.app"
@@ -450,7 +396,6 @@ final class WorkBuddyService {
 
     // MARK: - 套餐名简化
 
-    /// 把 WorkBuddy 的 PackageName 简化为短 tier 标签
     private func simplifyTier(_ packageName: String) -> String {
         if packageName.isEmpty { return "" }
         if packageName.contains("体验") || packageName.contains("裂变") || packageName.contains("个人") {

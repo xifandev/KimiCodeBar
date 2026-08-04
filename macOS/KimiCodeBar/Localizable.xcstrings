@@ -1441,6 +1441,7 @@
       }
     },
     "已签到" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

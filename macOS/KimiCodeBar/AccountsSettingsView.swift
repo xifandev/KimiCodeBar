@@ -1,14 +1,5 @@
 import SwiftUI
 
-// MARK: - 账号操作对象
-
-/// 账号管理页上两类异构账号的统一引用：KimiAccount（Kimi/DeepSeek）与 WorkBuddyAccount。
-/// 重命名、删除等弹窗用同一套状态承载，按 case 分派到各自的数据层。
-private enum AccountRef {
-    case kimi(KimiAccount)
-    case workBuddy(WorkBuddyAccount)
-}
-
 // MARK: - 账号设置页
 
 /// 设置窗口「账号管理」页：统一管理全部账号（列表 / 设主 / 重命名 / 删除 / 重新授权 / 添加账号）。
@@ -20,12 +11,12 @@ struct AccountsSettingsView: View {
     @StateObject private var languageManager = LanguageManager.shared
 
     // 重命名弹窗状态
-    @State private var renamingAccount: AccountRef?
+    @State private var renamingAccount: KimiAccount?
     @State private var renameText = ""
     @State private var showRenameAlert = false
 
     // 删除确认弹窗状态
-    @State private var accountPendingDeletion: AccountRef?
+    @State private var accountPendingDeletion: KimiAccount?
     @State private var showDeleteConfirm = false
 
     // CLI 切换确认弹窗状态
@@ -47,8 +38,7 @@ struct AccountsSettingsView: View {
     /// 有账号、授权流程进行中、或授权失败有待展示的错误时展示。
     /// 平台 / Key 表单全部移到 sheet 内，主面板不再承担表单态。
     private var showsAddAccountCard: Bool {
-        !model.accounts.isEmpty || !model.workBuddyAccounts.isEmpty
-            || model.oauthLoginInProgress || model.oauthLoginError != nil
+        !model.accounts.isEmpty || model.oauthLoginInProgress || model.oauthLoginError != nil
     }
 
     var body: some View {
@@ -59,7 +49,7 @@ struct AccountsSettingsView: View {
                     .foregroundStyle(.kimiTextPrimary)
 
                 // 账号列表：Kimi / DeepSeek / WorkBuddy 不分组，每个账号一张独立卡片
-                if model.accounts.isEmpty && model.workBuddyAccounts.isEmpty {
+                if model.accounts.isEmpty {
                     SettingsCard {
                         emptyState
                     }
@@ -78,12 +68,12 @@ struct AccountsSettingsView: View {
                                     reauthorizeDisabled: model.oauthLoginInProgress,
                                     onSwitchCli: { requestCliSwitch(account) },
                                     onRename: {
-                                        renamingAccount = .kimi(account)
+                                        renamingAccount = account
                                         renameText = account.alias ?? ""
                                         showRenameAlert = true
                                     },
                                     onDelete: {
-                                        accountPendingDeletion = .kimi(account)
+                                        accountPendingDeletion = account
                                         showDeleteConfirm = true
                                     },
                                     onReauthorize: { model.reauthorizeAccount(account.id) },
@@ -91,23 +81,6 @@ struct AccountsSettingsView: View {
                                         editingKeyAccount = account
                                         editKeyInput = ""
                                         showEditKeyAlert = true
-                                    }
-                                )
-                            }
-                        }
-
-                        ForEach(model.workBuddyAccounts) { wbAccount in
-                            SettingsCard {
-                                WorkBuddyAccountRow(
-                                    account: wbAccount,
-                                    onRename: {
-                                        renamingAccount = .workBuddy(wbAccount)
-                                        renameText = wbAccount.alias ?? ""
-                                        showRenameAlert = true
-                                    },
-                                    onDelete: {
-                                        accountPendingDeletion = .workBuddy(wbAccount)
-                                        showDeleteConfirm = true
                                     }
                                 )
                             }
@@ -155,14 +128,8 @@ struct AccountsSettingsView: View {
         .alert(LanguageManager.tr("重命名账号"), isPresented: $showRenameAlert) {
             TextField(LanguageManager.tr("别名"), text: $renameText)
             Button(LanguageManager.tr("保存")) {
-                if let ref = renamingAccount {
-                    // 空白别名 = 清除别名，恢复默认名称（「账号 N」/ 客户端昵称）
-                    switch ref {
-                    case .kimi(let account):
-                        model.renameAccount(account.id, alias: renameText)
-                    case .workBuddy(let account):
-                        model.renameWorkBuddyAccount(uid: account.uid, alias: renameText)
-                    }
+                if let account = renamingAccount {
+                    model.renameAccount(account.id, alias: renameText)
                 }
             }
             Button(LanguageManager.tr("取消"), role: .cancel) {}
@@ -171,30 +138,17 @@ struct AccountsSettingsView: View {
         }
         .alert(LanguageManager.tr("删除账号"), isPresented: $showDeleteConfirm) {
             Button(LanguageManager.tr("删除"), role: .destructive) {
-                if let ref = accountPendingDeletion {
-                    switch ref {
-                    case .kimi(let account):
-                        model.removeAccount(account.id)
-                    case .workBuddy(let account):
-                        model.removeWorkBuddyAccount(uid: account.uid)
-                    }
+                if let account = accountPendingDeletion {
+                    model.removeAccount(account.id)
                 }
             }
             Button(LanguageManager.tr("取消"), role: .cancel) {}
         } message: {
-            if let ref = accountPendingDeletion {
-                switch ref {
-                case .kimi(let account):
-                    Text(LanguageManager.tr(
-                        "确定删除「%1$@」吗？只会删除 Bar 中保存的授权，不影响 Kimi CLI 的登录状态。",
-                        arguments: [model.displayName(for: account)]
-                    ))
-                case .workBuddy(let account):
-                    Text(LanguageManager.tr(
-                        "确定删除「%1$@」吗？只会从 Bar 中移除该账号，不影响 WorkBuddy 客户端的登录状态。",
-                        arguments: [model.workBuddyDisplayName(for: account)]
-                    ))
-                }
+            if let account = accountPendingDeletion {
+                Text(LanguageManager.tr(
+                    "确定删除「%1$@」吗？只会删除 Bar 中保存的授权，不影响对应客户端的登录状态。",
+                    arguments: [model.displayName(for: account)]
+                ))
             }
         }
         .alert(LanguageManager.tr("切换 CLI 账号"), isPresented: $showCliSwitchConfirm) {
@@ -1080,70 +1034,5 @@ private struct AccountActionButton: View {
         if disabled { return Color.kimiTextPrimary.opacity(0.04) }
         if destructive { return isHovered ? Color.red.opacity(0.18) : Color.red.opacity(0.12) }
         return isHovered ? Color.kimiTextPrimary.opacity(0.14) : Color.kimiTextPrimary.opacity(0.08)
-    }
-}
-
-// MARK: - WorkBuddy 账号行
-
-/// WorkBuddy 账号行：与 Kimi/DeepSeek 账号行同款紧凑布局——
-/// 左侧 logo + 名称（别名优先）+「当前」标签 + 积分，右侧重命名 / 删除按钮。
-/// 数据独立于 KimiAccount 体系，视觉风格保持一致。
-private struct WorkBuddyAccountRow: View {
-    let account: WorkBuddyAccount
-    let onRename: () -> Void
-    let onDelete: () -> Void
-
-    @StateObject private var model = KimiCodeBarModel.shared
-    @StateObject private var languageManager = LanguageManager.shared
-
-    private var isActive: Bool {
-        model.workBuddyActiveUID == account.uid
-    }
-
-    var body: some View {
-        HStack(spacing: 12) {
-            // 头像：与 Kimi/DeepSeek 账号行同款圆角方块品牌底色
-            ZStack {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(red: 0.42, green: 0.30, blue: 1.00).opacity(0.10))
-
-                Image("workbuddy-logo")
-                    .resizable()
-                    .interpolation(.high)
-                    .aspectRatio(contentMode: .fit)
-                    .padding(5)
-            }
-            .frame(width: 28, height: 28)
-
-            // 单行：名称 + 当前标签
-            HStack(spacing: 6) {
-                Text(model.workBuddyDisplayName(for: account))
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(.kimiTextPrimary)
-                    .lineLimit(1)
-
-                if isActive {
-                    StatusTag(text: languageManager.tr("当前"), color: .kimiBlue)
-                }
-            }
-
-            Spacer(minLength: 8)
-
-            // 右侧：重命名 / 删除
-            HStack(spacing: 8) {
-                AccountActionButton(
-                    title: languageManager.tr("重命名"),
-                    action: onRename
-                )
-
-                AccountActionButton(
-                    title: languageManager.tr("删除"),
-                    destructive: true,
-                    action: onDelete
-                )
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
     }
 }

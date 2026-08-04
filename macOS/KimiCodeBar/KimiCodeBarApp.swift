@@ -180,10 +180,16 @@ struct KimiLabel: View {
     @StateObject private var languageManager = LanguageManager.shared
 
     var body: some View {
-        // WorkBuddy 被选中时显示积分，否则按 Kimi/DeepSeek 主账号显示
-        if let id = model.selectedAccountID, id.hasPrefix("wb:"),
-           let credits = model.workBuddyCredits[String(id.dropFirst(3))] {
-            Image(nsImage: MenuBarTextRenderer.workBuddyImage(creditsText: credits.remainingText))
+        // WorkBuddy 主账号：sparkle 图标 + 积分数字
+        if model.primaryAccount?.provider == .workbuddy {
+            if let primary = model.primaryAccount,
+               let credits = model.accountWorkBuddyCredits[primary.id] {
+                Image(nsImage: MenuBarTextRenderer.workBuddyImage(creditsText: credits.remainingText))
+            } else {
+                Text(model.text)
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .monospacedDigit()
+            }
         } else if model.primaryAccount?.provider == .deepseek {
             // DeepSeek 主账号：鲸鱼图标 + 余额数字
             if let primary = model.primaryAccount,
@@ -1006,11 +1012,6 @@ struct KimiMenu: View {
                 // 账号配额区：单账号直接出大卡片，多账号每账号一张紧凑卡片（内部左右双列压缩布局）
                 AccountQuotaListView()
 
-                // WorkBuddy 积分卡片：点击卡片可切换为菜单栏显示主账号，与 Kimi/DeepSeek 卡片同款悬停选中。
-                if !model.workBuddyAccounts.isEmpty {
-                    WorkBuddyCardListView()
-                }
-
                 // 本机消耗量卡片：扫描本地会话记录（wire.jsonl usage.record）得出 Token 消耗。
                 // Kimi Code CLI 本身可以调用其他模型（如 DeepSeek），本地会话记录跟当前主账号是哪个平台无关，
                 // 因此切换主账号时不影响此卡片显示与否，只看用户开关 showLocalUsageCard。
@@ -1593,16 +1594,19 @@ struct AccountQuotaListView: View {
             if model.accounts.count <= 1, let account = model.accounts.first {
                 if account.provider == .deepseek {
                     DeepSeekBalanceCard(account: account)
+                } else if account.provider == .workbuddy {
+                    WorkBuddyCard(account: account)
                 } else {
                     SingleAccountQuotaCards(account: account)
                 }
             } else {
                 ForEach(model.accounts) { account in
-                    // 统一选中状态：selectedAccountID 匹配时显示选中描边
-                    let isPrimary = model.selectedAccountID == "kimi:\(account.id.uuidString)"
+                    let isPrimary = account.id == model.primaryAccountID
                     Group {
                         if account.provider == .deepseek {
                             DeepSeekBalanceCard(account: account)
+                        } else if account.provider == .workbuddy {
+                            WorkBuddyCard(account: account)
                         } else {
                             AccountQuotaCard(
                                 account: account,
@@ -1778,7 +1782,7 @@ private struct DeepSeekBalanceCard: View {
 /// 启动按钮：点击 → 写配置（如有快照切换）→ 重启 WorkBuddy 客户端。
 /// 积分用星星图标 ✦ 暗示（区别于余额 ¥ 符号）。
 private struct WorkBuddyCard: View {
-    let account: WorkBuddyAccount
+    let account: KimiAccount
 
     @StateObject private var model = KimiCodeBarModel.shared
     @StateObject private var languageManager = LanguageManager.shared
@@ -1786,11 +1790,11 @@ private struct WorkBuddyCard: View {
     @State private var isHoveredLaunch = false
 
     private var credits: WorkBuddyCredits? {
-        model.workBuddyCredits[account.uid]
+        model.accountWorkBuddyCredits[account.id]
     }
 
     private var state: KimiAccountState {
-        model.workBuddyStates[account.uid] ?? .idle
+        model.accountStates[account.id] ?? .idle
     }
 
     private var isLoading: Bool {
@@ -1800,12 +1804,12 @@ private struct WorkBuddyCard: View {
 
     /// 该账号是否是当前 WorkBuddy 客户端登录的账号
     private var isActive: Bool {
-        model.workBuddyActiveUID == account.uid
+        model.workBuddyActiveUID == account.workBuddyCredential?.uid
     }
 
     /// 今日是否已签到
     private var isCheckedInToday: Bool {
-        model.workBuddyCheckinDates[account.uid] == WorkBuddyService.todayString()
+        model.accountCheckinDates[account.id] == WorkBuddyService.todayString()
     }
 
     var body: some View {
@@ -1818,7 +1822,7 @@ private struct WorkBuddyCard: View {
                 .frame(width: 16, height: 16)
 
             // 账号名
-            Text(account.nickname)
+            Text(model.displayName(for: account))
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.kimiTextSecondary)
                 .lineLimit(1)
@@ -1884,59 +1888,6 @@ private struct WorkBuddyCard: View {
             .padding(.vertical, 1)
             .background(color.opacity(0.12))
             .clipShape(RoundedRectangle(cornerRadius: 4))
-    }
-}
-
-// MARK: - WorkBuddy 卡片列表
-
-/// WorkBuddy 卡片列表：渲染所有已添加的 WorkBuddy 账号，每账号一张小横条。
-struct WorkBuddyCardListView: View {
-    @StateObject private var model = KimiCodeBarModel.shared
-    @State private var hoveredUID: String?
-
-    var body: some View {
-        VStack(spacing: 8) {
-            ForEach(model.workBuddyAccounts) { account in
-                WorkBuddyCard(account: account)
-                    .modifier(WorkBuddyCardHover(
-                        uid: account.uid,
-                        isPrimary: model.selectedAccountID == "wb:\(account.uid)",
-                        hoveredID: $hoveredUID,
-                        onTap: { model.setWorkBuddyPrimary(uid: account.uid) }
-                    ))
-            }
-        }
-    }
-}
-
-// MARK: - WorkBuddy 卡片悬停选中
-
-/// WorkBuddy 卡片的悬停高亮 + 点击设为菜单栏显示主账号。
-/// 与 AccountCardHover 平行（ID 类型为 String 而非 UUID），视觉行为一致：
-/// 主账号蓝色描边、悬停加粗、点击切换菜单栏显示。
-private struct WorkBuddyCardHover: ViewModifier {
-    let uid: String
-    let isPrimary: Bool
-    @Binding var hoveredID: String?
-    let onTap: () -> Void
-
-    func body(content: Content) -> some View {
-        let isHovered = hoveredID == uid
-        return content
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(
-                        Color.kimiBlue.opacity(isPrimary ? 0.85 : 0.65),
-                        lineWidth: isHovered ? 1.5 : (isPrimary ? 1 : 0)
-                    )
-                    .animation(.easeOut(duration: 0.12), value: isHovered)
-            )
-            .contentShape(Rectangle())
-            .onHover { hovering in
-                hoveredID = hovering ? uid : (hoveredID == uid ? nil : hoveredID)
-            }
-            .onTapGesture { onTap() }
-            .cursor(.pointingHand)
     }
 }
 
@@ -5333,21 +5284,14 @@ final class KimiCodeBarModel: ObservableObject {
     @AppStorage("multiAccountCardStyle") var multiAccountCardStyle: MultiAccountCardStyle = .classic
 
     // MARK: - WorkBuddy 集成
-    /// WorkBuddy 账号列表（独立于 Kimi/DeepSeek 账号体系，存储在 ~/.kimi-code-bar/workbuddy-accounts.json）
-    @Published var workBuddyAccounts: [WorkBuddyAccount] = []
-    /// 每个账号的积分（key = uid），失败时保留旧值
-    @Published var workBuddyCredits: [String: WorkBuddyCredits] = [:]
-    /// 每个账号的加载状态
-    @Published var workBuddyStates: [String: KimiAccountState] = [:]
-    /// 每个账号的签到日期（uid → "yyyy-MM-dd"），驱动 UI 显示「已签到」标签
-    @Published var workBuddyCheckinDates: [String: String] = [:]
+    /// 每个账号的积分（key = account UUID），失败时保留旧值
+    @Published var accountWorkBuddyCredits: [UUID: WorkBuddyCredits] = [:]
+    /// 每个账号的签到日期（UUID → "yyyy-MM-dd"），驱动 UI 显示「已签到」标签
+    @Published var accountCheckinDates: [UUID: String] = [:]
     /// WorkBuddy 客户端是否在运行
     @Published var isWorkBuddyRunning = false
     /// 当前在 WorkBuddy 中登录的账号 uid（读 auth 文件得到）
     @Published var workBuddyActiveUID: String?
-    /// 菜单栏当前显示的账号标识（统一，不区分平台）
-    /// 格式："kimi:<uuid>" 或 "wb:<uid>"，nil 表示未选择
-    @Published var selectedAccountID: String? = UserDefaults.standard.string(forKey: "selectedAccountID")
 
     @Published var text = "-- · --"
     @Published var quota: KimiQuota?
@@ -5425,10 +5369,12 @@ final class KimiCodeBarModel: ObservableObject {
 
     /// 当前是否已配置可用凭证（决定菜单栏是否提示去设置）
     var hasCredential: Bool {
-        !accounts.isEmpty || !workBuddyAccounts.isEmpty
+        !accounts.isEmpty
     }
 
     init() {
+        // 迁移旧的 WorkBuddy 独立账号存储到 KimiAccountStore 统一体系
+        WorkBuddyService.migrateOldAccounts()
         // 加载账号凭证并保证主账号有效（旧版凭证格式按无账号处理，需重新登录）
         let store = KimiAccountStore.shared
         store.ensurePrimaryAccount()
@@ -5436,7 +5382,7 @@ final class KimiCodeBarModel: ObservableObject {
         accounts = snapshot.accounts
         primaryAccountID = snapshot.primaryAccountID
         refresh(showsLoading: false)
-        refreshWorkBuddy()   // 同步加载 WorkBuddy 账号列表 + 积分 + 运行状态
+        refreshWorkBuddyAccounts()
         Task { await loadKimiVersion() }
         startQuotaTimer()
         startUpdateTimer()
@@ -5552,6 +5498,8 @@ final class KimiCodeBarModel: ObservableObject {
             accountQuotas = [:]
             accountBalances = [:]
             accountStates = [:]
+            accountWorkBuddyCredits = [:]
+            accountCheckinDates = [:]
             syncPrimaryCompat()
             return
         }
@@ -5561,6 +5509,8 @@ final class KimiCodeBarModel: ObservableObject {
         accountQuotas = accountQuotas.filter { validIDs.contains($0.key) }
         accountBalances = accountBalances.filter { validIDs.contains($0.key) }
         accountStates = accountStates.filter { validIDs.contains($0.key) }
+        accountWorkBuddyCredits = accountWorkBuddyCredits.filter { validIDs.contains($0.key) }
+        accountCheckinDates = accountCheckinDates.filter { validIDs.contains($0.key) }
 
         for account in snapshot.accounts {
             accountStates[account.id] = .loading
@@ -5581,6 +5531,8 @@ final class KimiCodeBarModel: ObservableObject {
                                 token = await self.resolveAccessToken(for: account.id)
                             case .apiKey(let key):
                                 token = key
+                            case .workbuddy:
+                                token = nil
                             }
                             guard let accessToken = token else {
                                 return (account.id, nil, nil)
@@ -5607,7 +5559,7 @@ final class KimiCodeBarModel: ObservableObject {
                                 return (account.id, nil, error)
                             }
                         case .workbuddy:
-                            // WorkBuddy 账号不走 KimiAccount 体系，由 WorkBuddyCardListView 独立渲染
+                            // WorkBuddy 账号由 refreshWorkBuddyAccounts() 独立处理积分，此处跳过
                             return (account.id, nil, nil)
                         }
                     }
@@ -5625,6 +5577,8 @@ final class KimiCodeBarModel: ObservableObject {
                             self.accountQuotas[id] = quota
                         case .deepseek(let balance):
                             self.accountBalances[id] = balance
+                        case .workbuddy(let credits):
+                            self.accountWorkBuddyCredits[id] = credits
                         }
                         self.accountStates[id] = .loaded
                     } else if let error {
@@ -5641,6 +5595,8 @@ final class KimiCodeBarModel: ObservableObject {
                 self.accountQuotas = self.accountQuotas.filter { validIDs.contains($0.key) }
                 self.accountBalances = self.accountBalances.filter { validIDs.contains($0.key) }
                 self.accountStates = self.accountStates.filter { validIDs.contains($0.key) }
+                self.accountWorkBuddyCredits = self.accountWorkBuddyCredits.filter { validIDs.contains($0.key) }
+                self.accountCheckinDates = self.accountCheckinDates.filter { validIDs.contains($0.key) }
                 if showsLoading {
                     self.isLoading = false
                 }
@@ -5678,9 +5634,12 @@ final class KimiCodeBarModel: ObservableObject {
                 text = "--"
             }
         case .workbuddy:
-            // WorkBuddy 不在 KimiAccount 体系，理论上不应作为主账号，兜底显示
             quota = nil
-            text = "--"
+            if let credits = accountWorkBuddyCredits[primaryID] {
+                text = credits.remainingText
+            } else {
+                text = "--"
+            }
         }
         switch accountStates[primaryID] {
         case .failed(let message):
@@ -5689,26 +5648,6 @@ final class KimiCodeBarModel: ObservableObject {
             errorMessage = LanguageManager.tr("授权已失效，请重新登录")
         default:
             errorMessage = nil
-        }
-
-        // 同步统一选中状态：WB 被选中时不覆盖，否则跟随 primaryAccountID
-        syncSelectedAccount()
-    }
-
-    /// 同步 selectedAccountID 到当前 Kimi/DeepSeek 主账号（WB 被选中时跳过，不覆盖）
-    private func syncSelectedAccount() {
-        // WorkBuddy 被选中时不覆盖
-        if selectedAccountID?.hasPrefix("wb:") == true { return }
-        // 跟随 Kimi/DeepSeek 主账号
-        if let pid = primaryAccountID {
-            let id = "kimi:\(pid.uuidString)"
-            if selectedAccountID != id {
-                selectedAccountID = id
-                UserDefaults.standard.set(id, forKey: "selectedAccountID")
-            }
-        } else if selectedAccountID != nil {
-            selectedAccountID = nil
-            UserDefaults.standard.removeObject(forKey: "selectedAccountID")
         }
     }
 
@@ -5828,6 +5767,8 @@ final class KimiCodeBarModel: ObservableObject {
         accountQuotas.removeValue(forKey: id)
         accountBalances.removeValue(forKey: id)
         accountStates.removeValue(forKey: id)
+        accountWorkBuddyCredits.removeValue(forKey: id)
+        accountCheckinDates.removeValue(forKey: id)
         syncPrimaryCompat()
     }
 
@@ -5843,18 +5784,7 @@ final class KimiCodeBarModel: ObservableObject {
         guard accounts.contains(where: { $0.id == id }) else { return }
         KimiAccountStore.shared.setPrimaryAccount(id)
         primaryAccountID = id
-        // 用户主动点 Kimi/DeepSeek 卡片 → 强制切回，覆盖 WB 选中状态
-        let kimiID = "kimi:\(id.uuidString)"
-        selectedAccountID = kimiID
-        UserDefaults.standard.set(kimiID, forKey: "selectedAccountID")
         syncPrimaryCompat()
-    }
-
-    /// 设置菜单栏显示的 WorkBuddy 账号（选中该卡片）
-    func setWorkBuddyPrimary(uid: String) {
-        guard workBuddyAccounts.contains(where: { $0.uid == uid }) else { return }
-        selectedAccountID = "wb:\(uid)"
-        UserDefaults.standard.set(selectedAccountID!, forKey: "selectedAccountID")
     }
 
     /// 重新授权：对指定账号重走设备授权流程，成功后替换其 token 并更新账号标识。
@@ -6022,9 +5952,12 @@ final class KimiCodeBarModel: ObservableObject {
         if let alias = account.alias?.trimmingCharacters(in: .whitespacesAndNewlines), !alias.isEmpty {
             return alias
         }
-        // 无别名兜底：DeepSeek 账号默认叫 "DeepSeek"，Kimi 走"账号 N"
+        // 无别名兜底：DeepSeek 账号默认叫 "DeepSeek"，WorkBuddy 用客户端昵称，Kimi 走"账号 N"
         if account.provider == .deepseek {
             return "DeepSeek"
+        }
+        if account.provider == .workbuddy, let cred = account.workBuddyCredential {
+            return cred.nickname
         }
         let index = accounts.firstIndex(where: { $0.id == account.id }) ?? 0
         return LanguageManager.tr("账号 %1$d", arguments: [index + 1])
@@ -6057,7 +5990,7 @@ final class KimiCodeBarModel: ObservableObject {
 
     func refreshAll() {
         refresh()
-        refreshWorkBuddy()
+        refreshWorkBuddyAccounts()
         Task {
             await checkForKimiCLIUpdate()
             await checkForAppUpdate()
@@ -6068,67 +6001,45 @@ final class KimiCodeBarModel: ObservableObject {
 
     // MARK: - WorkBuddy 集成
 
-    /// 刷新 WorkBuddy 账号列表 + 积分 + 运行状态。
-    /// 从本地存储加载账号 → 逐个查积分 → 读 auth 文件确定当前激活账号。
-    func refreshWorkBuddy() {
-        workBuddyAccounts = WorkBuddyService.shared.loadAccounts()
-        workBuddyActiveUID = WorkBuddyService.shared.currentActiveUID()
+    /// 刷新 WorkBuddy 账号的积分 + 运行状态。
+    /// 遍历 accounts 中 provider == .workbuddy 的账号，逐个签到 + 查积分。
+    func refreshWorkBuddyAccounts() {
         isWorkBuddyRunning = WorkBuddyService.shared.isWorkBuddyRunning()
+        workBuddyActiveUID = WorkBuddyService.shared.currentActiveUID()
 
-        // 清理无效的选中账号（账号可能已删除），无 Kimi/DeepSeek 主账号时自动提升首个 WB
-        if let id = selectedAccountID, id.hasPrefix("wb:") {
-            let uid = String(id.dropFirst(3))
-            if !workBuddyAccounts.contains(where: { $0.uid == uid }) {
-                selectedAccountID = nil
-                UserDefaults.standard.removeObject(forKey: "selectedAccountID")
-            }
-        }
-        if selectedAccountID == nil && primaryAccountID == nil && !workBuddyAccounts.isEmpty {
-            let id = "wb:\(workBuddyAccounts.first!.uid)"
-            selectedAccountID = id
-            UserDefaults.standard.set(id, forKey: "selectedAccountID")
-        }
-
-        // 没账号时不发请求
-        guard !workBuddyAccounts.isEmpty else { return }
+        let wbAccounts = accounts.filter { $0.provider == .workbuddy }
+        guard !wbAccounts.isEmpty else { return }
 
         Task {
             let today = WorkBuddyService.todayString()
+            for account in wbAccounts {
+                await MainActor.run { accountStates[account.id] = .loading }
 
-            for account in workBuddyAccounts {
-                // 标记加载中
-                await MainActor.run {
-                    workBuddyStates[account.uid] = .loading
-                }
-
-                // 签到：今日未签到才调 API（幂等接口），已签到则跳过
                 var didCallCheckinAPI = false
-                if account.lastCheckinDate != today {
+                if account.workBuddyCredential?.lastCheckinDate != today {
                     didCallCheckinAPI = true
                     let result = await WorkBuddyService.shared.checkin(account: account)
                     if result.success {
-                        WorkBuddyService.shared.setCheckinDate(uid: account.uid, date: today)
-                        await MainActor.run { workBuddyCheckinDates[account.uid] = today }
+                        KimiAccountStore.shared.updateWorkBuddyCheckinDate(id: account.id, date: today)
+                        await MainActor.run { accountCheckinDates[account.id] = today }
                     }
                 } else {
-                    await MainActor.run { workBuddyCheckinDates[account.uid] = today }
+                    await MainActor.run { accountCheckinDates[account.id] = today }
                 }
 
-                // 重新加载账号（签到时可能刷新了 token），再查积分
-                let refreshed = WorkBuddyService.shared.loadAccounts()
-                    .first { $0.uid == account.uid } ?? account
+                // Reload account (checkin may have refreshed token)
+                let refreshed = KimiAccountStore.shared.freshAccount(id: account.id) ?? account
                 let credits = await WorkBuddyService.shared.fetchCredits(account: refreshed)
                 await MainActor.run {
                     if let credits {
-                        workBuddyCredits[account.uid] = credits
-                        workBuddyStates[account.uid] = .loaded
+                        accountWorkBuddyCredits[account.id] = credits
+                        accountStates[account.id] = .loaded
                     } else {
-                        workBuddyStates[account.uid] = .failed("积分获取失败")
+                        accountStates[account.id] = .failed("积分获取失败")
                     }
                 }
 
-                // 仅在调了签到 API 时才间隔 1 秒（防限流）；已签到跳过 API 时不延迟
-                if didCallCheckinAPI && account.uid != workBuddyAccounts.last?.uid {
+                if didCallCheckinAPI && account.id != wbAccounts.last?.id {
                     try? await Task.sleep(nanoseconds: 1_000_000_000)
                 }
             }
@@ -6138,42 +6049,30 @@ final class KimiCodeBarModel: ObservableObject {
     /// 从本地 auth 文件添加当前 WorkBuddy 登录账号。
     /// 成功返回 nil，失败返回错误描述。
     func addWorkBuddyAccount() -> String? {
-        guard WorkBuddyService.shared.addCurrentAccount() != nil else {
+        guard let newAccount = WorkBuddyService.shared.addCurrentAccount() else {
             return LanguageManager.tr("未检测到 WorkBuddy 登录信息，请先在 WorkBuddy 中登录")
         }
-        refreshWorkBuddy()
-        return nil
-    }
-
-    /// 删除 WorkBuddy 账号
-    func removeWorkBuddyAccount(uid: String) {
-        WorkBuddyService.shared.removeAccount(uid: uid)
-        workBuddyCredits.removeValue(forKey: uid)
-        workBuddyStates.removeValue(forKey: uid)
-        refreshWorkBuddy()
-    }
-
-    /// 重命名 WorkBuddy 账号别名；传 nil 或空白字符串表示清除别名（回退显示客户端昵称）。
-    /// 只重读账号列表，不触发积分刷新。
-    func renameWorkBuddyAccount(uid: String, alias: String?) {
-        let trimmed = alias?.trimmingCharacters(in: .whitespacesAndNewlines)
-        WorkBuddyService.shared.setAlias(uid: uid, alias: (trimmed?.isEmpty == false) ? trimmed : nil)
-        workBuddyAccounts = WorkBuddyService.shared.loadAccounts()
-    }
-
-    /// WorkBuddy 账号显示名：优先别名，回退客户端昵称
-    func workBuddyDisplayName(for account: WorkBuddyAccount) -> String {
-        if let alias = account.alias?.trimmingCharacters(in: .whitespacesAndNewlines), !alias.isEmpty {
-            return alias
+        let store = KimiAccountStore.shared
+        // Dedup by WB uid (accountIdentifier)
+        if let existing = store.snapshot.accounts.first(where: { $0.accountIdentifier == newAccount.accountIdentifier }) {
+            // Already added — update credential (token may have refreshed)
+            store.updateWorkBuddyCredential(id: existing.id, credential: newAccount.workBuddyCredential!)
+        } else {
+            store.addAccount(newAccount)
         }
-        return account.nickname
+        store.ensurePrimaryAccount()
+        let snapshot = store.snapshot
+        accounts = snapshot.accounts
+        primaryAccountID = snapshot.primaryAccountID
+        refresh(showsLoading: false)
+        return nil
     }
 
     /// 切换到指定 WorkBuddy 账号并启动 / 重启客户端。
     /// 先把该账号的 token 对 + 快照写回 auth 文件（使 WorkBuddy 启动后使用该账号），
     /// 再终止旧进程并重新启动。逻辑迁移自 wbSwitch 项目。
-    func launchWorkBuddy(account: WorkBuddyAccount) {
-        WorkBuddyService.shared.switchTo(uid: account.uid)
+    func launchWorkBuddy(account: KimiAccount) {
+        WorkBuddyService.shared.switchTo(account: account)
         WorkBuddyService.shared.restartWorkBuddy { [weak self] in
             self?.isWorkBuddyRunning = WorkBuddyService.shared.isWorkBuddyRunning()
             self?.workBuddyActiveUID = WorkBuddyService.shared.currentActiveUID()
