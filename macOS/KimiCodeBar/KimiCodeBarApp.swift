@@ -1700,10 +1700,7 @@ private struct DeepSeekBalanceCard: View {
                 .foregroundStyle(.kimiTextSecondary)
                 .lineLimit(1)
 
-            // 标签：仅展示有意义的「主账号」/「登录失效」
-            if isPrimary {
-                tagPill(languageManager.tr("主账号"), color: .kimiBlue)
-            }
+            // 标签：仅展示「登录失效」
             if case .unauthorized = state {
                 tagPill(languageManager.tr("登录失效"), color: .red)
             }
@@ -2029,10 +2026,6 @@ private struct AccountQuotaCard: View {
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(.kimiTextSecondary)
                     .lineLimit(1)
-
-                if isPrimary {
-                    tagPill(languageManager.tr("主账号"), color: .kimiBlue)
-                }
 
                 if case .apiKey = account.credential {
                     tagPill("API Key", color: .kimiTextSecondary)
