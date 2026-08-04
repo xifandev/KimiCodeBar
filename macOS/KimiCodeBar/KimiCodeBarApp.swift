@@ -180,9 +180,9 @@ struct KimiLabel: View {
     @StateObject private var languageManager = LanguageManager.shared
 
     var body: some View {
-        // WorkBuddy 显示主账号优先于 Kimi/DeepSeek 主账号（用户点击面板卡片切换）
-        if let wbUID = model.workBuddyPrimaryUID,
-           let credits = model.workBuddyCredits[wbUID] {
+        // WorkBuddy 被选中时显示积分，否则按 Kimi/DeepSeek 主账号显示
+        if let id = model.selectedAccountID, id.hasPrefix("wb:"),
+           let credits = model.workBuddyCredits[String(id.dropFirst(3))] {
             Image(nsImage: MenuBarTextRenderer.workBuddyImage(creditsText: credits.remainingText))
         } else if model.primaryAccount?.provider == .deepseek {
             // DeepSeek 主账号：鲸鱼图标 + 余额数字
@@ -1598,8 +1598,8 @@ struct AccountQuotaListView: View {
                 }
             } else {
                 ForEach(model.accounts) { account in
-                    // workBuddyPrimaryUID 被选中时，Kimi/DeepSeek 卡片不显示选中描边（互斥）
-                    let isPrimary = account.id == model.primaryAccountID && model.workBuddyPrimaryUID == nil
+                    // 统一选中状态：selectedAccountID 匹配时显示选中描边
+                    let isPrimary = model.selectedAccountID == "kimi:\(account.id.uuidString)"
                     Group {
                         if account.provider == .deepseek {
                             DeepSeekBalanceCard(account: account)
@@ -1900,7 +1900,7 @@ struct WorkBuddyCardListView: View {
                 WorkBuddyCard(account: account)
                     .modifier(WorkBuddyCardHover(
                         uid: account.uid,
-                        isPrimary: model.workBuddyPrimaryUID == account.uid,
+                        isPrimary: model.selectedAccountID == "wb:\(account.uid)",
                         hoveredID: $hoveredUID,
                         onTap: { model.setWorkBuddyPrimary(uid: account.uid) }
                     ))
@@ -5345,16 +5345,9 @@ final class KimiCodeBarModel: ObservableObject {
     @Published var isWorkBuddyRunning = false
     /// 当前在 WorkBuddy 中登录的账号 uid（读 auth 文件得到）
     @Published var workBuddyActiveUID: String?
-    /// 菜单栏显示的 WorkBuddy 账号 uid（用户点击面板卡片切换，优先于 Kimi/DeepSeek 主账号）
-    @Published var workBuddyPrimaryUID: String? = UserDefaults.standard.string(forKey: "workBuddyPrimaryUID") {
-        didSet {
-            if let uid = workBuddyPrimaryUID {
-                UserDefaults.standard.set(uid, forKey: "workBuddyPrimaryUID")
-            } else {
-                UserDefaults.standard.removeObject(forKey: "workBuddyPrimaryUID")
-            }
-        }
-    }
+    /// 菜单栏当前显示的账号标识（统一，不区分平台）
+    /// 格式："kimi:<uuid>" 或 "wb:<uid>"，nil 表示未选择
+    @Published var selectedAccountID: String? = UserDefaults.standard.string(forKey: "selectedAccountID")
 
     @Published var text = "-- · --"
     @Published var quota: KimiQuota?
@@ -5697,6 +5690,26 @@ final class KimiCodeBarModel: ObservableObject {
         default:
             errorMessage = nil
         }
+
+        // 同步统一选中状态：WB 被选中时不覆盖，否则跟随 primaryAccountID
+        syncSelectedAccount()
+    }
+
+    /// 同步 selectedAccountID 到当前 Kimi/DeepSeek 主账号（WB 被选中时跳过，不覆盖）
+    private func syncSelectedAccount() {
+        // WorkBuddy 被选中时不覆盖
+        if selectedAccountID?.hasPrefix("wb:") == true { return }
+        // 跟随 Kimi/DeepSeek 主账号
+        if let pid = primaryAccountID {
+            let id = "kimi:\(pid.uuidString)"
+            if selectedAccountID != id {
+                selectedAccountID = id
+                UserDefaults.standard.set(id, forKey: "selectedAccountID")
+            }
+        } else if selectedAccountID != nil {
+            selectedAccountID = nil
+            UserDefaults.standard.removeObject(forKey: "selectedAccountID")
+        }
     }
 
     // MARK: - OAuth 授权登录（添加账号）
@@ -5830,15 +5843,14 @@ final class KimiCodeBarModel: ObservableObject {
         guard accounts.contains(where: { $0.id == id }) else { return }
         KimiAccountStore.shared.setPrimaryAccount(id)
         primaryAccountID = id
-        // 切回 Kimi/DeepSeek 主账号时清掉 WorkBuddy 显示主账号，避免菜单栏仍显示 WorkBuddy 积分
-        workBuddyPrimaryUID = nil
-        syncPrimaryCompat()
+        syncPrimaryCompat()   // 内部调 syncSelectedAccount，自动设 selectedAccountID = "kimi:<id>"
     }
 
-    /// 设置菜单栏显示的 WorkBuddy 账号（优先于 Kimi/DeepSeek 主账号）
+    /// 设置菜单栏显示的 WorkBuddy 账号（选中该卡片）
     func setWorkBuddyPrimary(uid: String) {
         guard workBuddyAccounts.contains(where: { $0.uid == uid }) else { return }
-        workBuddyPrimaryUID = uid
+        selectedAccountID = "wb:\(uid)"
+        UserDefaults.standard.set(selectedAccountID!, forKey: "selectedAccountID")
     }
 
     /// 重新授权：对指定账号重走设备授权流程，成功后替换其 token 并更新账号标识。
@@ -6059,12 +6071,18 @@ final class KimiCodeBarModel: ObservableObject {
         workBuddyActiveUID = WorkBuddyService.shared.currentActiveUID()
         isWorkBuddyRunning = WorkBuddyService.shared.isWorkBuddyRunning()
 
-        // 清理无效的 WorkBuddy 显示主账号（账号可能已删除），无 Kimi/DeepSeek 主账号时自动提升首个
-        if let uid = workBuddyPrimaryUID, !workBuddyAccounts.contains(where: { $0.uid == uid }) {
-            workBuddyPrimaryUID = nil
+        // 清理无效的选中账号（账号可能已删除），无 Kimi/DeepSeek 主账号时自动提升首个 WB
+        if let id = selectedAccountID, id.hasPrefix("wb:") {
+            let uid = String(id.dropFirst(3))
+            if !workBuddyAccounts.contains(where: { $0.uid == uid }) {
+                selectedAccountID = nil
+                UserDefaults.standard.removeObject(forKey: "selectedAccountID")
+            }
         }
-        if workBuddyPrimaryUID == nil && primaryAccountID == nil && !workBuddyAccounts.isEmpty {
-            workBuddyPrimaryUID = workBuddyAccounts.first?.uid
+        if selectedAccountID == nil && primaryAccountID == nil && !workBuddyAccounts.isEmpty {
+            let id = "wb:\(workBuddyAccounts.first!.uid)"
+            selectedAccountID = id
+            UserDefaults.standard.set(id, forKey: "selectedAccountID")
         }
 
         // 没账号时不发请求
