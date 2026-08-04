@@ -5843,7 +5843,11 @@ final class KimiCodeBarModel: ObservableObject {
         guard accounts.contains(where: { $0.id == id }) else { return }
         KimiAccountStore.shared.setPrimaryAccount(id)
         primaryAccountID = id
-        syncPrimaryCompat()   // 内部调 syncSelectedAccount，自动设 selectedAccountID = "kimi:<id>"
+        // 用户主动点 Kimi/DeepSeek 卡片 → 强制切回，覆盖 WB 选中状态
+        let kimiID = "kimi:\(id.uuidString)"
+        selectedAccountID = kimiID
+        UserDefaults.standard.set(kimiID, forKey: "selectedAccountID")
+        syncPrimaryCompat()
     }
 
     /// 设置菜单栏显示的 WorkBuddy 账号（选中该卡片）
