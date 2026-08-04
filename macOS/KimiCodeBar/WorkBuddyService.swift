@@ -11,6 +11,8 @@ struct WorkBuddyAccount: Codable, Identifiable, Equatable {
     var accessToken: String
     var refreshToken: String
     var domain: String
+    /// 用户自定义别名；为空时界面回退显示客户端昵称 nickname
+    var alias: String? = nil
 
     /// auth 文件里完整的 account 块原始 JSON（含 uin/phoneNumber/deployStatus 等）。
     /// 切换账号时整体写回，避免字段丢失。老数据无此字段时为 nil。
@@ -137,6 +139,14 @@ final class WorkBuddyService {
         saveAccounts(accounts)
     }
 
+    /// 设置账号别名；传 nil 清除别名（回退显示客户端昵称）
+    func setAlias(uid: String, alias: String?) {
+        var accounts = loadAccounts()
+        guard let idx = accounts.firstIndex(where: { $0.uid == uid }) else { return }
+        accounts[idx].alias = alias
+        saveAccounts(accounts)
+    }
+
     // MARK: - 查积分
 
     /// 查询指定账号的剩余积分 + 套餐名。失败返回 nil。
@@ -212,6 +222,7 @@ final class WorkBuddyService {
         return WorkBuddyAccount(
             nickname: account.nickname, uid: account.uid,
             accessToken: newAT, refreshToken: newRT, domain: account.domain,
+            alias: account.alias,
             accountSnapshot: account.accountSnapshot, authSnapshot: account.authSnapshot
         )
     }

@@ -6018,6 +6018,22 @@ final class KimiCodeBarModel: ObservableObject {
         refreshWorkBuddy()
     }
 
+    /// 重命名 WorkBuddy 账号别名；传 nil 或空白字符串表示清除别名（回退显示客户端昵称）。
+    /// 只重读账号列表，不触发积分刷新。
+    func renameWorkBuddyAccount(uid: String, alias: String?) {
+        let trimmed = alias?.trimmingCharacters(in: .whitespacesAndNewlines)
+        WorkBuddyService.shared.setAlias(uid: uid, alias: (trimmed?.isEmpty == false) ? trimmed : nil)
+        workBuddyAccounts = WorkBuddyService.shared.loadAccounts()
+    }
+
+    /// WorkBuddy 账号显示名：优先别名，回退客户端昵称
+    func workBuddyDisplayName(for account: WorkBuddyAccount) -> String {
+        if let alias = account.alias?.trimmingCharacters(in: .whitespacesAndNewlines), !alias.isEmpty {
+            return alias
+        }
+        return account.nickname
+    }
+
     /// 启动 / 重启 WorkBuddy 客户端
     func launchWorkBuddy() {
         WorkBuddyService.shared.restartWorkBuddy { [weak self] in

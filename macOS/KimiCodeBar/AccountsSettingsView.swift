@@ -1,21 +1,31 @@
 import SwiftUI
 
+// MARK: - 账号操作对象
+
+/// 账号管理页上两类异构账号的统一引用：KimiAccount（Kimi/DeepSeek）与 WorkBuddyAccount。
+/// 重命名、删除等弹窗用同一套状态承载，按 case 分派到各自的数据层。
+private enum AccountRef {
+    case kimi(KimiAccount)
+    case workBuddy(WorkBuddyAccount)
+}
+
 // MARK: - 账号设置页
 
 /// 设置窗口「账号管理」页：统一管理全部账号（列表 / 设主 / 重命名 / 删除 / 重新授权 / 添加账号）。
-/// 添加账号支持两种方式：浏览器授权登录（OAuth）与 API Key 登录，用户自选。
+/// Kimi / DeepSeek / WorkBuddy 账号不分组，每个账号一张独立卡片。
+/// 添加账号统一走「添加账号」弹窗选择平台。
 /// 数据全部来自 KimiCodeBarModel.shared（统一账号管理数据层）。
 struct AccountsSettingsView: View {
     @StateObject private var model = KimiCodeBarModel.shared
     @StateObject private var languageManager = LanguageManager.shared
 
     // 重命名弹窗状态
-    @State private var renamingAccount: KimiAccount?
+    @State private var renamingAccount: AccountRef?
     @State private var renameText = ""
     @State private var showRenameAlert = false
 
     // 删除确认弹窗状态
-    @State private var accountPendingDeletion: KimiAccount?
+    @State private var accountPendingDeletion: AccountRef?
     @State private var showDeleteConfirm = false
 
     // CLI 切换确认弹窗状态
@@ -37,7 +47,8 @@ struct AccountsSettingsView: View {
     /// 有账号、授权流程进行中、或授权失败有待展示的错误时展示。
     /// 平台 / Key 表单全部移到 sheet 内，主面板不再承担表单态。
     private var showsAddAccountCard: Bool {
-        !model.accounts.isEmpty || model.oauthLoginInProgress || model.oauthLoginError != nil
+        !model.accounts.isEmpty || !model.workBuddyAccounts.isEmpty
+            || model.oauthLoginInProgress || model.oauthLoginError != nil
     }
 
     var body: some View {
@@ -47,8 +58,8 @@ struct AccountsSettingsView: View {
                     .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(.kimiTextPrimary)
 
-                // 账号列表：每个账号一张独立卡片
-                if model.accounts.isEmpty {
+                // 账号列表：Kimi / DeepSeek / WorkBuddy 不分组，每个账号一张独立卡片
+                if model.accounts.isEmpty && model.workBuddyAccounts.isEmpty {
                     SettingsCard {
                         emptyState
                     }
@@ -67,12 +78,12 @@ struct AccountsSettingsView: View {
                                     reauthorizeDisabled: model.oauthLoginInProgress,
                                     onSwitchCli: { requestCliSwitch(account) },
                                     onRename: {
-                                        renamingAccount = account
+                                        renamingAccount = .kimi(account)
                                         renameText = account.alias ?? ""
                                         showRenameAlert = true
                                     },
                                     onDelete: {
-                                        accountPendingDeletion = account
+                                        accountPendingDeletion = .kimi(account)
                                         showDeleteConfirm = true
                                     },
                                     onReauthorize: { model.reauthorizeAccount(account.id) },
@@ -84,54 +95,22 @@ struct AccountsSettingsView: View {
                                 )
                             }
                         }
-                    }
-                }
 
-                // WorkBuddy 账号管理（独立于 Kimi/DeepSeek 账号体系，从本地 auth 文件读取）
-                if !model.workBuddyAccounts.isEmpty {
-                    SettingsCard {
-                        VStack(alignment: .leading, spacing: 0) {
-                            // 标头
-                            HStack(spacing: 8) {
-                                Image("workbuddy-logo")
-                                    .resizable()
-                                    .interpolation(.high)
-                                    .aspectRatio(contentMode: .fit)
-                                    .frame(width: 16, height: 16)
-
-                                LText("WorkBuddy")
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundStyle(.kimiTextPrimary)
-
-                                Spacer()
+                        ForEach(model.workBuddyAccounts) { wbAccount in
+                            SettingsCard {
+                                WorkBuddyAccountRow(
+                                    account: wbAccount,
+                                    onRename: {
+                                        renamingAccount = .workBuddy(wbAccount)
+                                        renameText = wbAccount.alias ?? ""
+                                        showRenameAlert = true
+                                    },
+                                    onDelete: {
+                                        accountPendingDeletion = .workBuddy(wbAccount)
+                                        showDeleteConfirm = true
+                                    }
+                                )
                             }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 12)
-
-                            SettingsCardDivider()
-
-                            // 账号列表
-                            ForEach(model.workBuddyAccounts) { wbAccount in
-                                WorkBuddyAccountRow(account: wbAccount)
-                            }
-
-                            SettingsCardDivider()
-
-                            // 添加按钮
-                            Button(action: { addWorkBuddyAccount() }) {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "plus.circle")
-                                        .font(.system(size: 12, weight: .medium))
-                                    LText("从本地 WorkBuddy 添加")
-                                        .font(.system(size: 13, weight: .medium))
-                                }
-                                .foregroundStyle(.kimiBlue)
-                                .frame(maxWidth: .infinity)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 12)
-                            }
-                            .buttonStyle(.plain)
-                            .cursor(.pointingHand)
                         }
                     }
                 }
@@ -176,9 +155,14 @@ struct AccountsSettingsView: View {
         .alert(LanguageManager.tr("重命名账号"), isPresented: $showRenameAlert) {
             TextField(LanguageManager.tr("别名"), text: $renameText)
             Button(LanguageManager.tr("保存")) {
-                if let account = renamingAccount {
-                    // 空白别名 = 清除别名，恢复默认「账号 N」
-                    model.renameAccount(account.id, alias: renameText)
+                if let ref = renamingAccount {
+                    // 空白别名 = 清除别名，恢复默认名称（「账号 N」/ 客户端昵称）
+                    switch ref {
+                    case .kimi(let account):
+                        model.renameAccount(account.id, alias: renameText)
+                    case .workBuddy(let account):
+                        model.renameWorkBuddyAccount(uid: account.uid, alias: renameText)
+                    }
                 }
             }
             Button(LanguageManager.tr("取消"), role: .cancel) {}
@@ -187,17 +171,30 @@ struct AccountsSettingsView: View {
         }
         .alert(LanguageManager.tr("删除账号"), isPresented: $showDeleteConfirm) {
             Button(LanguageManager.tr("删除"), role: .destructive) {
-                if let account = accountPendingDeletion {
-                    model.removeAccount(account.id)
+                if let ref = accountPendingDeletion {
+                    switch ref {
+                    case .kimi(let account):
+                        model.removeAccount(account.id)
+                    case .workBuddy(let account):
+                        model.removeWorkBuddyAccount(uid: account.uid)
+                    }
                 }
             }
             Button(LanguageManager.tr("取消"), role: .cancel) {}
         } message: {
-            if let account = accountPendingDeletion {
-                Text(LanguageManager.tr(
-                    "确定删除「%1$@」吗？只会删除 Bar 中保存的授权，不影响 Kimi CLI 的登录状态。",
-                    arguments: [model.displayName(for: account)]
-                ))
+            if let ref = accountPendingDeletion {
+                switch ref {
+                case .kimi(let account):
+                    Text(LanguageManager.tr(
+                        "确定删除「%1$@」吗？只会删除 Bar 中保存的授权，不影响 Kimi CLI 的登录状态。",
+                        arguments: [model.displayName(for: account)]
+                    ))
+                case .workBuddy(let account):
+                    Text(LanguageManager.tr(
+                        "确定删除「%1$@」吗？只会从 Bar 中移除该账号，不影响 WorkBuddy 客户端的登录状态。",
+                        arguments: [model.workBuddyDisplayName(for: account)]
+                    ))
+                }
             }
         }
         .alert(LanguageManager.tr("切换 CLI 账号"), isPresented: $showCliSwitchConfirm) {
@@ -250,28 +247,6 @@ struct AccountsSettingsView: View {
             if let editKeyError {
                 Text(editKeyError)
             }
-        }
-        .alert(LanguageManager.tr("添加失败"), isPresented: Binding(
-            get: { workBuddyError != nil },
-            set: { if !$0 { workBuddyError = nil } }
-        )) {
-            Button(LanguageManager.tr("好"), role: .cancel) {}
-        } message: {
-            if let workBuddyError {
-                Text(workBuddyError)
-            }
-        }
-    }
-
-    // MARK: WorkBuddy 账号添加
-
-    /// 从本地 auth 文件读取当前 WorkBuddy 登录账号并添加。
-    /// 失败时弹 alert 提示（auth 文件不存在 / 未登录）。
-    @State private var workBuddyError: String?
-
-    private func addWorkBuddyAccount() {
-        if let error = model.addWorkBuddyAccount() {
-            workBuddyError = error
         }
     }
 
@@ -353,7 +328,7 @@ struct AccountsSettingsView: View {
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(.kimiTextPrimary)
 
-                LText("授权登录或 API Key 登录")
+                LText("Kimi Code · DeepSeek · WorkBuddy")
                     .font(.system(size: 12))
                     .foregroundStyle(.kimiTextSecondary)
             }
@@ -767,10 +742,20 @@ private struct AccountRow: View {
 
     @StateObject private var languageManager = LanguageManager.shared
 
+    /// API Key 显隐切换：默认脱敏展示，点眼睛图标展开完整 Key
+    @State private var showingApiKey = false
+    @State private var isHoveredEye = false
+
     /// API Key 账号不能写入 CLI 凭证（CLI 只认 access/refresh token 对），不显示「切换账号」。
     private var isOAuth: Bool {
         if case .oauth = credential { return true }
         return false
+    }
+
+    /// API Key 账号的完整 Key（去除首尾空白）；OAuth 账号为 nil
+    private var apiKey: String? {
+        guard case .apiKey(let key) = credential else { return nil }
+        return key.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// API Key 脱敏展示：长 Key 取首尾各 4 位 + 4 颗星，短 Key 原样显示
@@ -811,101 +796,110 @@ private struct AccountRow: View {
     }
 
     var body: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 12) {
             avatar
 
-            VStack(alignment: .leading, spacing: 0) {
-                // 上部：账号名称 + 状态标签
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 6) {
-                        Text(displayName)
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(.kimiTextPrimary)
-                            .lineLimit(1)
+            // 左侧：账号名 + 状态标签；API Key 账号追加深一行的 Key（支持显隐切换）
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text(displayName)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.kimiTextPrimary)
+                        .lineLimit(1)
 
-                        if isPrimary {
-                            StatusTag(text: languageManager.tr("主账号"), color: .kimiBlue)
-                        }
-
-                        if !isOAuth {
-                            StatusTag(text: "API Key", color: .kimiTextSecondary)
-                        }
-
-                        // API Key 账号在「API Key」标签后追加脱敏缩写（前 4 + 4 星 + 后 4），
-                        // 多账号场景下便于一眼区分不同 Key。短 Key（≤12 字符）原样显示避免遮蔽后无法辨认。
-                        if !isOAuth, let masked = maskedApiKey {
-                            Text(masked)
-                                .font(.system(size: 11, design: .monospaced))
-                                .foregroundStyle(.kimiTextTertiary)
-                                .lineLimit(1)
-                                .truncationMode(.middle)
-                        }
-
-                        if isCliActive {
-                            StatusTag(text: languageManager.tr("CLI 使用中"), color: .green)
-                        }
-
-                        // 会员等级体系调整期：API Key 渠道取到的等级不可靠，暂只对 OAuth 账号展示
-                        if isOAuth, let membershipLevel, !membershipLevel.isEmpty {
-                            StatusTag(text: KimiQuota.membershipDisplayName(membershipLevel), color: .purple)
-                        }
-
-                        if case .unauthorized = state {
-                            StatusTag(text: languageManager.tr("登录失效"), color: .red)
-                        }
+                    if isPrimary {
+                        StatusTag(text: languageManager.tr("主账号"), color: .kimiBlue)
                     }
 
-                    statusLine
-                }
-                .padding(.bottom, 12)
+                    if isCliActive {
+                        StatusTag(text: languageManager.tr("CLI 使用中"), color: .green)
+                    }
 
-                // 分隔线：与账号名左对齐（SettingsCardDivider 自带 16pt 左缩进，此处不用）
-                Divider()
-                    .background(Color.kimiTextPrimary.opacity(0.08))
-
-                // 下部：全部操作按钮横排展开
-                HStack(spacing: 8) {
-                    AccountActionButton(
-                        title: languageManager.tr("重命名"),
-                        action: onRename
-                    )
+                    // 会员等级体系调整期：API Key 渠道取到的等级不可靠，暂只对 OAuth 账号展示
+                    if isOAuth, let membershipLevel, !membershipLevel.isEmpty {
+                        StatusTag(text: KimiQuota.membershipDisplayName(membershipLevel), color: .purple)
+                    }
 
                     if case .unauthorized = state {
-                        if isOAuth {
-                            AccountActionButton(
-                                title: languageManager.tr("重新授权"),
-                                color: .kimiBlue,
-                                hoveredColor: .kimiBlue,
-                                disabled: reauthorizeDisabled,
-                                action: onReauthorize
-                            )
-                        } else {
-                            AccountActionButton(
-                                title: languageManager.tr("修改 Key"),
-                                color: .kimiBlue,
-                                hoveredColor: .kimiBlue,
-                                action: onEditKey
-                            )
-                        }
-                    } else if isOAuth {
-                        AccountActionButton(
-                            title: languageManager.tr("切换账号"),
-                            disabled: isCliActive,
-                            action: onSwitchCli
-                        )
-                        .help(languageManager.tr("将该账号的凭证写入 Kimi CLI，更换 CLI 的登录账号"))
+                        StatusTag(text: languageManager.tr("登录失效"), color: .red)
                     }
-
-                    AccountActionButton(
-                        title: languageManager.tr("删除"),
-                        destructive: true,
-                        action: onDelete
-                    )
                 }
-                .padding(.top, 12)
+
+                // API Key 脱敏展示 + 眼睛按钮切换显隐；
+                // 多账号场景下 masked 形态（前 4 + 4 星 + 后 4）便于一眼区分不同 Key
+                if !isOAuth, let key = apiKey {
+                    HStack(spacing: 5) {
+                        Text(showingApiKey ? key : (maskedApiKey ?? key))
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundStyle(.kimiTextTertiary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                            .textSelection(.enabled)
+
+                        Button(action: { showingApiKey.toggle() }) {
+                            Image(systemName: showingApiKey ? "eye.slash" : "eye")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundStyle(isHoveredEye ? .kimiTextPrimary : .kimiTextTertiary)
+                                .frame(width: 18, height: 18)
+                                .background(isHoveredEye ? Color.kimiTextPrimary.opacity(0.10) : Color.clear)
+                                .clipShape(RoundedRectangle(cornerRadius: 4))
+                        }
+                        .buttonStyle(.plain)
+                        .cursor(.pointingHand)
+                        .onHover { isHoveredEye = $0 }
+                        .help(showingApiKey
+                              ? languageManager.tr("隐藏 API Key")
+                              : languageManager.tr("显示 API Key"))
+                    }
+                }
+
+                statusLine
+            }
+
+            Spacer(minLength: 8)
+
+            // 右侧：全部操作按钮
+            HStack(spacing: 8) {
+                AccountActionButton(
+                    title: languageManager.tr("重命名"),
+                    action: onRename
+                )
+
+                if case .unauthorized = state {
+                    if isOAuth {
+                        AccountActionButton(
+                            title: languageManager.tr("重新授权"),
+                            color: .kimiBlue,
+                            hoveredColor: .kimiBlue,
+                            disabled: reauthorizeDisabled,
+                            action: onReauthorize
+                        )
+                    } else {
+                        AccountActionButton(
+                            title: languageManager.tr("修改 Key"),
+                            color: .kimiBlue,
+                            hoveredColor: .kimiBlue,
+                            action: onEditKey
+                        )
+                    }
+                } else if isOAuth {
+                    AccountActionButton(
+                        title: languageManager.tr("切换账号"),
+                        disabled: isCliActive,
+                        action: onSwitchCli
+                    )
+                    .help(languageManager.tr("将该账号的凭证写入 Kimi CLI，更换 CLI 的登录账号"))
+                }
+
+                AccountActionButton(
+                    title: languageManager.tr("删除"),
+                    destructive: true,
+                    action: onDelete
+                )
             }
         }
-        .padding(16)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
     }
 
     // MARK: 状态行
@@ -1156,15 +1150,16 @@ private struct AccountActionButton: View {
 
 // MARK: - WorkBuddy 账号行
 
-/// WorkBuddy 账号行：logo + 昵称 + 当前标签 + 删除按钮。
-/// 独立于 AccountRow（不共享 KimiAccount 数据结构），但视觉风格保持一致。
+/// WorkBuddy 账号行：与 Kimi/DeepSeek 账号行同款紧凑布局——
+/// 左侧 logo + 名称（别名优先）+「当前」标签 + 积分，右侧重命名 / 删除按钮。
+/// 数据独立于 KimiAccount 体系，视觉风格保持一致。
 private struct WorkBuddyAccountRow: View {
     let account: WorkBuddyAccount
+    let onRename: () -> Void
+    let onDelete: () -> Void
 
     @StateObject private var model = KimiCodeBarModel.shared
     @StateObject private var languageManager = LanguageManager.shared
-
-    @State private var isHoveredDelete = false
 
     private var isActive: Bool {
         model.workBuddyActiveUID == account.uid
@@ -1172,55 +1167,61 @@ private struct WorkBuddyAccountRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // 小 logo
-            Image("workbuddy-logo")
-                .resizable()
-                .interpolation(.high)
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 20, height: 20)
+            // 头像：与 Kimi/DeepSeek 账号行同款圆角方块品牌底色
+            ZStack {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(red: 0.42, green: 0.30, blue: 1.00).opacity(0.10))
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(account.nickname)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(.kimiTextPrimary)
-                    .lineLimit(1)
+                Image("workbuddy-logo")
+                    .resizable()
+                    .interpolation(.high)
+                    .aspectRatio(contentMode: .fit)
+                    .padding(5)
+            }
+            .frame(width: 28, height: 28)
+
+            // 左侧：名称 + 状态标签；积分放深一行
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text(model.workBuddyDisplayName(for: account))
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.kimiTextPrimary)
+                        .lineLimit(1)
+
+                    if isActive {
+                        StatusTag(text: languageManager.tr("当前"), color: .kimiBlue)
+                    }
+                }
 
                 if let credits = model.workBuddyCredits[account.uid] {
                     HStack(spacing: 3) {
                         Image(systemName: "star.fill")
                             .font(.system(size: 9))
                             .foregroundStyle(.yellow)
-                        Text("\(credits.remainingText) 积分")
+                        LText("%@ 积分", credits.remainingText)
                             .font(.system(size: 11))
                             .foregroundStyle(.kimiTextTertiary)
                     }
                 }
             }
 
-            if isActive {
-                Text(languageManager.tr("当前"))
-                    .font(.system(size: 9, weight: .medium))
-                    .foregroundStyle(.kimiBlue)
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 1)
-                    .background(Color.kimiBlue.opacity(0.12))
-                    .clipShape(RoundedRectangle(cornerRadius: 4))
-            }
+            Spacer(minLength: 8)
 
-            Spacer()
+            // 右侧：重命名 / 删除
+            HStack(spacing: 8) {
+                AccountActionButton(
+                    title: languageManager.tr("重命名"),
+                    action: onRename
+                )
 
-            // 删除按钮
-            Button(action: { model.removeWorkBuddyAccount(uid: account.uid) }) {
-                Image(systemName: "trash")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(isHoveredDelete ? .red : .kimiTextTertiary)
-                    .frame(width: 24, height: 24)
+                AccountActionButton(
+                    title: languageManager.tr("删除"),
+                    destructive: true,
+                    action: onDelete
+                )
             }
-            .buttonStyle(.plain)
-            .cursor(.pointingHand)
-            .onHover { isHoveredDelete = $0 }
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .padding(.vertical, 12)
     }
 }

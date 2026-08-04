@@ -54,7 +54,14 @@
       }
     },
     "%@ 积分" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ credits"
+          }
+        }
+      }
     },
     "%1$d 次提交" : {
       "extractionState" : "stale",
@@ -1861,6 +1868,16 @@
         }
       }
     },
+    "显示 API Key" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show API Key"
+          }
+        }
+      }
+    },
     "显示样式" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2462,6 +2479,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "OK"
+          }
+        }
+      }
+    },
+    "确定删除「%1$@」吗？只会从 Bar 中移除该账号，不影响 WorkBuddy 客户端的登录状态。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Are you sure you want to delete “%1$@”? This only removes the account from the Bar and does not affect the WorkBuddy client’s sign-in."
           }
         }
       }
@@ -3155,6 +3182,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Privacy & Security"
+          }
+        }
+      }
+    },
+    "隐藏 API Key" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hide API Key"
           }
         }
       }
