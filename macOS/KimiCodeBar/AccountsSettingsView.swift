@@ -327,10 +327,6 @@ struct AccountsSettingsView: View {
                 LText("添加账号")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(.kimiTextPrimary)
-
-                LText("Kimi Code · DeepSeek · WorkBuddy")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.kimiTextSecondary)
             }
 
             Spacer()
@@ -742,20 +738,10 @@ private struct AccountRow: View {
 
     @StateObject private var languageManager = LanguageManager.shared
 
-    /// API Key 显隐切换：默认脱敏展示，点眼睛图标展开完整 Key
-    @State private var showingApiKey = false
-    @State private var isHoveredEye = false
-
     /// API Key 账号不能写入 CLI 凭证（CLI 只认 access/refresh token 对），不显示「切换账号」。
     private var isOAuth: Bool {
         if case .oauth = credential { return true }
         return false
-    }
-
-    /// API Key 账号的完整 Key（去除首尾空白）；OAuth 账号为 nil
-    private var apiKey: String? {
-        guard case .apiKey(let key) = credential else { return nil }
-        return key.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// API Key 脱敏展示：长 Key 取首尾各 4 位 + 4 颗星，短 Key 原样显示
@@ -769,7 +755,7 @@ private struct AccountRow: View {
     }
 
     /// 账号头像：渲染对应平台官方 logo（Kimi 文字 logo / DeepSeek 鲸鱼），
-    /// 圆角方块底色沿用品牌色微调，区分主账号 / 副账号视觉重量。
+    /// 圆角方块底色沿用品牌色微调。
     private var avatar: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 8)
@@ -799,61 +785,34 @@ private struct AccountRow: View {
         HStack(spacing: 12) {
             avatar
 
-            // 左侧：账号名 + 状态标签；API Key 账号追加深一行的 Key（支持显隐切换）
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
-                    Text(displayName)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(.kimiTextPrimary)
+            // 单行：名称 + 脱敏 Key + 状态标签
+            HStack(spacing: 6) {
+                Text(displayName)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.kimiTextPrimary)
+                    .lineLimit(1)
+
+                // API Key 账号：脱敏 Key 紧跟名称后，不支持显隐切换
+                if !isOAuth, let masked = maskedApiKey {
+                    Text(masked)
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundStyle(.kimiTextTertiary)
                         .lineLimit(1)
-
-                    if isPrimary {
-                        StatusTag(text: languageManager.tr("主账号"), color: .kimiBlue)
-                    }
-
-                    if isCliActive {
-                        StatusTag(text: languageManager.tr("CLI 使用中"), color: .green)
-                    }
-
-                    // 会员等级体系调整期：API Key 渠道取到的等级不可靠，暂只对 OAuth 账号展示
-                    if isOAuth, let membershipLevel, !membershipLevel.isEmpty {
-                        StatusTag(text: KimiQuota.membershipDisplayName(membershipLevel), color: .purple)
-                    }
-
-                    if case .unauthorized = state {
-                        StatusTag(text: languageManager.tr("登录失效"), color: .red)
-                    }
+                        .truncationMode(.middle)
                 }
 
-                // API Key 脱敏展示 + 眼睛按钮切换显隐；
-                // 多账号场景下 masked 形态（前 4 + 4 星 + 后 4）便于一眼区分不同 Key
-                if !isOAuth, let key = apiKey {
-                    HStack(spacing: 5) {
-                        Text(showingApiKey ? key : (maskedApiKey ?? key))
-                            .font(.system(size: 11, design: .monospaced))
-                            .foregroundStyle(.kimiTextTertiary)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                            .textSelection(.enabled)
-
-                        Button(action: { showingApiKey.toggle() }) {
-                            Image(systemName: showingApiKey ? "eye.slash" : "eye")
-                                .font(.system(size: 10, weight: .medium))
-                                .foregroundStyle(isHoveredEye ? .kimiTextPrimary : .kimiTextTertiary)
-                                .frame(width: 18, height: 18)
-                                .background(isHoveredEye ? Color.kimiTextPrimary.opacity(0.10) : Color.clear)
-                                .clipShape(RoundedRectangle(cornerRadius: 4))
-                        }
-                        .buttonStyle(.plain)
-                        .cursor(.pointingHand)
-                        .onHover { isHoveredEye = $0 }
-                        .help(showingApiKey
-                              ? languageManager.tr("隐藏 API Key")
-                              : languageManager.tr("显示 API Key"))
-                    }
+                if isCliActive {
+                    StatusTag(text: languageManager.tr("CLI 使用中"), color: .green)
                 }
 
-                statusLine
+                // 会员等级体系调整期：API Key 渠道取到的等级不可靠，暂只对 OAuth 账号展示
+                if isOAuth, let membershipLevel, !membershipLevel.isEmpty {
+                    StatusTag(text: KimiQuota.membershipDisplayName(membershipLevel), color: .purple)
+                }
+
+                if case .unauthorized = state {
+                    StatusTag(text: languageManager.tr("登录失效"), color: .red)
+                }
             }
 
             Spacer(minLength: 8)
@@ -900,30 +859,6 @@ private struct AccountRow: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-    }
-
-    // MARK: 状态行
-
-    @ViewBuilder
-    private var statusLine: some View {
-        switch state {
-        case .loading:
-            HStack(spacing: 6) {
-                ProgressView()
-                    .controlSize(.small)
-
-                LText("加载中…")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.kimiTextSecondary)
-            }
-        case .failed(let message):
-            Text(message)
-                .font(.system(size: 11))
-                .foregroundStyle(.orange.opacity(0.9))
-                .lineLimit(1)
-        default:
-            EmptyView()
-        }
     }
 }
 
@@ -1180,28 +1115,15 @@ private struct WorkBuddyAccountRow: View {
             }
             .frame(width: 28, height: 28)
 
-            // 左侧：名称 + 状态标签；积分放深一行
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
-                    Text(model.workBuddyDisplayName(for: account))
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(.kimiTextPrimary)
-                        .lineLimit(1)
+            // 单行：名称 + 当前标签
+            HStack(spacing: 6) {
+                Text(model.workBuddyDisplayName(for: account))
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.kimiTextPrimary)
+                    .lineLimit(1)
 
-                    if isActive {
-                        StatusTag(text: languageManager.tr("当前"), color: .kimiBlue)
-                    }
-                }
-
-                if let credits = model.workBuddyCredits[account.uid] {
-                    HStack(spacing: 3) {
-                        Image(systemName: "sparkle")
-                            .font(.system(size: 9))
-                            .foregroundStyle(.kimiTextSecondary)
-                        LText("%@ 积分", credits.remainingText)
-                            .font(.system(size: 11))
-                            .foregroundStyle(.kimiTextTertiary)
-                    }
+                if isActive {
+                    StatusTag(text: languageManager.tr("当前"), color: .kimiBlue)
                 }
             }
 
