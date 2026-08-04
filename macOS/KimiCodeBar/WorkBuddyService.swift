@@ -31,13 +31,9 @@ struct WorkBuddyCredits: Equatable {
     let remaining: Double
     let tier: String
 
-    /// 积分展示文本：截断到一位小数（不四舍五入），整数则不显示小数
+    /// 积分展示文本：截断到整数（不四舍五入），不显示小数
     var remainingText: String {
-        let truncated = floor(remaining * 10) / 10
-        if truncated == Double(Int(truncated)) {
-            return "\(Int(truncated))"
-        }
-        return String(format: "%.1f", truncated)
+        "\(Int(floor(remaining)))"
     }
 }
 

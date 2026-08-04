@@ -180,7 +180,11 @@ struct KimiLabel: View {
     @StateObject private var languageManager = LanguageManager.shared
 
     var body: some View {
-        if model.primaryAccount?.provider == .deepseek {
+        // WorkBuddy 显示主账号优先于 Kimi/DeepSeek 主账号（用户点击面板卡片切换）
+        if let wbUID = model.workBuddyPrimaryUID,
+           let credits = model.workBuddyCredits[wbUID] {
+            Image(nsImage: MenuBarTextRenderer.workBuddyImage(creditsText: credits.remainingText))
+        } else if model.primaryAccount?.provider == .deepseek {
             // DeepSeek 主账号：鲸鱼图标 + 余额数字
             if let primary = model.primaryAccount,
                let balance = model.accountBalances[primary.id] {
@@ -288,6 +292,24 @@ enum MenuBarTextRenderer {
                 .fill(textColor)
                 .frame(width: 18, height: 18)
             Text(balanceText)
+                .font(.system(size: 12, weight: .medium, design: .default))
+                .monospacedDigit()
+        }
+        .foregroundStyle(textColor)
+        .frame(height: 20)
+        .fixedSize(horizontal: true, vertical: false)
+
+        return render(content)
+    }
+
+    /// WorkBuddy 积分图标 + 积分数字（sparkle template 图，由系统按菜单栏明暗染色）
+    static func workBuddyImage(creditsText: String) -> NSImage {
+        let content = HStack(spacing: 3) {
+            Image(systemName: "sparkle")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 14, height: 14)
+            Text(creditsText)
                 .font(.system(size: 12, weight: .medium, design: .default))
                 .monospacedDigit()
         }
@@ -984,8 +1006,7 @@ struct KimiMenu: View {
                 // 账号配额区：单账号直接出大卡片，多账号每账号一张紧凑卡片（内部左右双列压缩布局）
                 AccountQuotaListView()
 
-                // WorkBuddy 积分卡片：独立于 Kimi/DeepSeek 账号体系，展示当前 WorkBuddy 登录账号的积分。
-                // 只要有账号就展示，不受主账号切换影响。
+                // WorkBuddy 积分卡片：点击卡片可切换为菜单栏显示主账号，与 Kimi/DeepSeek 卡片同款悬停选中。
                 if !model.workBuddyAccounts.isEmpty {
                     WorkBuddyCardListView()
                 }
@@ -1866,13 +1887,51 @@ private struct WorkBuddyCard: View {
 /// WorkBuddy 卡片列表：渲染所有已添加的 WorkBuddy 账号，每账号一张小横条。
 struct WorkBuddyCardListView: View {
     @StateObject private var model = KimiCodeBarModel.shared
+    @State private var hoveredUID: String?
 
     var body: some View {
         VStack(spacing: 8) {
             ForEach(model.workBuddyAccounts) { account in
                 WorkBuddyCard(account: account)
+                    .modifier(WorkBuddyCardHover(
+                        uid: account.uid,
+                        isPrimary: model.workBuddyPrimaryUID == account.uid,
+                        hoveredID: $hoveredUID,
+                        onTap: { model.setWorkBuddyPrimary(uid: account.uid) }
+                    ))
             }
         }
+    }
+}
+
+// MARK: - WorkBuddy 卡片悬停选中
+
+/// WorkBuddy 卡片的悬停高亮 + 点击设为菜单栏显示主账号。
+/// 与 AccountCardHover 平行（ID 类型为 String 而非 UUID），视觉行为一致：
+/// 主账号蓝色描边、悬停加粗、点击切换菜单栏显示。
+private struct WorkBuddyCardHover: ViewModifier {
+    let uid: String
+    let isPrimary: Bool
+    @Binding var hoveredID: String?
+    let onTap: () -> Void
+
+    func body(content: Content) -> some View {
+        let isHovered = hoveredID == uid
+        return content
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(
+                        Color.kimiBlue.opacity(isPrimary ? 0.45 : 0.32),
+                        lineWidth: isHovered ? 1.5 : (isPrimary ? 1 : 0)
+                    )
+                    .animation(.easeOut(duration: 0.12), value: isHovered)
+            )
+            .contentShape(Rectangle())
+            .onHover { hovering in
+                hoveredID = hovering ? uid : (hoveredID == uid ? nil : hoveredID)
+            }
+            .onTapGesture { onTap() }
+            .cursor(.pointingHand)
     }
 }
 
@@ -5283,6 +5342,16 @@ final class KimiCodeBarModel: ObservableObject {
     @Published var isWorkBuddyRunning = false
     /// 当前在 WorkBuddy 中登录的账号 uid（读 auth 文件得到）
     @Published var workBuddyActiveUID: String?
+    /// 菜单栏显示的 WorkBuddy 账号 uid（用户点击面板卡片切换，优先于 Kimi/DeepSeek 主账号）
+    @Published var workBuddyPrimaryUID: String? = UserDefaults.standard.string(forKey: "workBuddyPrimaryUID") {
+        didSet {
+            if let uid = workBuddyPrimaryUID {
+                UserDefaults.standard.set(uid, forKey: "workBuddyPrimaryUID")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "workBuddyPrimaryUID")
+            }
+        }
+    }
 
     @Published var text = "-- · --"
     @Published var quota: KimiQuota?
@@ -5360,7 +5429,7 @@ final class KimiCodeBarModel: ObservableObject {
 
     /// 当前是否已配置可用凭证（决定菜单栏是否提示去设置）
     var hasCredential: Bool {
-        !accounts.isEmpty
+        !accounts.isEmpty || !workBuddyAccounts.isEmpty
     }
 
     init() {
@@ -5757,7 +5826,15 @@ final class KimiCodeBarModel: ObservableObject {
         guard accounts.contains(where: { $0.id == id }) else { return }
         KimiAccountStore.shared.setPrimaryAccount(id)
         primaryAccountID = id
+        // 切回 Kimi/DeepSeek 主账号时清掉 WorkBuddy 显示主账号，避免菜单栏仍显示 WorkBuddy 积分
+        workBuddyPrimaryUID = nil
         syncPrimaryCompat()
+    }
+
+    /// 设置菜单栏显示的 WorkBuddy 账号（优先于 Kimi/DeepSeek 主账号）
+    func setWorkBuddyPrimary(uid: String) {
+        guard workBuddyAccounts.contains(where: { $0.uid == uid }) else { return }
+        workBuddyPrimaryUID = uid
     }
 
     /// 重新授权：对指定账号重走设备授权流程，成功后替换其 token 并更新账号标识。
@@ -5977,6 +6054,14 @@ final class KimiCodeBarModel: ObservableObject {
         workBuddyAccounts = WorkBuddyService.shared.loadAccounts()
         workBuddyActiveUID = WorkBuddyService.shared.currentActiveUID()
         isWorkBuddyRunning = WorkBuddyService.shared.isWorkBuddyRunning()
+
+        // 清理无效的 WorkBuddy 显示主账号（账号可能已删除），无 Kimi/DeepSeek 主账号时自动提升首个
+        if let uid = workBuddyPrimaryUID, !workBuddyAccounts.contains(where: { $0.uid == uid }) {
+            workBuddyPrimaryUID = nil
+        }
+        if workBuddyPrimaryUID == nil && primaryAccountID == nil && !workBuddyAccounts.isEmpty {
+            workBuddyPrimaryUID = workBuddyAccounts.first?.uid
+        }
 
         // 没账号时不发请求
         guard !workBuddyAccounts.isEmpty else { return }
