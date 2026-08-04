@@ -1637,7 +1637,7 @@ private struct AccountCardHover: ViewModifier {
                 RoundedRectangle(cornerRadius: 12)
                     // 主账号描边略深一档、悬停时轻蓝；非主账号只在悬停时出描边
                     .stroke(
-                        Color.kimiBlue.opacity(isPrimary ? 0.45 : 0.32),
+                        Color.kimiBlue.opacity(isPrimary ? 0.6 : 0.45),
                         lineWidth: isHovered ? 1.5 : (isPrimary ? 1 : 0)
                     )
                     .animation(.easeOut(duration: 0.12), value: isHovered)
@@ -1924,7 +1924,7 @@ private struct WorkBuddyCardHover: ViewModifier {
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(
-                        Color.kimiBlue.opacity(isPrimary ? 0.45 : 0.32),
+                        Color.kimiBlue.opacity(isPrimary ? 0.6 : 0.45),
                         lineWidth: isHovered ? 1.5 : (isPrimary ? 1 : 0)
                     )
                     .animation(.easeOut(duration: 0.12), value: isHovered)
