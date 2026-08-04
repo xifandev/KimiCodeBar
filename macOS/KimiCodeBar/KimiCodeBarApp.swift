@@ -6098,7 +6098,9 @@ final class KimiCodeBarModel: ObservableObject {
                 }
 
                 // 签到：今日未签到才调 API（幂等接口），已签到则跳过
+                var didCallCheckinAPI = false
                 if account.lastCheckinDate != today {
+                    didCallCheckinAPI = true
                     let result = await WorkBuddyService.shared.checkin(account: account)
                     if result.success {
                         WorkBuddyService.shared.setCheckinDate(uid: account.uid, date: today)
@@ -6121,8 +6123,8 @@ final class KimiCodeBarModel: ObservableObject {
                     }
                 }
 
-                // 账号间隔 1 秒（防 API 限流）
-                if account.uid != workBuddyAccounts.last?.uid {
+                // 仅在调了签到 API 时才间隔 1 秒（防限流）；已签到跳过 API 时不延迟
+                if didCallCheckinAPI && account.uid != workBuddyAccounts.last?.uid {
                     try? await Task.sleep(nanoseconds: 1_000_000_000)
                 }
             }
