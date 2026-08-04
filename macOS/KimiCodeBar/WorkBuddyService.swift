@@ -263,6 +263,90 @@ final class WorkBuddyService {
         return uid
     }
 
+    // MARK: - 切换账号（写 auth 文件）
+
+    /// 将指定账号的 token 对 + 快照写回 auth 文件，使下次启动 WorkBuddy 时使用该账号。
+    /// 逻辑迁移自 wbSwitch 项目。返回是否成功写入。
+    @discardableResult
+    func switchTo(uid: String) -> Bool {
+        guard let target = loadAccounts().first(where: { $0.uid == uid }) else { return false }
+
+        // 1. 读当前文件（带重试，防止与 WorkBuddy 并发写时瞬态失败）
+        guard var curJson = readAuthJSONWithRetry() else { return false }
+
+        // 2. 若目标账号已是当前账号，无需切换
+        if let curUid = (curJson["account"] as? [String: Any])?["uid"] as? String, curUid == uid {
+            return true
+        }
+
+        // 3. 构建目标 account 和 auth 块
+        var accountObj: [String: Any]
+        var authObj: [String: Any]
+
+        if let accountData = target.accountSnapshot,
+           let authData = target.authSnapshot,
+           let snapAccount = try? JSONSerialization.jsonObject(with: accountData) as? [String: Any],
+           let snapAuth = try? JSONSerialization.jsonObject(with: authData) as? [String: Any] {
+            // 有快照：整体替换
+            accountObj = snapAccount
+            authObj = snapAuth
+        } else {
+            // 无快照：降级 patch —— 以当前 auth 文件结构为模板，补入已知字段
+            accountObj = (curJson["account"] as? [String: Any]) ?? [:]
+            authObj = (curJson["auth"] as? [String: Any]) ?? [:]
+            accountObj["uid"] = target.uid
+            accountObj["nickname"] = target.nickname
+            authObj["accessToken"] = target.accessToken
+            authObj["refreshToken"] = target.refreshToken
+            authObj["domain"] = target.domain
+            if authObj["tokenType"] == nil {
+                authObj["tokenType"] = "Bearer"
+            }
+        }
+
+        // 4. 备份当前文件
+        backupAuthFile()
+
+        // 5. 替换顶层 account 和 auth，原子写回
+        curJson["account"] = accountObj
+        curJson["auth"] = authObj
+
+        guard let newData = try? JSONSerialization.data(withJSONObject: curJson, options: [.prettyPrinted]) else {
+            return false
+        }
+        do {
+            try newData.write(to: authFileURL, options: [.atomic])
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    /// 带重试的 auth 文件读取（防止与 WorkBuddy 客户端并发写时瞬态失败）
+    private func readAuthJSONWithRetry() -> [String: Any]? {
+        for attempt in 0..<3 {
+            if let data = try? Data(contentsOf: authFileURL),
+               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                return json
+            }
+            if attempt < 2 {
+                Thread.sleep(forTimeInterval: 0.1)
+            }
+        }
+        return nil
+    }
+
+    /// 切换前备份当前 auth 文件
+    private func backupAuthFile() {
+        let backupDir = authFileURL.deletingLastPathComponent()
+            .appendingPathComponent("auth-backups", isDirectory: true)
+        try? FileManager.default.createDirectory(at: backupDir, withIntermediateDirectories: true)
+        let ts = ISO8601DateFormatter().string(from: Date())
+            .replacingOccurrences(of: ":", with: "-")
+        let backupURL = backupDir.appendingPathComponent("workbuddy-desktop.\(ts).info")
+        try? FileManager.default.copyItem(at: authFileURL, to: backupURL)
+    }
+
     // MARK: - 启动 / 重启 WorkBuddy
 
     /// WorkBuddy 进程是否在运行

@@ -1843,9 +1843,9 @@ private struct WorkBuddyCard: View {
                         .lineLimit(1)
                 }
 
-                // 启动 / 重启按钮
-                Button(action: { model.launchWorkBuddy() }) {
-                    Image(systemName: model.isWorkBuddyRunning ? "arrow.clockwise" : "play.fill")
+                // 启动按钮：写该账号到 auth 文件 → 重启 WorkBuddy（切换 + 启动）
+                Button(action: { model.launchWorkBuddy(account: account) }) {
+                    Image(systemName: "play.fill")
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(isHoveredLaunch ? .kimiTextPrimary : .kimiTextSecondary)
                         .frame(width: 22, height: 22)
@@ -1855,9 +1855,7 @@ private struct WorkBuddyCard: View {
                 .buttonStyle(.plain)
                 .cursor(.pointingHand)
                 .onHover { isHoveredLaunch = $0 }
-                .help(model.isWorkBuddyRunning
-                      ? languageManager.tr("重启 WorkBuddy")
-                      : languageManager.tr("启动 WorkBuddy"))
+                .help(languageManager.tr("启动 WorkBuddy"))
             } else {
                 Text("--")
                     .font(.system(size: 15, weight: .semibold, design: .rounded))
@@ -6119,8 +6117,11 @@ final class KimiCodeBarModel: ObservableObject {
         return account.nickname
     }
 
-    /// 启动 / 重启 WorkBuddy 客户端
-    func launchWorkBuddy() {
+    /// 切换到指定 WorkBuddy 账号并启动 / 重启客户端。
+    /// 先把该账号的 token 对 + 快照写回 auth 文件（使 WorkBuddy 启动后使用该账号），
+    /// 再终止旧进程并重新启动。逻辑迁移自 wbSwitch 项目。
+    func launchWorkBuddy(account: WorkBuddyAccount) {
+        WorkBuddyService.shared.switchTo(uid: account.uid)
         WorkBuddyService.shared.restartWorkBuddy { [weak self] in
             self?.isWorkBuddyRunning = WorkBuddyService.shared.isWorkBuddyRunning()
             self?.workBuddyActiveUID = WorkBuddyService.shared.currentActiveUID()
