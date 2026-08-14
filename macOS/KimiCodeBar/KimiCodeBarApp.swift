@@ -974,6 +974,45 @@ struct KimiMenu: View {
             || sparkleUpdater.isUpdateReadyToRestart || model.pendingAppUpdateVersion != nil
     }
 
+    /// 底部第 1 个操作按钮：按当前主账号 provider 动态切换图标与行为。
+    /// Kimi 沿用「KIMI」文字图标（深度调过的样式），DeepSeek / WorkBuddy 复用账号管理的品牌 logo。
+    /// 语义统一为「打开当前主账号的后台 / 启动客户端」。
+    @ViewBuilder
+    private var consoleButton: some View {
+        switch model.primaryAccount?.provider {
+        case .deepseek:
+            ActionButton(
+                title: languageManager.tr("控制台"),
+                imageIcon: AccountProvider.deepseek.logoImageName,
+                action: {
+                    dismissMenuBarPanel()
+                    NSWorkspace.shared.open(DeepSeekBalanceService.consoleURL)
+                }
+            )
+        case .workbuddy:
+            ActionButton(
+                title: languageManager.tr("启动"),
+                imageIcon: AccountProvider.workbuddy.logoImageName,
+                action: {
+                    dismissMenuBarPanel()
+                    if let primary = model.primaryAccount {
+                        model.launchWorkBuddy(account: primary)
+                    }
+                }
+            )
+        default:
+            // Kimi 主账号 / 未配置账号：保持现状，打开 Kimi 控制台
+            ActionButton(
+                title: languageManager.tr("控制台"),
+                textIcon: "KIMI",
+                action: {
+                    dismissMenuBarPanel()
+                    NSWorkspace.shared.open(consoleURL)
+                }
+            )
+        }
+    }
+
     var body: some View {
         VStack(spacing: 14) {
             // Header
@@ -1027,14 +1066,7 @@ struct KimiMenu: View {
 
             // 操作按钮卡片
             HStack(spacing: 8) {
-                ActionButton(
-                    title: languageManager.tr("控制台"),
-                    textIcon: "KIMI",
-                    action: {
-                        dismissMenuBarPanel()
-                        NSWorkspace.shared.open(consoleURL)
-                    }
-                )
+                consoleButton
 
                 ActionButton(
                     title: languageManager.tr("刷新"),
@@ -1672,8 +1704,6 @@ private struct DeepSeekBalanceCard: View {
     @StateObject private var model = KimiCodeBarModel.shared
     @StateObject private var languageManager = LanguageManager.shared
 
-    @State private var isHoveredConsole = false
-
     private var balance: DeepSeekBalance? {
         model.accountBalances[account.id]
     }
@@ -1721,7 +1751,7 @@ private struct DeepSeekBalanceCard: View {
                 LoadingRing()
                     .frame(width: 12, height: 12)
             } else if let balance {
-                // 正常：余额数字（主色 + semibold 强调）+ 后台入口（地球图标）
+                // 正常：余额数字（主色 + semibold 强调）
                 Text(balance.balanceWithSymbol)
                     .font(.system(size: 15, weight: .semibold, design: .rounded))
                     .monospacedDigit()
@@ -1733,23 +1763,6 @@ private struct DeepSeekBalanceCard: View {
                         .font(.system(size: 11))
                         .foregroundStyle(.orange)
                 }
-
-                // 后台入口：地球图标，悬停高亮，点击打开 DeepSeek 控制台
-                // 只放图标不加文字，单行横条尽量省空间，保持视觉简洁
-                Button(action: {
-                    NSWorkspace.shared.open(DeepSeekBalanceService.consoleURL)
-                }) {
-                    Image(systemName: "globe")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(isHoveredConsole ? .kimiTextPrimary : .kimiTextSecondary)
-                        .frame(width: 22, height: 22)
-                        .background(isHoveredConsole ? Color.kimiTextPrimary.opacity(0.14) : Color.kimiTextPrimary.opacity(0.08))
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                }
-                .buttonStyle(.plain)
-                .cursor(.pointingHand)
-                .onHover { isHoveredConsole = $0 }
-                .help(languageManager.tr("打开 DeepSeek 控制台"))
             } else {
                 LText("暂无余额")
                     .font(.system(size: 13))
@@ -2846,6 +2859,7 @@ struct ActionButton: View {
     let title: String
     var icon: String? = nil
     var textIcon: String? = nil
+    var imageIcon: String? = nil
     let action: () -> Void
     var disabled: Bool = false
     @State private var isHovered = false
@@ -2853,7 +2867,13 @@ struct ActionButton: View {
     var body: some View {
         Button(action: action) {
             VStack(spacing: 6) {
-                if let textIcon {
+                if let imageIcon {
+                    Image(imageIcon)
+                        .resizable()
+                        .interpolation(.high)
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 18, height: 18)
+                } else if let textIcon {
                     Text(textIcon)
                         .font(.system(size: 14, weight: .bold))
                         .lineLimit(1)
