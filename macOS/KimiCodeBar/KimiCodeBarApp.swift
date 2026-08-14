@@ -3692,8 +3692,9 @@ final class SettingsWindowManager: ObservableObject {
         window.titleVisibility = .hidden
         window.styleMask.insert(.fullSizeContentView)
         window.titlebarAppearsTransparent = true
-        // 标题栏视觉消失后，允许从空白区域拖动窗口
-        window.isMovableByWindowBackground = true
+        // 不再整窗背景可拖动：内容区的卡片拖拽排序会与之冲突。
+        // 窗口拖动改由 SettingsRootView 顶部的 WindowDragStrip 区域承担。
+        window.isMovableByWindowBackground = false
         window.backgroundColor = NSColor(name: nil, dynamicProvider: { appearance in
             let isDark = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
             return isDark
@@ -3904,6 +3905,26 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     }
 }
 
+// MARK: - 设置窗口拖动条
+
+/// 设置窗口顶部的窗口拖动区：标题栏视觉隐藏 + isMovableByWindowBackground 关闭后，
+/// 由这条透明区域负责「按住顶部空白拖动窗口」，内容区不再响应窗口拖动。
+private struct WindowDragStrip: NSViewRepresentable {
+    func makeNSView(context: Context) -> WindowDragNSView {
+        WindowDragNSView()
+    }
+
+    func updateNSView(_ nsView: WindowDragNSView, context: Context) {}
+}
+
+private final class WindowDragNSView: NSView {
+    override func mouseDown(with event: NSEvent) {
+        window?.performDrag(with: event)
+    }
+
+    override var mouseDownCanMoveWindow: Bool { true }
+}
+
 struct SettingsRootView: View {
     @StateObject private var languageManager = LanguageManager.shared
     @StateObject private var windowManager = SettingsWindowManager.shared
@@ -3944,6 +3965,13 @@ struct SettingsRootView: View {
             case .about:
                 AboutSettingsView()
             }
+        }
+        // 顶部 40pt 拖动条：对齐侧边栏红绿灯区域与内容区顶部留白，
+        // 只有这里能按住拖动窗口，内容区留给卡片拖拽排序等交互
+        .overlay(alignment: .top) {
+            WindowDragStrip()
+                .frame(maxWidth: .infinity)
+                .frame(height: 40)
         }
         .onChange(of: languageManager.language) { _, _ in
             SettingsWindowManager.shared.refreshTitle()
