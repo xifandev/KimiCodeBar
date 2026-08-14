@@ -4313,7 +4313,7 @@ struct PanelCustomSettingsView: View {
                 SettingsCard(title: languageManager.tr("卡片显示")) {
                     VStack(alignment: .leading, spacing: 0) {
                         SettingsCardRow(
-                            title: languageManager.tr("本机消耗量卡片")
+                            title: languageManager.tr("Kimi Code 本机消耗量卡片")
                         ) {
                             Toggle("", isOn: $model.showLocalUsageCard)
                                 .labelsHidden()

@@ -2155,24 +2155,24 @@
         }
       }
     },
-    "本机消耗量" : {
+    "Kimi Code 本机消耗量" : {
       "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Local Consumption"
+            "value" : "Kimi Code Local Consumption"
           }
         }
       }
     },
-    "本机消耗量卡片" : {
+    "Kimi Code 本机消耗量卡片" : {
       "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Local Consumption Card"
+            "value" : "Kimi Code Local Consumption Card"
           }
         }
       }

@@ -440,7 +440,7 @@ struct LocalUsageCard: View {
 
     private var headerRow: some View {
         HStack {
-            LText("本机消耗量")
+            LText("Kimi Code 本机消耗量")
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(.kimiTextPrimary)
 
