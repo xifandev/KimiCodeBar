@@ -1983,6 +1983,13 @@ private struct AccountQuotaCard: View {
             // MARK: - 标头：账号名 + 标签行（主账号 / 会员等级 / 登录失效）
             // 账号名刻意用次级色弱化：整张卡片唯一的高亮元素是配额大数字，保证第一眼聚焦额度
             HStack(spacing: 6) {
+                // Kimi 平台 logo（16×16，与 DeepSeek / WorkBuddy 卡片风格对齐）
+                Image(account.provider.logoImageName)
+                    .resizable()
+                    .interpolation(.high)
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 16, height: 16)
+
                 Text(model.displayName(for: account))
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(.kimiTextSecondary)
@@ -5571,6 +5578,11 @@ final class KimiCodeBarModel: ObservableObject {
 
             await MainActor.run {
                 for (id, result, error) in results {
+                    // WorkBuddy 账号由 refreshWorkBuddyAccounts() 独立处理积分和状态，
+                    // 此处跳过避免 (nil, nil) 被误判为 unauthorized（"登录失效"）
+                    if let account = self.accounts.first(where: { $0.id == id }), account.provider == .workbuddy {
+                        continue
+                    }
                     if let result {
                         switch result {
                         case .kimi(let quota):
@@ -6065,6 +6077,8 @@ final class KimiCodeBarModel: ObservableObject {
         accounts = snapshot.accounts
         primaryAccountID = snapshot.primaryAccountID
         refresh(showsLoading: false)
+        // 同步触发 WorkBuddy 账号积分刷新，避免被 refreshAllAccounts 的 (nil, nil) 误判为 unauthorized
+        refreshWorkBuddyAccounts()
         return nil
     }
 
