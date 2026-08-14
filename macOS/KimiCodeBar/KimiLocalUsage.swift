@@ -568,49 +568,34 @@ struct LocalUsageCard: View {
     private var barChart: some View {
         GeometryReader { proxy in
             let count = chartDays.count
-            let slotWidth = proxy.size.width / CGFloat(count)
-            // 柱子最大 22px，避免 7 根柱子时过宽；密集档（累计）按槽位宽度收窄
-            let barWidth = min(slotWidth - barSpacing, 22)
+            let width = proxy.size.width
+            // 7天/今日档：柱子固定窄柱(16px)+小间距(4px)居中排列；累计档：撑满槽位
+            let isSparse = count <= 7
+            let barWidth: CGFloat = 16
+            let gap: CGFloat = 4
+            let slotWidth = width / CGFloat(count)
             let chartBottomY = chartHeight + tooltipZoneHeight
 
             ZStack(alignment: .bottom) {
-                // 柱子 + 柱顶圆点
                 ForEach(Array(chartDays.enumerated()), id: \.element.id) { index, day in
-                    let centerX = slotWidth * (CGFloat(index) + 0.5)
-                    let height = barHeight(for: day)
-                    let topY = chartBottomY - height
+                    let cx = barCenterX(at: index, count: count, totalWidth: width)
+                    let h = barHeight(for: day)
 
-                    // 柱子（渐变填充）
-                    RoundedRectangle(cornerRadius: barCornerRadius)
-                        .fill(barGradient(for: day))
-                        .frame(width: barWidth, height: height)
-                        .position(x: centerX, y: chartBottomY - height / 2)
+                    // 透明悬停区域：覆盖柱子所在垂直列（全高），矮柱子也能轻松触发 tooltip
+                    let hoverWidth = isSparse ? (barWidth + gap) : slotWidth
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .frame(width: hoverWidth, height: chartHeight + tooltipZoneHeight)
+                        .position(x: cx, y: (chartHeight + tooltipZoneHeight) / 2)
                         .onHover { isHovered in
                             hoveredDay = isHovered ? day : nil
                         }
 
-                    // 柱顶圆点
-                    Circle()
-                        .fill(Color.kimiBlue)
-                        .frame(width: 5, height: 5)
-                        .overlay(Circle().stroke(Color.kimiCardBackground, lineWidth: 1.2))
-                        .position(x: centerX, y: topY)
-                }
-
-                // 折线（连接各柱顶，展示趋势）
-                if count > 1 {
-                    Path { path in
-                        for (index, day) in chartDays.enumerated() {
-                            let centerX = slotWidth * (CGFloat(index) + 0.5)
-                            let y = chartBottomY - barHeight(for: day)
-                            if index == 0 {
-                                path.move(to: CGPoint(x: centerX, y: y))
-                            } else {
-                                path.addLine(to: CGPoint(x: centerX, y: y))
-                            }
-                        }
-                    }
-                    .stroke(Color.kimiBlue.opacity(0.45), style: StrokeStyle(lineWidth: 1.5, lineJoin: .round))
+                    // 柱子
+                    RoundedRectangle(cornerRadius: barCornerRadius)
+                        .fill(barColor(for: day))
+                        .frame(width: isSparse ? barWidth : slotWidth - barSpacing, height: h)
+                        .position(x: cx, y: chartBottomY - h / 2)
                 }
 
                 if let hoveredDay {
@@ -622,6 +607,21 @@ struct LocalUsageCard: View {
         .frame(height: chartHeight + tooltipZoneHeight)
     }
 
+    /// 柱子中心 x 坐标：7天档固定窄柱居中排列，累计档均分槽位
+    private func barCenterX(at index: Int, count: Int, totalWidth: CGFloat) -> CGFloat {
+        let isSparse = count <= 7
+        if isSparse {
+            let barWidth: CGFloat = 16
+            let gap: CGFloat = 4
+            let totalBarsWidth = CGFloat(count) * barWidth + CGFloat(max(count - 1, 0)) * gap
+            let leadingOffset = (totalWidth - totalBarsWidth) / 2
+            return leadingOffset + CGFloat(index) * (barWidth + gap) + barWidth / 2
+        } else {
+            let slotWidth = totalWidth / CGFloat(count)
+            return slotWidth * (CGFloat(index) + 0.5)
+        }
+    }
+
     private func barHeight(for day: LocalUsageDay) -> CGFloat {
         guard maxDayTokens > 0 else { return 2 }
         // 0 值天保留 2px 占位，让柱子轮廓可见（7天档缺失天也能看出柱子）
@@ -629,15 +629,9 @@ struct LocalUsageCard: View {
         return max(2, CGFloat(day.totalTokens) / CGFloat(maxDayTokens) * chartHeight)
     }
 
-    private func barGradient(for day: LocalUsageDay) -> LinearGradient {
-        let isHovered = hoveredDay?.id == day.id
-        let topColor: Color = isHovered ? .kimiBlue : .kimiBlue.opacity(0.55)
-        let bottomColor: Color = isHovered ? .kimiBlue.opacity(0.7) : .kimiBlue.opacity(0.15)
-        return LinearGradient(
-            colors: [topColor, bottomColor],
-            startPoint: .top,
-            endPoint: .bottom
-        )
+    private func barColor(for day: LocalUsageDay) -> Color {
+        if hoveredDay?.id == day.id { return .kimiBlue }
+        return .kimiBlue.opacity(0.35)
     }
 
     private func tooltipView(for day: LocalUsageDay) -> some View {
@@ -665,7 +659,7 @@ struct LocalUsageCard: View {
     private func tooltipPosition(for day: LocalUsageDay, in size: CGSize) -> CGPoint {
         let count = chartDays.count
         let index = chartDays.firstIndex(where: { $0.id == day.id }) ?? 0
-        let centerX = size.width * (CGFloat(index) + 0.5) / CGFloat(max(count, 1))
+        let centerX = barCenterX(at: index, count: count, totalWidth: size.width)
         // tooltip 宽约 96，clamp 防止贴边时超出卡片
         let clampedX = min(max(centerX, 48), size.width - 48)
         return CGPoint(x: clampedX, y: tooltipZoneHeight / 2)
