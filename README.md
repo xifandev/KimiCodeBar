@@ -68,4 +68,5 @@
 
 ## 🙏 致谢
 
-DeepSeek 鲸鱼菜单栏图标 adapted from [CodexBar](https://github.com/AidenYang1/CodexBar) (MIT License)。
+- DeepSeek 鲸鱼菜单栏图标 adapted from [CodexBar](https://github.com/AidenYang1/CodexBar) (MIT License)。
+- 本项目基于 [Kimi Code](https://github.com/MoonshotAI/kimi-code) 开源仓库深度升级，特此致谢。
