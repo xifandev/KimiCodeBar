@@ -569,10 +569,10 @@ struct LocalUsageCard: View {
         GeometryReader { proxy in
             let count = chartDays.count
             let width = proxy.size.width
-            // 7天/今日档：柱子固定窄柱(16px)+小间距(4px)居中排列；累计档：撑满槽位
+            // 7天/今日档：柱子稍宽(24px)+适中间距(8px)居中排列；累计档：撑满槽位
             let isSparse = count <= 7
-            let barWidth: CGFloat = 16
-            let gap: CGFloat = 4
+            let barWidth: CGFloat = 24
+            let gap: CGFloat = 8
             let slotWidth = width / CGFloat(count)
             let chartBottomY = chartHeight + tooltipZoneHeight
 
@@ -611,8 +611,8 @@ struct LocalUsageCard: View {
     private func barCenterX(at index: Int, count: Int, totalWidth: CGFloat) -> CGFloat {
         let isSparse = count <= 7
         if isSparse {
-            let barWidth: CGFloat = 16
-            let gap: CGFloat = 4
+            let barWidth: CGFloat = 24
+            let gap: CGFloat = 8
             let totalBarsWidth = CGFloat(count) * barWidth + CGFloat(max(count - 1, 0)) * gap
             let leadingOffset = (totalWidth - totalBarsWidth) / 2
             return leadingOffset + CGFloat(index) * (barWidth + gap) + barWidth / 2
