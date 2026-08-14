@@ -348,13 +348,30 @@ struct LocalUsageCard: View {
         service.isLoading && !service.hasScanned
     }
 
-    /// 图表展示的天数：累计档限制为近 30 个自然日（全历史柱子太密不好看），
-    /// 大数字仍按全量累计；其余范围与 filteredDays 一致
+    /// 图表展示的天数：
+    /// - 累计档：近 30 个自然日（全历史柱子太密），大数字仍按全量累计
+    /// - 7天档：固定 7 根柱子（今天往前 6 天），缺失的天补 0 值占位，避免只显示几根
+    /// - 今日档：由 todayWaveChart 处理，不走此处
     private var chartDays: [LocalUsageDay] {
-        guard range == .all else { return filteredDays }
-        let calendar = Calendar.current
-        let start = calendar.date(byAdding: .day, value: -29, to: calendar.startOfDay(for: Date())) ?? .distantPast
-        return filteredDays.filter { $0.date >= start }
+        switch range {
+        case .all:
+            let calendar = Calendar.current
+            let start = calendar.date(byAdding: .day, value: -29, to: calendar.startOfDay(for: Date())) ?? .distantPast
+            return filteredDays.filter { $0.date >= start }
+        case .week:
+            // 固定 7 根柱子：缺失的天补 0 值占位，柱状图始终对齐 7 天
+            let calendar = Calendar.current
+            let todayStart = calendar.startOfDay(for: Date())
+            return (0..<7).reversed().map { offset in
+                let date = calendar.date(byAdding: .day, value: -offset, to: todayStart)!
+                if let day = filteredDays.first(where: { $0.date == date }) {
+                    return day
+                }
+                return LocalUsageDay(date: date, input: 0, output: 0, cacheRead: 0)
+            }
+        case .today:
+            return filteredDays
+        }
     }
 
     /// 指标标签随范围联动：累计使用 Token / 今日使用 Token / 7 天使用 Token
@@ -574,9 +591,10 @@ struct LocalUsageCard: View {
     }
 
     private func barHeight(for day: LocalUsageDay) -> CGFloat {
-        guard maxDayTokens > 0 else { return 1 }
-        // 0 值天保留 1px 底线，视觉上不断流
-        return max(1, CGFloat(day.totalTokens) / CGFloat(maxDayTokens) * chartHeight)
+        guard maxDayTokens > 0 else { return 2 }
+        // 0 值天保留 2px 占位，让柱子轮廓可见（7天档缺失天也能看出柱子）
+        if day.totalTokens == 0 { return 2 }
+        return max(2, CGFloat(day.totalTokens) / CGFloat(maxDayTokens) * chartHeight)
     }
 
     private func barColor(for day: LocalUsageDay) -> Color {
