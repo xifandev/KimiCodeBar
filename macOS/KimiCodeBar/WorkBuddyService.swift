@@ -37,6 +37,9 @@ final class WorkBuddyService {
     private let baseURL = "https://copilot.tencent.com"
     private let refreshURL = "https://www.codebuddy.cn/auth/realms/copilot/protocol/openid-connect/token"
 
+    /// WorkBuddy 控制台（用量 / 套餐页），底部「控制台」按钮跳转入口
+    static let consoleURL = URL(string: "https://www.workbuddy.cn/profile/plans-usage")!
+
     private init() {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 30

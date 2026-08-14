@@ -976,7 +976,7 @@ struct KimiMenu: View {
 
     /// 底部第 1 个操作按钮：按当前主账号 provider 动态切换图标与行为。
     /// Kimi 沿用「KIMI」文字图标（深度调过的样式），DeepSeek / WorkBuddy 复用账号管理的品牌 logo。
-    /// 语义统一为「打开当前主账号的后台 / 启动客户端」。
+    /// 语义统一为「打开当前主账号的控制台」。
     @ViewBuilder
     private var consoleButton: some View {
         switch model.primaryAccount?.provider {
@@ -991,13 +991,11 @@ struct KimiMenu: View {
             )
         case .workbuddy:
             ActionButton(
-                title: languageManager.tr("启动"),
+                title: languageManager.tr("控制台"),
                 imageIcon: AccountProvider.workbuddy.logoImageName,
                 action: {
                     dismissMenuBarPanel()
-                    if let primary = model.primaryAccount {
-                        model.launchWorkBuddy(account: primary)
-                    }
+                    NSWorkspace.shared.open(WorkBuddyService.consoleURL)
                 }
             )
         default:
