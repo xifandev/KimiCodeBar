@@ -6,7 +6,7 @@
 
 一个 Kimi 账号 = 一份凭证（`AccountCredential`：OAuth token 对，或 API Key）+ 用户别名 + 可选的账号唯一标识 + 提供方（`AccountProvider`，目前只有 `kimi`）。Bar 在「设置 → 账号管理」中统一管理全部账号，添加时由用户选择授权登录（浏览器 OAuth）或 API Key 登录。
 
-凭证文件（`~/Library/Application Support/KimiCodeBar/credentials.json`）只认新格式（provider + credential 结构）；旧版单 token 格式按无账号处理，不做迁移，用户升级后重新登录即可。
+凭证文件（`~/Library/Application Support/KimiCodeBar/credentials.json`，DEV 版为 `KimiCodeBarDev/credentials.json`，两边账号池完全隔离）只认新格式（provider + credential 结构）；旧版单 token 格式按无账号处理，不做迁移，用户升级后重新登录即可。
 
 **扩展路径**：未来接入其它提供方（如 DeepSeek 余额监测）时，给 `AccountProvider` 加 case，在 `refreshAllAccounts` 的刷新任务组里按 provider 分派对应的查询服务，设置页与面板卡片按 provider 渲染即可。注意「切换账号」（写 CLI 凭证）仅对 OAuth 凭证的 Kimi 账号有意义。
 
@@ -32,4 +32,4 @@ Kimi Code CLI 实际使用的账号，即 `~/.kimi-code/credentials/kimi-code.js
 
 ### 凭证隔离原则
 
-Bar 的授权、刷新、删除只操作 Bar 自己的凭证文件（`~/Library/Application Support/KimiCodeBar/credentials.json`），历史上刻意不读写 CLI 凭证，避免 refresh_token 服务端轮换导致互相失效。「切换账号」是该原则唯一的、显式的例外：仅在用户主动触发切换的瞬间写入 CLI 凭证文件，此后两边各自独立、不再同步。
+Bar 的授权、刷新、删除只操作 Bar 自己的凭证文件（`~/Library/Application Support/KimiCodeBar/credentials.json`，DEV 版为 `KimiCodeBarDev/credentials.json`），历史上刻意不读写 CLI 凭证，避免 refresh_token 服务端轮换导致互相失效。「切换账号」是该原则唯一的、显式的例外：仅在用户主动触发切换的瞬间写入 CLI 凭证文件，此后两边各自独立、不再同步。

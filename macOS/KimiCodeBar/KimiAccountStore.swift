@@ -187,7 +187,14 @@ final class KimiAccountStore {
     /// 避免因 refresh_token 服务端轮换导致 CLI 凭证失效。
     static func credentialsFileURL() -> URL {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        return appSupport.appendingPathComponent("KimiCodeBar/credentials.json")
+        return appSupport.appendingPathComponent("\(storageDirectoryName)/credentials.json")
+    }
+
+    /// 凭证目录名：DEV 版（com.kimicodebar.app.dev）用独立目录，
+    /// 与正式版账号池完全隔离，互不影响。
+    static var storageDirectoryName: String {
+        let bundleID = Bundle.main.bundleIdentifier ?? ""
+        return bundleID.hasSuffix(".dev") ? "KimiCodeBarDev" : "KimiCodeBar"
     }
 
     // MARK: 读取

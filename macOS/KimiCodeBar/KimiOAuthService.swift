@@ -22,7 +22,8 @@ enum KimiOAuthConstants {
 // MARK: - OAuth Token
 
 /// 与 Kimi Code CLI 磁盘格式兼容的 token 模型（snake_case）。
-/// 存储位置：~/Library/Application Support/KimiCodeBar/credentials.json（Bar 专属，与 CLI 隔离）。
+/// 存储位置：~/Library/Application Support/<KimiCodeBar|KimiCodeBarDev>/credentials.json
+/// （Bar 专属，与 CLI 隔离；DEV 版与正式版目录独立，账号池互不影响）。
 struct KimiOAuthToken: Codable, Equatable {
     var accessToken: String
     var refreshToken: String
