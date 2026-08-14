@@ -581,16 +581,6 @@ struct LocalUsageCard: View {
                     let cx = barCenterX(at: index, count: count, totalWidth: width)
                     let h = barHeight(for: day)
 
-                    // 透明悬停区域：覆盖柱子所在垂直列（全高），矮柱子也能轻松触发 tooltip
-                    let hoverWidth = isSparse ? (barWidth + gap) : slotWidth
-                    Color.clear
-                        .contentShape(Rectangle())
-                        .frame(width: hoverWidth, height: chartHeight + tooltipZoneHeight)
-                        .position(x: cx, y: (chartHeight + tooltipZoneHeight) / 2)
-                        .onHover { isHovered in
-                            hoveredDay = isHovered ? day : nil
-                        }
-
                     // 柱子
                     RoundedRectangle(cornerRadius: barCornerRadius)
                         .fill(barColor(for: day))
@@ -603,8 +593,40 @@ struct LocalUsageCard: View {
                         .position(tooltipPosition(for: hoveredDay, in: proxy.size))
                 }
             }
+            // 整体 hover：根据鼠标 x 坐标命中柱子所在垂直列（全高），
+            // 矮柱子也能轻松触发 tooltip，且避免多个透明 view 叠加导致命中分发错乱
+            .contentShape(Rectangle())
+            .onContinuousHover(coordinateSpace: .local) { phase in
+                switch phase {
+                case .active(let location):
+                    hoveredDay = day(at: location.x, count: count, totalWidth: width)
+                case .ended:
+                    hoveredDay = nil
+                }
+            }
         }
         .frame(height: chartHeight + tooltipZoneHeight)
+    }
+
+    /// 根据鼠标 x 坐标反查命中的柱子：7天档按居中排列的窄柱计算，累计档按均分槽位计算。
+    /// 鼠标落在柱子所在列（含柱子之间间隙）即命中，落在两侧留白返回 nil。
+    private func day(at x: CGFloat, count: Int, totalWidth: CGFloat) -> LocalUsageDay? {
+        let isSparse = count <= 7
+        if isSparse {
+            let barWidth: CGFloat = 24
+            let gap: CGFloat = 8
+            let totalBarsWidth = CGFloat(count) * barWidth + CGFloat(max(count - 1, 0)) * gap
+            let leadingOffset = (totalWidth - totalBarsWidth) / 2
+            let relX = x - leadingOffset
+            guard relX >= 0, relX < totalBarsWidth else { return nil }
+            let index = Int(relX / (barWidth + gap))
+            return chartDays[min(max(index, 0), count - 1)]
+        } else {
+            let slotWidth = totalWidth / CGFloat(count)
+            guard x >= 0, x < totalWidth else { return nil }
+            let index = Int(x / slotWidth)
+            return chartDays[min(max(index, 0), count - 1)]
+        }
     }
 
     /// 柱子中心 x 坐标：7天档固定窄柱居中排列，累计档均分槽位
