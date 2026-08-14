@@ -567,19 +567,51 @@ struct LocalUsageCard: View {
 
     private var barChart: some View {
         GeometryReader { proxy in
+            let count = chartDays.count
+            let slotWidth = proxy.size.width / CGFloat(count)
+            // 柱子最大 22px，避免 7 根柱子时过宽；密集档（累计）按槽位宽度收窄
+            let barWidth = min(slotWidth - barSpacing, 22)
+            let chartBottomY = chartHeight + tooltipZoneHeight
+
             ZStack(alignment: .bottom) {
-                HStack(alignment: .bottom, spacing: barSpacing) {
-                    ForEach(chartDays) { day in
-                        RoundedRectangle(cornerRadius: barCornerRadius)
-                            .fill(barColor(for: day))
-                            .frame(maxWidth: .infinity)
-                            .frame(height: barHeight(for: day))
-                            .onHover { isHovered in
-                                hoveredDay = isHovered ? day : nil
-                            }
-                    }
+                // 柱子 + 柱顶圆点
+                ForEach(Array(chartDays.enumerated()), id: \.element.id) { index, day in
+                    let centerX = slotWidth * (CGFloat(index) + 0.5)
+                    let height = barHeight(for: day)
+                    let topY = chartBottomY - height
+
+                    // 柱子（渐变填充）
+                    RoundedRectangle(cornerRadius: barCornerRadius)
+                        .fill(barGradient(for: day))
+                        .frame(width: barWidth, height: height)
+                        .position(x: centerX, y: chartBottomY - height / 2)
+                        .onHover { isHovered in
+                            hoveredDay = isHovered ? day : nil
+                        }
+
+                    // 柱顶圆点
+                    Circle()
+                        .fill(Color.kimiBlue)
+                        .frame(width: 5, height: 5)
+                        .overlay(Circle().stroke(Color.kimiCardBackground, lineWidth: 1.2))
+                        .position(x: centerX, y: topY)
                 }
-                .frame(maxHeight: .infinity, alignment: .bottom)
+
+                // 折线（连接各柱顶，展示趋势）
+                if count > 1 {
+                    Path { path in
+                        for (index, day) in chartDays.enumerated() {
+                            let centerX = slotWidth * (CGFloat(index) + 0.5)
+                            let y = chartBottomY - barHeight(for: day)
+                            if index == 0 {
+                                path.move(to: CGPoint(x: centerX, y: y))
+                            } else {
+                                path.addLine(to: CGPoint(x: centerX, y: y))
+                            }
+                        }
+                    }
+                    .stroke(Color.kimiBlue.opacity(0.45), style: StrokeStyle(lineWidth: 1.5, lineJoin: .round))
+                }
 
                 if let hoveredDay {
                     tooltipView(for: hoveredDay)
@@ -597,9 +629,15 @@ struct LocalUsageCard: View {
         return max(2, CGFloat(day.totalTokens) / CGFloat(maxDayTokens) * chartHeight)
     }
 
-    private func barColor(for day: LocalUsageDay) -> Color {
-        if hoveredDay?.id == day.id { return .kimiBlue }
-        return .kimiBlue.opacity(0.35)
+    private func barGradient(for day: LocalUsageDay) -> LinearGradient {
+        let isHovered = hoveredDay?.id == day.id
+        let topColor: Color = isHovered ? .kimiBlue : .kimiBlue.opacity(0.55)
+        let bottomColor: Color = isHovered ? .kimiBlue.opacity(0.7) : .kimiBlue.opacity(0.15)
+        return LinearGradient(
+            colors: [topColor, bottomColor],
+            startPoint: .top,
+            endPoint: .bottom
+        )
     }
 
     private func tooltipView(for day: LocalUsageDay) -> some View {
