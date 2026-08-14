@@ -5809,6 +5809,17 @@ final class KimiCodeBarModel: ObservableObject {
         accounts = KimiAccountStore.shared.snapshot.accounts
     }
 
+    /// 拖拽排序：把 sourceIndex 处的账号移动到 destinationIndex（目标卡片当前所在位置）。
+    /// 数组顺序即展示顺序（设置页与菜单栏面板共用），移动后立即落盘。
+    func moveAccount(from sourceIndex: Int, to destinationIndex: Int) {
+        guard sourceIndex != destinationIndex, accounts.indices.contains(sourceIndex) else { return }
+        var reordered = accounts
+        let account = reordered.remove(at: sourceIndex)
+        reordered.insert(account, at: min(destinationIndex, reordered.count))
+        KimiAccountStore.shared.setAccountsOrder(reordered)
+        accounts = reordered
+    }
+
     /// 设置主账号：菜单栏文字/图形与兼容属性只展示主账号用量
     func setPrimaryAccount(_ id: UUID) {
         guard accounts.contains(where: { $0.id == id }) else { return }

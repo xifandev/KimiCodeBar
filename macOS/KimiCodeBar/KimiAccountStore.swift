@@ -234,6 +234,11 @@ final class KimiAccountStore {
         }
     }
 
+    /// 整体替换账号顺序（拖拽排序后落盘；数组顺序即展示顺序与落盘顺序）
+    func setAccountsOrder(_ accounts: [KimiAccount]) {
+        mutate { $0.accounts = accounts }
+    }
+
     /// 更新 OAuth 账号的 token（重新授权 / 刷新 token 后落盘）
     func updateOAuthToken(id: UUID, token: KimiOAuthToken) {
         mutate { format in

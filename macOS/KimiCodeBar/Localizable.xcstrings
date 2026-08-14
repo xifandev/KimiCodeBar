@@ -3145,6 +3145,17 @@
         }
       }
     },
+    "按住拖动排序" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drag to reorder"
+          }
+        }
+      }
+    },
     "重命名" : {
       "extractionState" : "stale",
       "localizations" : {
