@@ -5420,6 +5420,9 @@ final class KimiCodeBarModel: ObservableObject {
     /// Kimi 服务端每次刷新都会轮换 refresh_token，两次并发刷新会导致第二次被判定为 unauthorized。
     private var isRefreshing = false
 
+    /// WorkBuddy 串行刷新（签到 + 积分）进行中时置 true，防止定时器与手动触发重叠。
+    private var isRefreshingWorkBuddy = false
+
     /// 当前是否已配置可用凭证（决定菜单栏是否提示去设置）
     var hasCredential: Bool {
         !accounts.isEmpty
@@ -5435,7 +5438,6 @@ final class KimiCodeBarModel: ObservableObject {
         accounts = snapshot.accounts
         primaryAccountID = snapshot.primaryAccountID
         refresh(showsLoading: false)
-        refreshWorkBuddyAccounts()
         Task { await loadKimiVersion() }
         startQuotaTimer()
         startUpdateTimer()
@@ -5480,11 +5482,13 @@ final class KimiCodeBarModel: ObservableObject {
     ///   仅手动点「刷新」按钮时传 true；后台场景（启动、定时器、面板打开、
     ///   设置窗口 onAppear）一律传 false，避免界面无谓闪烁。
     /// - Note: 正在刷新时直接跳过，避免并发刷新同一个 refresh_token 导致服务端轮换冲突。
+    ///   WorkBuddy 账号的签到 + 积分刷新也随此入口统一触发（内部有独立的重入保护）。
     func refresh(showsLoading: Bool = true) {
         guard !isRefreshing else { return }
         isRefreshing = true
         refreshCliActiveAccount()
         refreshAllAccounts(showsLoading: showsLoading)
+        refreshWorkBuddyAccounts()
     }
 
     /// 解析单个 OAuth 账号当前可用的 access token。
@@ -5565,7 +5569,8 @@ final class KimiCodeBarModel: ObservableObject {
         accountWorkBuddyCredits = accountWorkBuddyCredits.filter { validIDs.contains($0.key) }
         accountCheckinDates = accountCheckinDates.filter { validIDs.contains($0.key) }
 
-        for account in snapshot.accounts {
+        for account in snapshot.accounts where account.provider != .workbuddy {
+            // WorkBuddy 账号的 loading / 结果态由 refreshWorkBuddyAccounts() 独立维护
             accountStates[account.id] = .loading
         }
 
@@ -6059,7 +6064,6 @@ final class KimiCodeBarModel: ObservableObject {
 
     func refreshAll() {
         refresh()
-        refreshWorkBuddyAccounts()
         Task {
             await checkForKimiCLIUpdate()
             await checkForAppUpdate()
@@ -6070,14 +6074,22 @@ final class KimiCodeBarModel: ObservableObject {
 
     // MARK: - WorkBuddy 集成
 
-    /// 刷新 WorkBuddy 账号的积分 + 运行状态。
-    /// 遍历 accounts 中 provider == .workbuddy 的账号，逐个签到 + 查积分。
+    /// 刷新 WorkBuddy 账号的积分 + 运行状态，并顺带完成每日签到。
+    /// 由 refresh() 统一触发（启动 / 定时器 / 面板打开 / 手动刷新）。
+    ///
+    /// 签到与积分刷新解耦：
+    /// - 积分：每次调用都会重新查询，保证面板数据新鲜。
+    /// - 签到：仅当 credentials.json 里持久化的 lastCheckinDate 落后于今天（北京时间）
+    ///   时才真正发签到请求，每日每账号最多一次；跨天后下一次定时刷新自动补签。
+    ///
+    /// 多账号串行执行，实际发过签到请求的账号之间间隔 1 秒，避免集中打服务端。
     func refreshWorkBuddyAccounts() {
         isWorkBuddyRunning = WorkBuddyService.shared.isWorkBuddyRunning()
         workBuddyActiveUID = WorkBuddyService.shared.currentActiveUID()
 
         let wbAccounts = accounts.filter { $0.provider == .workbuddy }
-        guard !wbAccounts.isEmpty else { return }
+        guard !wbAccounts.isEmpty, !isRefreshingWorkBuddy else { return }
+        isRefreshingWorkBuddy = true
 
         Task {
             let today = WorkBuddyService.todayString()
@@ -6112,6 +6124,7 @@ final class KimiCodeBarModel: ObservableObject {
                     try? await Task.sleep(nanoseconds: 1_000_000_000)
                 }
             }
+            await MainActor.run { self.isRefreshingWorkBuddy = false }
         }
     }
 
@@ -6134,8 +6147,7 @@ final class KimiCodeBarModel: ObservableObject {
         accounts = snapshot.accounts
         primaryAccountID = snapshot.primaryAccountID
         refresh(showsLoading: false)
-        // 同步触发 WorkBuddy 账号积分刷新，避免被 refreshAllAccounts 的 (nil, nil) 误判为 unauthorized
-        refreshWorkBuddyAccounts()
+        // refresh() 内部已统一触发 WorkBuddy 签到 + 积分刷新
         return nil
     }
 
