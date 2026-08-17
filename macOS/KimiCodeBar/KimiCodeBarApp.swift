@@ -184,8 +184,8 @@ struct KimiLabel: View {
         if model.primaryAccount?.provider == .antigravity {
             if let primary = model.primaryAccount,
                let quota = model.accountAntigravityQuotas[primary.id] {
-                let gPercent = Int(quota.geminiWeekly?.remainingPercent ?? 100)
-                let cPercent = Int(quota.claudeWeekly?.remainingPercent ?? 100)
+                let gPercent = Int(quota.geminiWeekly?.remainingPercent ?? quota.geminiSession?.remainingPercent ?? 0)
+                let cPercent = Int(quota.claudeWeekly?.remainingPercent ?? quota.claudeSession?.remainingPercent ?? 0)
                 Image(nsImage: MenuBarTextRenderer.antigravityImage(geminiPercent: gPercent, claudePercent: cPercent))
             } else {
                 Text(model.text)
@@ -2013,11 +2013,19 @@ private struct AntigravityQuotaCard: View {
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(.kimiTextSecondary)
                 }
-            } else if let quota {
+            } else if let quota, quota.hasPoolQuota {
                 VStack(spacing: 10) {
                     if let gemini = quota.geminiWeekly {
                         AntigravityQuotaBar(
-                            title: "Gemini weekly",
+                            title: languageManager.tr("Gemini 周限额"),
+                            remainingPercent: gemini.remainingPercent,
+                            resetFormatted: gemini.resetTimeFormatted,
+                            color: Color(red: 0.20, green: 0.60, blue: 0.86)
+                        )
+                    }
+                    if let gemini = quota.geminiSession {
+                        AntigravityQuotaBar(
+                            title: languageManager.tr("Gemini 5小时"),
                             remainingPercent: gemini.remainingPercent,
                             resetFormatted: gemini.resetTimeFormatted,
                             color: Color(red: 0.20, green: 0.60, blue: 0.86)
@@ -2025,21 +2033,19 @@ private struct AntigravityQuotaCard: View {
                     }
                     if let claude = quota.claudeWeekly {
                         AntigravityQuotaBar(
-                            title: "Claude/GPT weekly",
+                            title: languageManager.tr("Claude/GPT 周限额"),
                             remainingPercent: claude.remainingPercent,
                             resetFormatted: claude.resetTimeFormatted,
                             color: Color(red: 0.50, green: 0.35, blue: 0.90)
                         )
                     }
-                    if quota.geminiWeekly == nil && quota.claudeWeekly == nil {
-                        ForEach(quota.allBuckets) { bucket in
-                            AntigravityQuotaBar(
-                                title: bucket.name,
-                                remainingPercent: bucket.remainingPercent,
-                                resetFormatted: bucket.resetTimeFormatted,
-                                color: Color(red: 0.20, green: 0.60, blue: 0.86)
-                            )
-                        }
+                    if let claude = quota.claudeSession {
+                        AntigravityQuotaBar(
+                            title: languageManager.tr("Claude/GPT 5小时"),
+                            remainingPercent: claude.remainingPercent,
+                            resetFormatted: claude.resetTimeFormatted,
+                            color: Color(red: 0.50, green: 0.35, blue: 0.90)
+                        )
                     }
                 }
             } else if case .failed(let message) = state {
@@ -2082,7 +2088,7 @@ private struct AntigravityQuotaBar: View {
 
                 Text(String(format: "%.0f%% %@", remainingPercent, languageManager.tr("剩余")))
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.kimiTextSecondary)
+                    .foregroundStyle(remainingPercent <= 0 ? Color.orange : .kimiTextSecondary)
 
                 Spacer()
 
@@ -5890,7 +5896,11 @@ final class KimiCodeBarModel: ObservableObject {
                             guard let token = await self.resolveAntigravityAccessToken(for: account.id) else {
                                 return (account.id, nil, nil)
                             }
-                            switch await self.antigravityService.fetchQuota(accessToken: token, cachedEmail: account.antigravityCredential?.email) {
+                            switch await self.antigravityService.fetchQuota(
+                                accessToken: token,
+                                cachedEmail: account.antigravityCredential?.email,
+                                cachedProjectID: account.antigravityCredential?.projectID
+                            ) {
                             case .success(let quota):
                                 return (account.id, .antigravity(quota), nil)
                             case .failure(let error):
@@ -5927,6 +5937,15 @@ final class KimiCodeBarModel: ObservableObject {
                             self.accountWorkBuddyCredits[id] = credits
                         case .antigravity(let quota):
                             self.accountAntigravityQuotas[id] = quota
+                            if let pid = quota.projectID,
+                               var cred = KimiAccountStore.shared.account(id: id)?.antigravityCredential,
+                               cred.projectID != pid {
+                                cred.projectID = pid
+                                if let plan = quota.planName, !plan.isEmpty {
+                                    cred.planName = plan
+                                }
+                                KimiAccountStore.shared.updateAntigravityCredential(id: id, credential: cred)
+                            }
                         }
                         self.accountStates[id] = .loaded
                     } else if let error {
@@ -5985,8 +6004,8 @@ final class KimiCodeBarModel: ObservableObject {
         case .antigravity:
             quota = nil
             if let aQuota = accountAntigravityQuotas[primaryID] {
-                let g = Int(aQuota.geminiWeekly?.remainingPercent ?? 100)
-                let c = Int(aQuota.claudeWeekly?.remainingPercent ?? 100)
+                let g = Int(aQuota.geminiWeekly?.remainingPercent ?? aQuota.geminiSession?.remainingPercent ?? 0)
+                let c = Int(aQuota.claudeWeekly?.remainingPercent ?? aQuota.claudeSession?.remainingPercent ?? 0)
                 text = "G \(g)% · C \(c)%"
             } else {
                 text = "--"

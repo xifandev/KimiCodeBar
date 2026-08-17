@@ -1,76 +1,6 @@
 {
   "sourceLanguage" : "zh-Hans",
   "strings" : {
-    "%@后重置" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Resets in %@"
-          }
-        }
-      }
-    },
-    "登录 Google 账号" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sign in with Google"
-          }
-        }
-      }
-    },
-    "使用 Google 登录" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sign in with Google"
-          }
-        }
-      }
-    },
-    "点击下方按钮将在默认浏览器中打开 Google 授权页面，授权完成后自动添加该 Antigravity 账号。" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Click the button below to open Google authorization in your default browser. The Antigravity account will be added automatically once authorized."
-          }
-        }
-      }
-    },
-    "该 Google 账号已添加，无需重复添加" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This Google account has already been added."
-          }
-        }
-      }
-    },
-    "剩余" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "left"
-          }
-        }
-      }
-    },
-    "即将重置" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Resetting soon"
-          }
-        }
-      }
-    },
     "" : {
 
     },
@@ -130,6 +60,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ credits"
+          }
+        }
+      }
+    },
+    "%@后重置" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resets in %@"
           }
         }
       }
@@ -201,6 +142,46 @@
         }
       }
     },
+    "Claude/GPT 5小时" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Claude/GPT 5-hour"
+          }
+        }
+      }
+    },
+    "Claude/GPT 周限额" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Claude/GPT weekly"
+          }
+        }
+      }
+    },
+    "Gemini 5小时" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gemini 5-hour"
+          }
+        }
+      }
+    },
+    "Gemini 周限额" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gemini weekly"
+          }
+        }
+      }
+    },
     "7 天使用 Token" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -259,6 +240,9 @@
         }
       }
     },
+    "C" : {
+
+    },
     "CLI 使用中" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -280,6 +264,9 @@
           }
         }
       }
+    },
+    "G" : {
+
     },
     "GitHub Release 接口请求失败：%@" : {
       "extractionState" : "stale",
@@ -346,6 +333,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kimi API returned an error (%1$@): %2$@"
+          }
+        }
+      }
+    },
+    "Kimi Code 本机消耗量" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kimi Code Local Consumption"
+          }
+        }
+      }
+    },
+    "Kimi Code 本机消耗量卡片" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kimi Code Local Consumption Card"
           }
         }
       }
@@ -707,6 +716,17 @@
         }
       }
     },
+    "使用 Google 登录" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in with Google"
+          }
+        }
+      }
+    },
     "保存" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -956,6 +976,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Create and copy an API Key in the Kimi console."
+          }
+        }
+      }
+    },
+    "剩余" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "left"
           }
         }
       }
@@ -1708,6 +1739,17 @@
         }
       }
     },
+    "按住拖动排序" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drag to reorder"
+          }
+        }
+      }
+    },
     "授权已失效，请重新登录" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2225,28 +2267,6 @@
         }
       }
     },
-    "Kimi Code 本机消耗量" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kimi Code Local Consumption"
-          }
-        }
-      }
-    },
-    "Kimi Code 本机消耗量卡片" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kimi Code Local Consumption Card"
-          }
-        }
-      }
-    },
     "极简" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2478,6 +2498,17 @@
         }
       }
     },
+    "点击下方按钮将在默认浏览器中打开 Google 授权页面，授权完成后自动添加该 Antigravity 账号。" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Click the button below to open Google authorization in your default browser. The Antigravity account will be added automatically once authorized."
+          }
+        }
+      }
+    },
     "版本 %@" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2529,6 +2560,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "The version API returned an unexpected status code: %@"
+          }
+        }
+      }
+    },
+    "登录 Google 账号" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in with Google"
           }
         }
       }
@@ -2837,6 +2879,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "This API Key has already been added"
+          }
+        }
+      }
+    },
+    "该 Google 账号已添加，无需重复添加" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This Google account has already been added."
           }
         }
       }
@@ -3211,17 +3264,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Restart to Update"
-          }
-        }
-      }
-    },
-    "按住拖动排序" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Drag to reorder"
           }
         }
       }
