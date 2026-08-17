@@ -362,46 +362,63 @@ public final class AntigravityOAuthService: Sendable {
 // MARK: - Loopback 本地回调服务器
 
 private final class LoopbackOAuthServer: @unchecked Sendable {
-    let port: UInt16
-    let redirectURI: String
+    private(set) var port: UInt16
+    private(set) var redirectURI: String
     private var listener: NWListener?
     private var completion: CheckedContinuation<String, Error>?
     private var expectedState: String = ""
+    private let queue = DispatchQueue(label: "com.kimicodebar.antigravity.oauth.loopback")
 
-    private init(port: UInt16, listener: NWListener) {
-        self.port = port
+    private init(listener: NWListener) {
+        self.port = 0
         self.listener = listener
-        self.redirectURI = "http://127.0.0.1:\(port)/oauth2callback"
+        self.redirectURI = "http://127.0.0.1/oauth2callback"
     }
 
     static func start() async throws -> LoopbackOAuthServer {
         let parameters = NWParameters.tcp
-        let listener = try NWListener(using: parameters, on: .any)
-        
+        parameters.allowLocalEndpointReuse = true
+        parameters.requiredInterfaceType = .loopback
+
+        let listener: NWListener
+        do {
+            listener = try NWListener(using: parameters, on: .any)
+        } catch {
+            throw AntigravityOAuthError.serverError(error.localizedDescription)
+        }
+
+        let server = LoopbackOAuthServer(listener: listener)
+        // Network.framework 要求在 start() 之前设置 newConnectionHandler，
+        // 否则会立刻失败：POSIX 22 Invalid argument。
+        listener.newConnectionHandler = { [weak server] connection in
+            server?.handleConnection(connection)
+        }
+
         return try await withCheckedThrowingContinuation { continuation in
+            var resumed = false
+            func resumeOnce(_ result: Result<LoopbackOAuthServer, Error>) {
+                guard !resumed else { return }
+                resumed = true
+                continuation.resume(with: result)
+            }
+
             listener.stateUpdateHandler = { state in
                 switch state {
                 case .ready:
-                    if let port = listener.port?.rawValue {
-                        let readyServer = LoopbackOAuthServer(port: port, listener: listener)
-                        readyServer.setupConnectionHandler()
-                        continuation.resume(returning: readyServer)
-                    } else {
-                        continuation.resume(throwing: AntigravityOAuthError.serverError("无法获取本地监听端口"))
+                    guard let port = listener.port?.rawValue, port > 0 else {
+                        resumeOnce(.failure(AntigravityOAuthError.serverError("无法获取本地监听端口")))
+                        return
                     }
+                    server.port = port
+                    server.redirectURI = "http://127.0.0.1:\(port)/oauth2callback"
+                    resumeOnce(.success(server))
                 case .failed(let error):
-                    continuation.resume(throwing: AntigravityOAuthError.serverError(error.localizedDescription))
+                    resumeOnce(.failure(AntigravityOAuthError.serverError(error.localizedDescription)))
                 default:
                     break
                 }
             }
-            listener.start(queue: .global())
-        }
-    }
-
-    private func setupConnectionHandler() {
-        listener?.newConnectionHandler = { [weak self] connection in
-            self?.handleConnection(connection)
+            listener.start(queue: server.queue)
         }
     }
 
