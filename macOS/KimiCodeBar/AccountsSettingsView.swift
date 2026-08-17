@@ -424,6 +424,8 @@ private struct AddAccountSheet: View {
                     workBuddyAddEntry
                 } else if selectedProvider == .deepseek {
                     apiKeyInputArea
+                } else if selectedProvider == .antigravity {
+                    antigravityAddEntry
                 } else {
                     // Kimi Code：方式卡片 + 选中 API Key 时展开输入区
                     VStack(spacing: 8) {
@@ -547,6 +549,8 @@ private struct AddAccountSheet: View {
             return Color(red: 0.34, green: 0.53, blue: 1.00).opacity(0.10)
         case .workbuddy:
             return Color(red: 0.42, green: 0.30, blue: 1.00).opacity(0.10)
+        case .antigravity:
+            return Color(red: 0.20, green: 0.60, blue: 0.86).opacity(0.10)
         }
     }
 
@@ -555,6 +559,7 @@ private struct AddAccountSheet: View {
         switch selectedProvider {
         case .deepseek: return languageManager.tr("输入 DeepSeek API Key")
         case .workbuddy: return languageManager.tr("从本地 WorkBuddy 添加")
+        case .antigravity: return languageManager.tr("登录 Google 账号")
         case .kimi: return languageManager.tr("选择登录方式")
         }
     }
@@ -618,6 +623,68 @@ private struct AddAccountSheet: View {
                 apiKeyError = error
             } else {
                 onDismiss()
+            }
+        }
+    }
+
+    // MARK: Antigravity 添加入口
+
+    @State private var isLoggingInAntigravity = false
+
+    private var antigravityAddEntry: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: "info.circle")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.kimiTextTertiary)
+                LText("点击下方按钮将在默认浏览器中打开 Google 授权页面，授权完成后自动添加该 Antigravity 账号。")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.kimiTextSecondary)
+            }
+            .padding(10)
+            .background(Color.kimiTextPrimary.opacity(0.04))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+
+            HStack(spacing: 10) {
+                AccountPrimaryButton(
+                    title: isLoggingInAntigravity ? languageManager.tr("授权中…") : languageManager.tr("使用 Google 登录"),
+                    disabled: isLoggingInAntigravity,
+                    action: { submitAntigravityOAuth() }
+                )
+
+                if isLoggingInAntigravity {
+                    ProgressView()
+                        .controlSize(.small)
+                }
+
+                Spacer()
+
+                Button(action: onDismiss) {
+                    Text(languageManager.tr("取消"))
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.kimiTextSecondary)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
+                }
+                .buttonStyle(.plain)
+                .cursor(.pointingHand)
+                .disabled(isLoggingInAntigravity)
+            }
+        }
+    }
+
+    private func submitAntigravityOAuth() {
+        isLoggingInAntigravity = true
+        apiKeyError = nil
+        Task {
+            let error = await KimiCodeBarModel.shared.startAntigravityOAuthLogin()
+            await MainActor.run {
+                isLoggingInAntigravity = false
+                if let error {
+                    apiKeyError = error
+                } else {
+                    onDismiss()
+                }
             }
         }
     }
@@ -718,6 +785,7 @@ private struct AccountRow: View {
     /// API Key 账号不能写入 CLI 凭证（CLI 只认 access/refresh token 对），不显示「切换账号」。
     private var isOAuth: Bool {
         if case .oauth = credential { return true }
+        if case .antigravity = credential { return true }
         return false
     }
 
@@ -755,6 +823,8 @@ private struct AccountRow: View {
             return Color(red: 0.34, green: 0.53, blue: 1.00).opacity(0.10)
         case .workbuddy:
             return Color(red: 0.42, green: 0.30, blue: 1.00).opacity(0.10)
+        case .antigravity:
+            return Color(red: 0.20, green: 0.60, blue: 0.86).opacity(0.10)
         }
     }
 
@@ -853,7 +923,7 @@ private struct AccountRow: View {
                             action: onEditKey
                         )
                     }
-                } else if isOAuth {
+                } else if isOAuth && provider == .kimi {
                     AccountActionButton(
                         title: languageManager.tr("切换账号"),
                         disabled: isCliActive,

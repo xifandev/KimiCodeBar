@@ -13,6 +13,7 @@ enum AccountProvider: String, Codable, CaseIterable, Identifiable {
     case kimi
     case deepseek
     case workbuddy
+    case antigravity
 
     var id: String { rawValue }
 
@@ -22,6 +23,7 @@ enum AccountProvider: String, Codable, CaseIterable, Identifiable {
         case .kimi: return "Kimi Code"
         case .deepseek: return "DeepSeek"
         case .workbuddy: return "WorkBuddy"
+        case .antigravity: return "Antigravity"
         }
     }
 
@@ -30,6 +32,7 @@ enum AccountProvider: String, Codable, CaseIterable, Identifiable {
         case .kimi: return "k.circle"
         case .deepseek: return "d.circle"
         case .workbuddy: return "w.circle"
+        case .antigravity: return "a.circle"
         }
     }
 
@@ -37,11 +40,13 @@ enum AccountProvider: String, Codable, CaseIterable, Identifiable {
     /// Kimi logo 自带 light/dark 双版，深浅模式自动切换。
     /// DeepSeek logo 品牌蓝在两种背景下都可见，单版本即可。
     /// WorkBuddy logo 紫色两种背景下都可见，单版本即可。
+    /// Antigravity logo 官方图标。
     var logoImageName: String {
         switch self {
         case .kimi: return "kimi-logo"
         case .deepseek: return "deepseek-logo"
         case .workbuddy: return "workbuddy-logo"
+        case .antigravity: return "antigravity-logo"
         }
     }
 
@@ -51,6 +56,7 @@ enum AccountProvider: String, Codable, CaseIterable, Identifiable {
         case .kimi: return [.oauth, .apiKey]
         case .deepseek: return [.apiKey]
         case .workbuddy: return [.localRead]
+        case .antigravity: return [.oauth]
         }
     }
 }
@@ -69,6 +75,7 @@ enum AccountFetchResult: Sendable {
     case kimi(KimiQuota)
     case deepseek(DeepSeekBalance)
     case workbuddy(WorkBuddyCredits)
+    case antigravity(AntigravityQuota)
 }
 
 // MARK: - 账号凭证
@@ -78,6 +85,7 @@ enum AccountCredential: Codable, Equatable {
     case oauth(KimiOAuthToken)
     case apiKey(String)
     case workbuddy(WorkBuddyCredential)
+    case antigravity(AntigravityCredential)
 }
 
 /// WorkBuddy 账号凭证：token 对 + 快照 + 签到日期。
@@ -122,6 +130,12 @@ struct KimiAccount: Codable, Equatable, Identifiable {
     /// WorkBuddy 凭证便捷访问
     var workBuddyCredential: WorkBuddyCredential? {
         if case .workbuddy(let cred) = credential { return cred }
+        return nil
+    }
+
+    /// Antigravity 凭证便捷访问
+    var antigravityCredential: AntigravityCredential? {
+        if case .antigravity(let cred) = credential { return cred }
         return nil
     }
 
@@ -267,6 +281,14 @@ final class KimiAccountStore {
         mutate { format in
             guard let index = format.accounts.firstIndex(where: { $0.id == id }) else { return }
             format.accounts[index].credential = .workbuddy(credential)
+        }
+    }
+
+    /// 更新 Antigravity 账号的凭证（token 刷新后落盘）
+    func updateAntigravityCredential(id: UUID, credential: AntigravityCredential) {
+        mutate { format in
+            guard let index = format.accounts.firstIndex(where: { $0.id == id }) else { return }
+            format.accounts[index].credential = .antigravity(credential)
         }
     }
 

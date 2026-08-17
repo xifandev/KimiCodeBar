@@ -1,6 +1,76 @@
 {
   "sourceLanguage" : "zh-Hans",
   "strings" : {
+    "%@后重置" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resets in %@"
+          }
+        }
+      }
+    },
+    "登录 Google 账号" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in with Google"
+          }
+        }
+      }
+    },
+    "使用 Google 登录" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in with Google"
+          }
+        }
+      }
+    },
+    "点击下方按钮将在默认浏览器中打开 Google 授权页面，授权完成后自动添加该 Antigravity 账号。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Click the button below to open Google authorization in your default browser. The Antigravity account will be added automatically once authorized."
+          }
+        }
+      }
+    },
+    "该 Google 账号已添加，无需重复添加" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This Google account has already been added."
+          }
+        }
+      }
+    },
+    "剩余" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "left"
+          }
+        }
+      }
+    },
+    "即将重置" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resetting soon"
+          }
+        }
+      }
+    },
     "" : {
 
     },

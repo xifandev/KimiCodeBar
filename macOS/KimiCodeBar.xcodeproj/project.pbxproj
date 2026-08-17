@@ -22,6 +22,8 @@
 		7B1CA15E00000000000000000000C1 /* CliCredentialsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B1CA15E00000000000000000000C2 /* CliCredentialsService.swift */; };
 		B9C4D489692D416CA7616C08D907965F /* SparkleUpdater.swift in Sources */ = {isa = PBXBuildFile; fileRef = 528728E8E55940FC93765F944AFE050F /* SparkleUpdater.swift */; };
 		C3C950D6204C47819C0011560E684C68 /* ArchiveSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D072D603E59C42A791F3136E0477FE56 /* ArchiveSettingsView.swift */; };
+		7B1CA15E0000000000A00001 /* AntigravityOAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B1CA15E0000000000A00002 /* AntigravityOAuthService.swift */; };
+		7B1CA15E0000000000A00003 /* AntigravityQuotaService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B1CA15E0000000000A00004 /* AntigravityQuotaService.swift */; };
 		FF4EC20D71184E45B29FFDB3C8BC6524 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 35A4DA7EE8214A199549CDB1B5E1C570 /* Sparkle */; };
 		FFAC0CE5E70E4F17AAD3B902 /* KimiCodeBarQuotaService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02F47923DD8C405BB3237AE1 /* KimiCodeBarQuotaService.swift */; };
 /* End PBXBuildFile section */
@@ -30,6 +32,8 @@
 		02F47923DD8C405BB3237AE1 /* KimiCodeBarQuotaService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KimiCodeBarQuotaService.swift; sourceTree = "<group>"; };
 		2843BDA7749D4A188DD90B73 /* DeepSeekBalanceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepSeekBalanceService.swift; sourceTree = "<group>"; };
 		7B1CA15E0000000000D10002 /* WorkBuddyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkBuddyService.swift; sourceTree = "<group>"; };
+		7B1CA15E0000000000A00002 /* AntigravityOAuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntigravityOAuthService.swift; sourceTree = "<group>"; };
+		7B1CA15E0000000000A00004 /* AntigravityQuotaService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntigravityQuotaService.swift; sourceTree = "<group>"; };
 		2EF9AB1130A844A89CE0075C /* KimiCodeBarApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KimiCodeBarApp.swift; sourceTree = "<group>"; };
 		510792D7AE86479585E4504C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		528728E8E55940FC93765F944AFE050F /* SparkleUpdater.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SparkleUpdater.swift; sourceTree = "<group>"; };
@@ -96,6 +100,8 @@
 				7B1CA15E00000000000000000000A2 /* KimiLocalUsage.swift */,
 				2843BDA7749D4A188DD90B73 /* DeepSeekBalanceService.swift */,
 				7B1CA15E0000000000D10002 /* WorkBuddyService.swift */,
+				7B1CA15E0000000000A00002 /* AntigravityOAuthService.swift */,
+				7B1CA15E0000000000A00004 /* AntigravityQuotaService.swift */,
 				c68dac1893a64de08b00b18830c9deba /* KimiWebLaunchAgentManager.swift */,
 				02F47923DD8C405BB3237AE1 /* KimiCodeBarQuotaService.swift */,
 				9E4D2C7B1A5F48E3B6D09A21 /* KimiOAuthService.swift */,
@@ -191,6 +197,8 @@
 				7B1CA15E00000000000000000000A1 /* KimiLocalUsage.swift in Sources */,
 				145CD546D644400198EA5E79 /* DeepSeekBalanceService.swift in Sources */,
 				7B1CA15E0000000000D10001 /* WorkBuddyService.swift in Sources */,
+				7B1CA15E0000000000A00001 /* AntigravityOAuthService.swift in Sources */,
+				7B1CA15E0000000000A00003 /* AntigravityQuotaService.swift in Sources */,
 				0C489D06D649421680AD66D7 /* KimiCodeBarApp.swift in Sources */,
 				4f9dbf90dffc49ad85242801801d170f /* KimiWebLaunchAgentManager.swift in Sources */,
 				FFAC0CE5E70E4F17AAD3B902 /* KimiCodeBarQuotaService.swift in Sources */,

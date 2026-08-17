@@ -181,7 +181,18 @@ struct KimiLabel: View {
 
     var body: some View {
         // WorkBuddy 主账号：sparkle 图标 + 积分数字
-        if model.primaryAccount?.provider == .workbuddy {
+        if model.primaryAccount?.provider == .antigravity {
+            if let primary = model.primaryAccount,
+               let quota = model.accountAntigravityQuotas[primary.id] {
+                let gPercent = Int(quota.geminiWeekly?.remainingPercent ?? 100)
+                let cPercent = Int(quota.claudeWeekly?.remainingPercent ?? 100)
+                Image(nsImage: MenuBarTextRenderer.antigravityImage(geminiPercent: gPercent, claudePercent: cPercent))
+            } else {
+                Text(model.text)
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .monospacedDigit()
+            }
+        } else if model.primaryAccount?.provider == .workbuddy {
             if let primary = model.primaryAccount,
                let credits = model.accountWorkBuddyCredits[primary.id] {
                 Image(nsImage: MenuBarTextRenderer.workBuddyImage(creditsText: credits.remainingText))
@@ -318,6 +329,35 @@ enum MenuBarTextRenderer {
             Text(creditsText)
                 .font(.system(size: 12, weight: .medium, design: .default))
                 .monospacedDigit()
+        }
+        .foregroundStyle(textColor)
+        .frame(height: 20)
+        .fixedSize(horizontal: true, vertical: false)
+
+        return render(content)
+    }
+
+    /// Antigravity 两行进度：Gemini / Claude 剩余百分比
+    static func antigravityImage(geminiPercent: Int, claudePercent: Int) -> NSImage {
+        let content = VStack(alignment: .trailing, spacing: -1) {
+            HStack(spacing: 2) {
+                Text("G")
+                    .font(.system(size: 10, weight: .bold, design: .default))
+                    .frame(width: 12, alignment: .leading)
+                Text(percentageText(geminiPercent))
+                    .font(percentageFont(for: geminiPercent))
+                    .monospacedDigit()
+                    .frame(width: 30, alignment: .trailing)
+            }
+            HStack(spacing: 2) {
+                Text("C")
+                    .font(.system(size: 10, weight: .bold, design: .default))
+                    .frame(width: 12, alignment: .leading)
+                Text(percentageText(claudePercent))
+                    .font(percentageFont(for: claudePercent))
+                    .monospacedDigit()
+                    .frame(width: 30, alignment: .trailing)
+            }
         }
         .foregroundStyle(textColor)
         .frame(height: 20)
@@ -1626,6 +1666,8 @@ struct AccountQuotaListView: View {
                     DeepSeekBalanceCard(account: account)
                 } else if account.provider == .workbuddy {
                     WorkBuddyCard(account: account)
+                } else if account.provider == .antigravity {
+                    AntigravityQuotaCard(account: account)
                 } else {
                     SingleAccountQuotaCards(account: account)
                 }
@@ -1637,6 +1679,8 @@ struct AccountQuotaListView: View {
                             DeepSeekBalanceCard(account: account)
                         } else if account.provider == .workbuddy {
                             WorkBuddyCard(account: account)
+                        } else if account.provider == .antigravity {
+                            AntigravityQuotaCard(account: account, isPrimary: isPrimary)
                         } else {
                             AccountQuotaCard(
                                 account: account,
@@ -1899,6 +1943,170 @@ private struct WorkBuddyCard: View {
             .padding(.vertical, 1)
             .background(color.opacity(0.12))
             .clipShape(RoundedRectangle(cornerRadius: 4))
+    }
+}
+
+// MARK: - Antigravity 用量卡片
+
+private struct AntigravityQuotaCard: View {
+    let account: KimiAccount
+    var isPrimary: Bool = false
+
+    @StateObject private var model = KimiCodeBarModel.shared
+    @StateObject private var languageManager = LanguageManager.shared
+
+    private var quota: AntigravityQuota? {
+        model.accountAntigravityQuotas[account.id]
+    }
+
+    private var state: KimiAccountState {
+        model.accountStates[account.id] ?? .idle
+    }
+
+    private var isLoading: Bool {
+        if case .loading = state { return true }
+        return false
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            // 标头：Logo + 账号名 + 套餐名 + 状态
+            HStack(spacing: 6) {
+                Image(account.provider.logoImageName)
+                    .resizable()
+                    .interpolation(.high)
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 16, height: 16)
+
+                Text(model.displayName(for: account))
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.kimiTextSecondary)
+                    .lineLimit(1)
+
+                if let plan = quota?.planName, !plan.isEmpty {
+                    tagPill(plan, color: .purple)
+                }
+
+                if case .unauthorized = state {
+                    tagPill(languageManager.tr("登录失效"), color: .red)
+                }
+
+                Spacer(minLength: 8)
+
+                if isLoading && quota == nil {
+                    LoadingRing()
+                        .frame(width: 12, height: 12)
+                }
+            }
+
+            Rectangle()
+                .fill(Color.kimiTextPrimary.opacity(0.06))
+                .frame(height: 1)
+
+            if case .unauthorized = state {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.red)
+
+                    LText("登录失效，请到设置-账号管理处理")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.kimiTextSecondary)
+                }
+            } else if let quota {
+                VStack(spacing: 10) {
+                    if let gemini = quota.geminiWeekly {
+                        AntigravityQuotaBar(
+                            title: "Gemini weekly",
+                            remainingPercent: gemini.remainingPercent,
+                            resetFormatted: gemini.resetTimeFormatted,
+                            color: Color(red: 0.20, green: 0.60, blue: 0.86)
+                        )
+                    }
+                    if let claude = quota.claudeWeekly {
+                        AntigravityQuotaBar(
+                            title: "Claude/GPT weekly",
+                            remainingPercent: claude.remainingPercent,
+                            resetFormatted: claude.resetTimeFormatted,
+                            color: Color(red: 0.50, green: 0.35, blue: 0.90)
+                        )
+                    }
+                    if quota.geminiWeekly == nil && quota.claudeWeekly == nil {
+                        ForEach(quota.allBuckets) { bucket in
+                            AntigravityQuotaBar(
+                                title: bucket.name,
+                                remainingPercent: bucket.remainingPercent,
+                                resetFormatted: bucket.resetTimeFormatted,
+                                color: Color(red: 0.20, green: 0.60, blue: 0.86)
+                            )
+                        }
+                    }
+                }
+            } else if case .failed(let message) = state {
+                Text(message)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.kimiTextTertiary)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(Color.kimiCardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    private func tagPill(_ text: String, color: Color) -> some View {
+        Text(text)
+            .font(.system(size: 9, weight: .medium))
+            .foregroundStyle(color)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 1)
+            .background(color.opacity(0.12))
+            .clipShape(RoundedRectangle(cornerRadius: 4))
+    }
+}
+
+private struct AntigravityQuotaBar: View {
+    let title: String
+    let remainingPercent: Double
+    let resetFormatted: String?
+    let color: Color
+
+    @StateObject private var languageManager = LanguageManager.shared
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(title)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.kimiTextPrimary)
+
+                Text(String(format: "%.0f%% %@", remainingPercent, languageManager.tr("剩余")))
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.kimiTextSecondary)
+
+                Spacer()
+
+                if let reset = resetFormatted {
+                    Text(String(format: languageManager.tr("%@后重置"), reset))
+                        .font(.system(size: 11))
+                        .foregroundStyle(.kimiTextTertiary)
+                }
+            }
+
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .frame(height: 5)
+                        .foregroundStyle(Color.kimiTextPrimary.opacity(0.10))
+
+                    Capsule()
+                        .frame(width: max(0, proxy.size.width * CGFloat(min(remainingPercent, 100)) / 100), height: 5)
+                        .foregroundStyle(color)
+                        .shadow(color: color.opacity(0.4), radius: 2, x: 0, y: 1)
+                }
+            }
+            .frame(height: 5)
+        }
     }
 }
 
@@ -5365,6 +5573,9 @@ final class KimiCodeBarModel: ObservableObject {
     @Published var accountQuotas: [UUID: KimiQuota] = [:]
     /// 每个账号最近一次拉取成功的余额（失败时保留旧值）。仅 DeepSeek 账号有值。
     @Published var accountBalances: [UUID: DeepSeekBalance] = [:]
+    /// 每个账号最近一次拉取成功的 Antigravity 配额（失败时保留旧值）。仅 Antigravity 账号有值。
+    @Published var accountAntigravityQuotas: [UUID: AntigravityQuota] = [:]
+    let antigravityService = AntigravityQuotaService.shared
     /// 每个账号的加载状态（错误隔离：单账号失败不影响其他账号）
     @Published var accountStates: [UUID: KimiAccountState] = [:]
     /// CLI 活跃账号（与 CLI 凭证文件 token 匹配的账号），用于账号列表「CLI 使用中」标签；
@@ -5529,6 +5740,63 @@ final class KimiCodeBarModel: ObservableObject {
         }
     }
 
+    /// 解析 Antigravity 账号当前可用的 Access Token（自动刷新）
+    private func resolveAntigravityAccessToken(for accountID: UUID) async -> String? {
+        let store = KimiAccountStore.shared
+        guard let account = store.account(id: accountID),
+              case .antigravity(let cred) = account.credential,
+              cred.isValid else {
+            return nil
+        }
+
+        guard cred.needsRefresh else {
+            return cred.accessToken
+        }
+
+        if let latest = store.freshAccount(id: accountID),
+           case .antigravity(let freshCred) = latest.credential,
+           freshCred.accessToken != cred.accessToken,
+           !freshCred.needsRefresh {
+            return freshCred.accessToken
+        }
+
+        do {
+            let refreshed = try await AntigravityOAuthService.shared.refreshAccessToken(credential: cred)
+            store.updateAntigravityCredential(id: accountID, credential: refreshed)
+            return refreshed.accessToken
+        } catch {
+            return nil
+        }
+    }
+
+    /// 启动 Antigravity Google OAuth 登录流程
+    @discardableResult
+    func startAntigravityOAuthLogin() async -> String? {
+        do {
+            let cred = try await AntigravityOAuthService.shared.startOAuthLogin()
+            let store = KimiAccountStore.shared
+            if store.snapshot.accounts.contains(where: { $0.antigravityCredential?.email == cred.email }) {
+                return LanguageManager.tr("该 Google 账号已添加，无需重复添加")
+            }
+            let account = KimiAccount(
+                id: UUID(),
+                alias: nil,
+                provider: .antigravity,
+                credential: .antigravity(cred),
+                accountIdentifier: cred.email
+            )
+            store.addAccount(account)
+            store.ensurePrimaryAccount()
+            let snapshot = store.snapshot
+            accounts = snapshot.accounts
+            primaryAccountID = snapshot.primaryAccountID
+            refresh(showsLoading: false)
+            return nil
+        } catch {
+            return error.localizedDescription
+        }
+    }
+
     // MARK: - 多账号刷新
 
     /// 并行刷新全部账号的配额。错误隔离：单账号失败（含登录失效）只标记该账号，
@@ -5554,6 +5822,7 @@ final class KimiCodeBarModel: ObservableObject {
             isRefreshing = false
             accountQuotas = [:]
             accountBalances = [:]
+            accountAntigravityQuotas = [:]
             accountStates = [:]
             accountWorkBuddyCredits = [:]
             accountCheckinDates = [:]
@@ -5565,6 +5834,7 @@ final class KimiCodeBarModel: ObservableObject {
         let validIDs = Set(snapshot.accounts.map(\.id))
         accountQuotas = accountQuotas.filter { validIDs.contains($0.key) }
         accountBalances = accountBalances.filter { validIDs.contains($0.key) }
+        accountAntigravityQuotas = accountAntigravityQuotas.filter { validIDs.contains($0.key) }
         accountStates = accountStates.filter { validIDs.contains($0.key) }
         accountWorkBuddyCredits = accountWorkBuddyCredits.filter { validIDs.contains($0.key) }
         accountCheckinDates = accountCheckinDates.filter { validIDs.contains($0.key) }
@@ -5589,7 +5859,7 @@ final class KimiCodeBarModel: ObservableObject {
                                 token = await self.resolveAccessToken(for: account.id)
                             case .apiKey(let key):
                                 token = key
-                            case .workbuddy:
+                            case .workbuddy, .antigravity:
                                 token = nil
                             }
                             guard let accessToken = token else {
@@ -5612,6 +5882,19 @@ final class KimiCodeBarModel: ObservableObject {
                             case .failure(let error):
                                 // Key 无效（401/403）按「登录失效」处理，引导用户修改 Key
                                 if case .httpError(let statusCode, _) = error, statusCode == 401 || statusCode == 403 {
+                                    return (account.id, nil, nil)
+                                }
+                                return (account.id, nil, error)
+                            }
+                        case .antigravity:
+                            guard let token = await self.resolveAntigravityAccessToken(for: account.id) else {
+                                return (account.id, nil, nil)
+                            }
+                            switch await self.antigravityService.fetchQuota(accessToken: token, cachedEmail: account.antigravityCredential?.email) {
+                            case .success(let quota):
+                                return (account.id, .antigravity(quota), nil)
+                            case .failure(let error):
+                                if case .httpError(let statusCode, _) = error, statusCode == 401 {
                                     return (account.id, nil, nil)
                                 }
                                 return (account.id, nil, error)
@@ -5642,6 +5925,8 @@ final class KimiCodeBarModel: ObservableObject {
                             self.accountBalances[id] = balance
                         case .workbuddy(let credits):
                             self.accountWorkBuddyCredits[id] = credits
+                        case .antigravity(let quota):
+                            self.accountAntigravityQuotas[id] = quota
                         }
                         self.accountStates[id] = .loaded
                     } else if let error {
@@ -5657,6 +5942,7 @@ final class KimiCodeBarModel: ObservableObject {
                 let validIDs = Set(latest.accounts.map(\.id))
                 self.accountQuotas = self.accountQuotas.filter { validIDs.contains($0.key) }
                 self.accountBalances = self.accountBalances.filter { validIDs.contains($0.key) }
+                self.accountAntigravityQuotas = self.accountAntigravityQuotas.filter { validIDs.contains($0.key) }
                 self.accountStates = self.accountStates.filter { validIDs.contains($0.key) }
                 self.accountWorkBuddyCredits = self.accountWorkBuddyCredits.filter { validIDs.contains($0.key) }
                 self.accountCheckinDates = self.accountCheckinDates.filter { validIDs.contains($0.key) }
@@ -5693,6 +5979,15 @@ final class KimiCodeBarModel: ObservableObject {
             quota = nil
             if let balance = accountBalances[primaryID] {
                 text = balance.balanceText
+            } else {
+                text = "--"
+            }
+        case .antigravity:
+            quota = nil
+            if let aQuota = accountAntigravityQuotas[primaryID] {
+                let g = Int(aQuota.geminiWeekly?.remainingPercent ?? 100)
+                let c = Int(aQuota.claudeWeekly?.remainingPercent ?? 100)
+                text = "G \(g)% · C \(c)%"
             } else {
                 text = "--"
             }
@@ -5829,6 +6124,7 @@ final class KimiCodeBarModel: ObservableObject {
         primaryAccountID = snapshot.primaryAccountID
         accountQuotas.removeValue(forKey: id)
         accountBalances.removeValue(forKey: id)
+        accountAntigravityQuotas.removeValue(forKey: id)
         accountStates.removeValue(forKey: id)
         accountWorkBuddyCredits.removeValue(forKey: id)
         accountCheckinDates.removeValue(forKey: id)
@@ -5864,6 +6160,28 @@ final class KimiCodeBarModel: ObservableObject {
     /// 重新授权：对指定账号重走设备授权流程，成功后替换其 token 并更新账号标识。
     /// 用于「登录失效」的账号恢复；不会删除该账号的别名等其它信息。
     func reauthorizeAccount(_ id: UUID) {
+        guard let account = accounts.first(where: { $0.id == id }) else { return }
+        if account.provider == .antigravity {
+            Task {
+                do {
+                    let cred = try await AntigravityOAuthService.shared.startOAuthLogin()
+                    let store = KimiAccountStore.shared
+                    store.updateAntigravityCredential(id: id, credential: cred)
+                    store.updateAccountIdentifier(id: id, identifier: cred.email)
+                    await MainActor.run {
+                        self.accounts = store.snapshot.accounts
+                        self.accountStates[id] = .idle
+                        self.refresh(showsLoading: false)
+                    }
+                } catch {
+                    await MainActor.run {
+                        self.accountStates[id] = .failed(error.localizedDescription)
+                    }
+                }
+            }
+            return
+        }
+
         runDeviceAuthorizationFlow(autoOpenBrowser: false) { token in
             var identifier: String?
             if case .success(let quota) = await self.service.fetchQuota(token: token.accessToken) {
@@ -5954,6 +6272,8 @@ final class KimiCodeBarModel: ObservableObject {
         case .workbuddy:
             // WorkBuddy 走独立 addWorkBuddyAccount()（读本地 auth 文件），这里兜底返回错误
             return LanguageManager.tr("WorkBuddy 账号请用本地读取方式添加")
+        case .antigravity:
+            return LanguageManager.tr("Antigravity 账号请使用 Google 授权登录")
         }
     }
 
@@ -5999,6 +6319,8 @@ final class KimiCodeBarModel: ObservableObject {
         case .workbuddy:
             // WorkBuddy Key 不可修改（认证态由 WorkBuddy 客户端管理）
             return LanguageManager.tr("WorkBuddy 账号 Key 由 WorkBuddy 客户端管理")
+        case .antigravity:
+            return LanguageManager.tr("Antigravity 账号请使用重新授权")
         }
     }
 
@@ -6026,12 +6348,15 @@ final class KimiCodeBarModel: ObservableObject {
         if let alias = account.alias?.trimmingCharacters(in: .whitespacesAndNewlines), !alias.isEmpty {
             return alias
         }
-        // 无别名兜底：DeepSeek 账号默认叫 "DeepSeek"，WorkBuddy 用客户端昵称，Kimi 走"账号 N"
+        // 无别名兜底：DeepSeek 账号默认叫 "DeepSeek"，WorkBuddy 用客户端昵称，Antigravity 用邮箱，Kimi 走"账号 N"
         if account.provider == .deepseek {
             return "DeepSeek"
         }
         if account.provider == .workbuddy, let cred = account.workBuddyCredential {
             return cred.nickname
+        }
+        if account.provider == .antigravity, let cred = account.antigravityCredential {
+            return cred.email
         }
         let index = accounts.firstIndex(where: { $0.id == account.id }) ?? 0
         return LanguageManager.tr("账号 %1$d", arguments: [index + 1])
