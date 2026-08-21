@@ -1843,6 +1843,7 @@ private struct WorkBuddyCard: View {
     @StateObject private var languageManager = LanguageManager.shared
 
     @State private var isHoveredLaunch = false
+    @State private var isHoveredReauth = false
 
     private var credits: WorkBuddyCredits? {
         model.accountWorkBuddyCredits[account.id]
@@ -1922,6 +1923,34 @@ private struct WorkBuddyCard: View {
                 .cursor(.pointingHand)
                 .onHover { isHoveredLaunch = $0 }
                 .help(languageManager.tr("启动 WorkBuddy"))
+            } else if case .unauthorized = state {
+                // 登录失效：红字提示 + 「重新授权」按钮（走 OAuth 浏览器登录）
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.red)
+                    LText("登录失效")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.red)
+                }
+
+                Button(action: { model.reauthorizeWorkBuddyAccount() }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 10, weight: .medium))
+                        LText("重新授权")
+                            .font(.system(size: 11, weight: .medium))
+                    }
+                    .foregroundStyle(isHoveredReauth ? .white : .white.opacity(0.95))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(isHoveredReauth ? Color.kimiBlue.opacity(0.85) : Color.kimiBlue)
+                    .clipShape(RoundedRectangle(cornerRadius: 5))
+                }
+                .buttonStyle(.plain)
+                .cursor(.pointingHand)
+                .onHover { isHoveredReauth = $0 }
+                .help(languageManager.tr("通过浏览器重新登录该 WorkBuddy 账号"))
             } else {
                 Text("--")
                     .font(.system(size: 15, weight: .semibold, design: .rounded))
@@ -6467,13 +6496,18 @@ final class KimiCodeBarModel: ObservableObject {
 
                 // Reload account (checkin may have refreshed token)
                 let refreshed = KimiAccountStore.shared.freshAccount(id: account.id) ?? account
-                let credits = await WorkBuddyService.shared.fetchCredits(account: refreshed)
+                let outcome = await WorkBuddyService.shared.fetchCredits(account: refreshed)
                 await MainActor.run {
-                    if let credits {
+                    switch outcome {
+                    case .success(let credits):
                         accountWorkBuddyCredits[account.id] = credits
                         accountStates[account.id] = .loaded
-                    } else {
-                        accountStates[account.id] = .failed("积分获取失败")
+                    case .unauthorized:
+                        // SSO session 失效：清掉旧积分避免 UI 残留显示，状态置 unauthorized 触发红字 + 重新授权按钮
+                        accountWorkBuddyCredits.removeValue(forKey: account.id)
+                        accountStates[account.id] = .unauthorized
+                    case .failed(let msg):
+                        accountStates[account.id] = .failed(msg)
                     }
                 }
 

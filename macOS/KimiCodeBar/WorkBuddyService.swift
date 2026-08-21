@@ -14,6 +14,16 @@ struct WorkBuddyCredits: Equatable {
     }
 }
 
+/// fetchCredits 的返回类型，区分三种情况让 UI 给出对应状态提示：
+/// - success：积分正常返回
+/// - unauthorized：服务端 SSO session 失效（HTTP 401/403），需走 OAuth 重新登录
+/// - failed：网络错误 / 响应解析失败等，附带错误描述
+enum WorkBuddyFetchOutcome: Equatable {
+    case success(WorkBuddyCredits)
+    case unauthorized
+    case failed(String)
+}
+
 // MARK: - WorkBuddy 服务
 
 /// WorkBuddy 集成服务：
@@ -166,25 +176,55 @@ final class WorkBuddyService {
 
     // MARK: - 查积分
 
-    /// 查询指定账号的剩余积分 + 套餐名。失败返回 nil。
-    /// Token 快过期时自动刷新。
-    func fetchCredits(account: KimiAccount) async -> WorkBuddyCredits? {
-        guard var cred = account.workBuddyCredential else { return nil }
+    /// 查询指定账号的剩余积分 + 套餐名。
+    /// 返回 WorkBuddyFetchOutcome 让调用方区分 401 失效 / 网络错误 / 正常成功三种状态。
+    /// Token 快过期时自动刷新（refresh_token grant 在 console client 上禁用，
+    /// 实际很少触发；服务端 SSO session 失效时返回 .unauthorized 让 UI 引导重登）。
+    func fetchCredits(account: KimiAccount) async -> WorkBuddyFetchOutcome {
+        guard var cred = account.workBuddyCredential else {
+            return .failed("账号凭证缺失")
+        }
 
         if isTokenExpiringSoon(cred.accessToken) {
             if let refreshed = await refreshToken(cred: cred) {
                 cred = refreshed
                 KimiAccountStore.shared.updateWorkBuddyCredential(id: account.id, credential: refreshed)
             } else {
-                return nil
+                // refresh_token grant 被 Keycloak 后台禁用，refresh 必然失败；
+                // 这种情况按 unauthorized 处理（实际更可能是 access_token 已被服务端吊销）
+                return .unauthorized
             }
         }
 
-        guard let (data, _) = try? await session.data(for: makeRequest(path: "/v2/billing/meter/get-user-resource", cred: cred)),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let code = (json["code"] as? NSNumber)?.intValue ?? (json["code"] as? Int),
-              code == 0 else {
-            return nil
+        let request = makeRequest(path: "/v2/billing/meter/get-user-resource", cred: cred)
+        let data: Data
+        let http: HTTPURLResponse
+        do {
+            let (rawData, response) = try await session.data(for: request)
+            guard let httpResponse = response as? HTTPURLResponse else {
+                return .failed("服务端响应格式异常")
+            }
+            data = rawData
+            http = httpResponse
+        } catch {
+            return .failed("网络错误：\(error.localizedDescription)")
+        }
+
+        // 401/403 = SSO session 失效（access_token JWT 没过期但服务端 session 表里查不到 sid）
+        if http.statusCode == 401 || http.statusCode == 403 {
+            return .unauthorized
+        }
+        if http.statusCode != 200 {
+            return .failed("HTTP \(http.statusCode)")
+        }
+
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let code = (json["code"] as? NSNumber)?.intValue ?? (json["code"] as? Int) else {
+            return .failed("响应解析失败")
+        }
+        if code != 0 {
+            let msg = (json["msg"] as? String) ?? "code=\(code)"
+            return .failed("服务端错误：\(msg)")
         }
 
         let resp = (json["data"] as? [String: Any])?["Response"] as? [String: Any]
@@ -217,7 +257,7 @@ final class WorkBuddyService {
             }
         }
 
-        return WorkBuddyCredits(remaining: total, tier: simplifyTier(tierName))
+        return .success(WorkBuddyCredits(remaining: total, tier: simplifyTier(tierName)))
     }
 
     // MARK: - 刷新 Token

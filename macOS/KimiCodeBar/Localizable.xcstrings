@@ -3480,6 +3480,17 @@
           }
         }
       }
+    },
+    "通过浏览器重新登录该 WorkBuddy 账号" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Re-authorize this WorkBuddy account via browser"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"
