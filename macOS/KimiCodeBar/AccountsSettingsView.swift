@@ -38,19 +38,39 @@ struct AccountsSettingsView: View {
     // 拖拽排序状态：正在拖拽的账号 ID（用于被拖卡片降透明度 + 落点重置）
     @State private var draggingAccountID: UUID?
 
-    /// 是否展示「添加账号」卡片：
-    /// 有账号、授权流程进行中、或授权失败有待展示的错误时展示。
-    /// 平台 / Key 表单全部移到 sheet 内，主面板不再承担表单态。
-    private var showsAddAccountCard: Bool {
-        !model.accounts.isEmpty || model.oauthLoginInProgress || model.oauthLoginError != nil
-    }
-
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                LText("账号管理")
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundStyle(.kimiTextPrimary)
+                // 顶部标题 + 添加账号按钮
+                HStack(spacing: 16) {
+                    LText("账号管理")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(.kimiTextPrimary)
+
+                    Spacer()
+
+                    AccountPrimaryButton(
+                        title: languageManager.tr("添加账号"),
+                        disabled: model.oauthLoginInProgress
+                    ) {
+                        showAddAccountSheet = true
+                    }
+                }
+
+                // 授权中 / 授权失败提示
+                if model.oauthLoginInProgress, let auth = model.oauthDeviceAuth {
+                    SettingsCard {
+                        AddAccountAuthorizingView(auth: auth)
+                    }
+                }
+
+                if let error = model.oauthLoginError {
+                    SettingsCard {
+                        ErrorMessageView(message: error)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                    }
+                }
 
                 // 账号列表：Kimi / DeepSeek / WorkBuddy 不分组，每个账号一张独立卡片
                 if model.accounts.isEmpty {
@@ -110,26 +130,6 @@ struct AccountsSettingsView: View {
                         model: model,
                         draggingAccountID: $draggingAccountID
                     ))
-                }
-
-                // 添加账号 / 授权引导
-                if showsAddAccountCard {
-                    SettingsCard {
-                        VStack(alignment: .leading, spacing: 0) {
-                            if model.oauthLoginInProgress, let auth = model.oauthDeviceAuth {
-                                AddAccountAuthorizingView(auth: auth)
-                            } else {
-                                addAccountRow
-                            }
-
-                            if let error = model.oauthLoginError {
-                                SettingsCardDivider()
-                                ErrorMessageView(message: error)
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 12)
-                            }
-                        }
-                    }
                 }
             }
             .padding(.horizontal, 24)
@@ -277,50 +277,9 @@ struct AccountsSettingsView: View {
             LText("添加账号后，即可在菜单栏查看各账号的配额使用情况")
                 .font(.system(size: 12))
                 .foregroundStyle(.kimiTextSecondary)
-
-            AccountPrimaryButton(
-                title: languageManager.tr("添加账号"),
-                disabled: model.oauthLoginInProgress
-            ) {
-                showAddAccountSheet = true
-            }
-            .padding(.top, 4)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 24)
-    }
-
-    // MARK: 添加账号入口行
-
-    private var addAccountRow: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "person.badge.plus")
-                .font(.system(size: 22, weight: .regular))
-                .foregroundStyle(.kimiTextTertiary)
-                .frame(width: 32, height: 32)
-                .background(Color.kimiTextPrimary.opacity(0.06))
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-
-            VStack(alignment: .leading, spacing: 3) {
-                LText("添加账号")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.kimiTextPrimary)
-            }
-
-            Spacer()
-
-            if model.oauthLoginInProgress {
-                // 已发起授权、等待设备授权码返回中
-                ProgressView()
-                    .controlSize(.small)
-            } else {
-                AccountPrimaryButton(title: languageManager.tr("添加账号")) {
-                    showAddAccountSheet = true
-                }
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 13)
     }
 }
 
