@@ -1909,8 +1909,11 @@ private struct WorkBuddyCard: View {
                         .lineLimit(1)
                 }
 
-                // 启动按钮：写该账号到 auth 文件 → 重启 WorkBuddy（切换 + 启动）
-                Button(action: { model.launchWorkBuddy(account: account) }) {
+                // 启动按钮：设为主账号 → 写该账号到 auth 文件 → 重启 WorkBuddy（切换 + 启动）
+                Button(action: {
+                    model.setPrimaryAccount(account.id)
+                    model.launchWorkBuddy(account: account)
+                }) {
                     Image(systemName: "play.fill")
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(isHoveredLaunch ? .kimiTextPrimary : .kimiTextSecondary)
