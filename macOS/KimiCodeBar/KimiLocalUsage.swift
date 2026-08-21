@@ -349,14 +349,14 @@ struct LocalUsageCard: View {
     }
 
     /// 图表展示的天数：
-    /// - 累计档：最近 30 个「有记录的天」（按数量而非时间范围，近期用量少时
+    /// - 累计档：最近 25 个「有记录的天」（按数量而非时间范围，近期用量少时
     ///   也能拉出历史柱子，图表密度稳定），大数字仍按全量累计
     /// - 7天档：固定 7 根柱子（今天往前 6 天），缺失的天补 0 值占位，避免只显示几根
     /// - 今日档：由 todayWaveChart 处理，不走此处
     private var chartDays: [LocalUsageDay] {
         switch range {
         case .all:
-            return Array(filteredDays.suffix(30))
+            return Array(filteredDays.suffix(25))
         case .week:
             // 固定 7 根柱子：缺失的天补 0 值占位，柱状图始终对齐 7 天
             let calendar = Calendar.current
