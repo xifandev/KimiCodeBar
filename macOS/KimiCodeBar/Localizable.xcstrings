@@ -3107,13 +3107,13 @@
         }
       }
     },
-    "近 30 天暂无记录" : {
+    "暂无记录" : {
       "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No Records in Last 30 Days"
+            "value" : "No Records"
           }
         }
       }

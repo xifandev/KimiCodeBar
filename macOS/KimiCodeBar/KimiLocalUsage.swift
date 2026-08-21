@@ -349,15 +349,14 @@ struct LocalUsageCard: View {
     }
 
     /// 图表展示的天数：
-    /// - 累计档：近 30 个自然日（全历史柱子太密），大数字仍按全量累计
+    /// - 累计档：最近 30 个「有记录的天」（按数量而非时间范围，近期用量少时
+    ///   也能拉出历史柱子，图表密度稳定），大数字仍按全量累计
     /// - 7天档：固定 7 根柱子（今天往前 6 天），缺失的天补 0 值占位，避免只显示几根
     /// - 今日档：由 todayWaveChart 处理，不走此处
     private var chartDays: [LocalUsageDay] {
         switch range {
         case .all:
-            let calendar = Calendar.current
-            let start = calendar.date(byAdding: .day, value: -29, to: calendar.startOfDay(for: Date())) ?? .distantPast
-            return filteredDays.filter { $0.date >= start }
+            return Array(filteredDays.suffix(30))
         case .week:
             // 固定 7 根柱子：缺失的天补 0 值占位，柱状图始终对齐 7 天
             let calendar = Calendar.current
@@ -522,8 +521,8 @@ struct LocalUsageCard: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: chartHeight + tooltipZoneHeight)
         } else if chartDays.isEmpty {
-            // 仅累计档可能出现：历史有记录但近 30 天无记录
-            LText("近 30 天暂无记录")
+            // 理论上不可达（累计档按数量取，有记录必有柱子），防御性兜底
+            LText("暂无记录")
                 .font(.system(size: 13))
                 .foregroundStyle(.kimiTextTertiary)
                 .frame(maxWidth: .infinity)
@@ -572,7 +571,6 @@ struct LocalUsageCard: View {
             // 7天/今日档：柱子稍宽(24px)+适中间距(8px)居中排列；累计档：撑满槽位
             let isSparse = count <= 7
             let barWidth: CGFloat = 24
-            let gap: CGFloat = 8
             let slotWidth = width / CGFloat(count)
             let chartBottomY = chartHeight + tooltipZoneHeight
 
