@@ -2018,33 +2018,33 @@ private struct AntigravityQuotaCard: View {
                     if let gemini = quota.geminiWeekly {
                         AntigravityQuotaBar(
                             title: languageManager.tr("Gemini 周限额"),
-                            remainingPercent: gemini.remainingPercent,
+                            usedPercent: gemini.usedPercent,
                             resetFormatted: gemini.resetTimeFormatted,
-                            color: Color(red: 0.20, green: 0.60, blue: 0.86)
+                            color: .kimiBlue
                         )
                     }
                     if let gemini = quota.geminiSession {
                         AntigravityQuotaBar(
                             title: languageManager.tr("Gemini 5小时"),
-                            remainingPercent: gemini.remainingPercent,
+                            usedPercent: gemini.usedPercent,
                             resetFormatted: gemini.resetTimeFormatted,
-                            color: Color(red: 0.20, green: 0.60, blue: 0.86)
+                            color: .kimiBlue
                         )
                     }
                     if let claude = quota.claudeWeekly {
                         AntigravityQuotaBar(
                             title: languageManager.tr("Claude/GPT 周限额"),
-                            remainingPercent: claude.remainingPercent,
+                            usedPercent: claude.usedPercent,
                             resetFormatted: claude.resetTimeFormatted,
-                            color: Color(red: 0.50, green: 0.35, blue: 0.90)
+                            color: .kimiBlue
                         )
                     }
                     if let claude = quota.claudeSession {
                         AntigravityQuotaBar(
                             title: languageManager.tr("Claude/GPT 5小时"),
-                            remainingPercent: claude.remainingPercent,
+                            usedPercent: claude.usedPercent,
                             resetFormatted: claude.resetTimeFormatted,
-                            color: Color(red: 0.50, green: 0.35, blue: 0.90)
+                            color: .kimiBlue
                         )
                     }
                 }
@@ -2071,47 +2071,52 @@ private struct AntigravityQuotaCard: View {
     }
 }
 
+/// Antigravity 单行限额条：样式对齐 Kimi 卡片 MinimalQuotaRow（「7天 10%」那一行）：
+/// 灰色名称（对应「7天」）+ 主色百分比数字（对应「10%」）+ 3pt 细进度条 + 右侧重置时间。
 private struct AntigravityQuotaBar: View {
     let title: String
-    let remainingPercent: Double
+    let usedPercent: Double
     let resetFormatted: String?
     let color: Color
 
     @StateObject private var languageManager = LanguageManager.shared
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text(title)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.kimiTextPrimary)
+        HStack(spacing: 8) {
+            // 限额名称：灰色次级文本，同 Kimi 卡「7天」/「5时」层级
+            Text(title)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(.kimiTextSecondary)
+                .lineLimit(1)
 
-                Text(String(format: "%.0f%% %@", remainingPercent, languageManager.tr("剩余")))
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(remainingPercent <= 0 ? Color.orange : .kimiTextSecondary)
+            // 百分比数字：主色加粗，同 Kimi 卡「10%」样式
+            Text("\(Int(usedPercent.rounded()))%")
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(.kimiTextPrimary)
 
-                Spacer()
-
-                if let reset = resetFormatted {
-                    Text(String(format: languageManager.tr("%@后重置"), reset))
-                        .font(.system(size: 11))
-                        .foregroundStyle(.kimiTextTertiary)
-                }
-            }
-
+            // 进度条：3pt 细线单色，与 Kimi 卡同款粗细
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
                     Capsule()
-                        .frame(height: 5)
+                        .frame(height: 3)
                         .foregroundStyle(Color.kimiTextPrimary.opacity(0.10))
 
                     Capsule()
-                        .frame(width: max(0, proxy.size.width * CGFloat(min(remainingPercent, 100)) / 100), height: 5)
+                        .frame(width: max(0, proxy.size.width * CGFloat(min(usedPercent, 100)) / 100), height: 3)
                         .foregroundStyle(color)
-                        .shadow(color: color.opacity(0.4), radius: 2, x: 0, y: 1)
                 }
             }
-            .frame(height: 5)
+            .frame(height: 3)
+
+            // 重置时间靠右
+            if let reset = resetFormatted {
+                Text(String(format: languageManager.tr("%@后重置"), reset))
+                    .font(.system(size: 10))
+                    .foregroundStyle(.kimiTextTertiary)
+                    .lineLimit(1)
+                    .fixedSize()
+            }
         }
     }
 }
@@ -6201,6 +6206,14 @@ final class KimiCodeBarModel: ObservableObject {
             return
         }
 
+        if account.provider == .workbuddy {
+            // WorkBuddy 浏览器 OAuth 重新登录：浏览器里登录哪个账号由用户决定，
+            // 登录后按 uid 匹配现有账号覆盖（不存在则新增）。失败时不挂到 id 的 state，
+            // 因为可能影响任意账号；用 errorMessage 全局提示。
+            reauthorizeWorkBuddyAccount()
+            return
+        }
+
         runDeviceAuthorizationFlow(autoOpenBrowser: false) { token in
             var identifier: String?
             if case .success(let quota) = await self.service.fetchQuota(token: token.accessToken) {
@@ -6503,6 +6516,56 @@ final class KimiCodeBarModel: ObservableObject {
         WorkBuddyService.shared.restartWorkBuddy { [weak self] in
             self?.isWorkBuddyRunning = WorkBuddyService.shared.isWorkBuddyRunning()
             self?.workBuddyActiveUID = WorkBuddyService.shared.currentActiveUID()
+        }
+    }
+
+    // MARK: - WorkBuddy OAuth 浏览器登录
+
+    /// 通过 OAuth Authorization Code + PKCE 浏览器登录添加 WorkBuddy 账号。
+    /// 不依赖 WorkBuddy 桌面端切账号，每个账号浏览器登录一次 30 秒搞定。
+    /// 成功返回 nil；失败返回错误描述（用于弹窗显示）。
+    func startWorkBuddyOAuthLogin() async -> String? {
+        do {
+            let cred = try await WorkBuddyOAuthService.shared.startOAuthLogin()
+            let store = KimiAccountStore.shared
+            // 去重：相同 uid 的已有账号直接更新 credential（相当于重新授权）
+            if let existing = store.snapshot.accounts.first(where: { $0.accountIdentifier == cred.uid }) {
+                store.updateWorkBuddyCredential(id: existing.id, credential: cred)
+            } else {
+                store.addAccount(KimiAccount(
+                    id: UUID(),
+                    alias: nil,
+                    provider: .workbuddy,
+                    credential: .workbuddy(cred),
+                    accountIdentifier: cred.uid
+                ))
+            }
+            store.ensurePrimaryAccount()
+            let snapshot = store.snapshot
+            accounts = snapshot.accounts
+            primaryAccountID = snapshot.primaryAccountID
+            refresh(showsLoading: false)
+            return nil
+        } catch {
+            return error.localizedDescription
+        }
+    }
+
+    /// 重新授权已失效的 WorkBuddy 账号：跑一遍 OAuth 浏览器登录。
+    /// 浏览器里登录哪个账号由用户决定，登录后按 uid 匹配现有账号（已有则更新，没有则新增），
+    /// 不预先指定目标账号——避免「点了 A 的重新授权却拿到 B 的 token」错位。
+    func reauthorizeWorkBuddyAccount() {
+        Task {
+            let error = await startWorkBuddyOAuthLogin()
+            await MainActor.run {
+                if let error {
+                    // 直接显示在 errorMessage 让用户看到，不挂到具体账号 state 上（可能涉及任意账号）
+                    self.errorMessage = error
+                } else {
+                    // startWorkBuddyOAuthLogin 内部已 refresh()
+                    self.refresh(showsLoading: false)
+                }
+            }
         }
     }
 

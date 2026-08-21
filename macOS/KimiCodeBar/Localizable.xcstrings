@@ -142,46 +142,6 @@
         }
       }
     },
-    "Claude/GPT 5小时" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Claude/GPT 5-hour"
-          }
-        }
-      }
-    },
-    "Claude/GPT 周限额" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Claude/GPT weekly"
-          }
-        }
-      }
-    },
-    "Gemini 5小时" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gemini 5-hour"
-          }
-        }
-      }
-    },
-    "Gemini 周限额" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gemini weekly"
-          }
-        }
-      }
-    },
     "7 天使用 Token" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -243,6 +203,28 @@
     "C" : {
 
     },
+    "Claude/GPT 5小时" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Claude/GPT 5-hour"
+          }
+        }
+      }
+    },
+    "Claude/GPT 周限额" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Claude/GPT weekly"
+          }
+        }
+      }
+    },
     "CLI 使用中" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -267,6 +249,28 @@
     },
     "G" : {
 
+    },
+    "Gemini 5小时" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gemini 5-hour"
+          }
+        }
+      }
+    },
+    "Gemini 周限额" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gemini weekly"
+          }
+        }
+      }
     },
     "GitHub Release 接口请求失败：%@" : {
       "extractionState" : "stale",
@@ -3385,6 +3389,94 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Default"
+          }
+        }
+      }
+    },
+    "浏览器授权登录（推荐）" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in with Browser (Recommended)"
+          }
+        }
+      }
+    },
+    "开始授权" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start Authorization"
+          }
+        }
+      }
+    },
+    "授权中…" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Authorizing…"
+          }
+        }
+      }
+    },
+    "将在系统私密浏览窗口中打开 WorkBuddy 登录页，登录任意账号后自动添加。token 失效时可用同样方式重新授权。" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opens the WorkBuddy sign-in page in a private system browser window. Sign in to any account and it will be added automatically. Re-authorize the same way when tokens expire."
+          }
+        }
+      }
+    },
+    "从 WorkBuddy 桌面端读取" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Read from WorkBuddy Desktop"
+          }
+        }
+      }
+    },
+    "需先在 WorkBuddy 客户端登录目标账号，再点下方按钮读取本地登录信息。" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in to the target account in the WorkBuddy client first, then click the button below to read local credentials."
+          }
+        }
+      }
+    },
+    "读取本地" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Read Local"
+          }
+        }
+      }
+    },
+    "读取中…" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reading…"
           }
         }
       }
