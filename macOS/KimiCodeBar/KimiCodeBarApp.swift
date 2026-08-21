@@ -1843,6 +1843,7 @@ private struct WorkBuddyCard: View {
     @StateObject private var languageManager = LanguageManager.shared
 
     @State private var isHoveredLaunch = false
+    @State private var isHoveredForceLaunch = false
 
     private var credits: WorkBuddyCredits? {
         model.accountWorkBuddyCredits[account.id]
@@ -1923,10 +1924,31 @@ private struct WorkBuddyCard: View {
                 .onHover { isHoveredLaunch = $0 }
                 .help(languageManager.tr("启动 WorkBuddy"))
             } else {
+                // 失效账号：显示 -- + 「强制启动」按钮
+                // 强制启动 = 把该账号 token（哪怕失效）写进 WorkBuddy 桌面端 auth 文件 + 重启客户端
+                // 用于测试腾讯 WorkBuddy 桌面端打开时能否自动救活失效 token
                 Text("--")
                     .font(.system(size: 15, weight: .semibold, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(.kimiTextTertiary)
+
+                Button(action: { model.launchWorkBuddy(account: account) }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "bolt.fill")
+                            .font(.system(size: 10, weight: .medium))
+                        LText("强制启动")
+                            .font(.system(size: 11, weight: .medium))
+                    }
+                    .foregroundStyle(isHoveredForceLaunch ? .white : .white.opacity(0.95))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(isHoveredForceLaunch ? Color.orange.opacity(0.85) : Color.orange)
+                    .clipShape(RoundedRectangle(cornerRadius: 5))
+                }
+                .buttonStyle(.plain)
+                .cursor(.pointingHand)
+                .onHover { isHoveredForceLaunch = $0 }
+                .help(languageManager.tr("将该账号 token 写入 WorkBuddy 客户端并重启，测试客户端能否自动救活失效 token"))
             }
         }
         .padding(.horizontal, 14)

@@ -3480,6 +3480,28 @@
           }
         }
       }
+    },
+    "强制启动" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Force Launch"
+          }
+        }
+      }
+    },
+    "将该账号 token 写入 WorkBuddy 客户端并重启，测试客户端能否自动救活失效 token" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Write this account's token to WorkBuddy client and restart it, to test whether the client can auto-recover an expired token"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"
