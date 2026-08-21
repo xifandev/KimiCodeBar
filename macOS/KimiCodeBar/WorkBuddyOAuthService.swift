@@ -9,11 +9,11 @@ import CryptoKit
 /// 与现有「读取 WorkBuddy 桌面端 auth 文件」方式并列，作为更健壮的添加 / 重新授权入口：
 /// 不依赖桌面端切账号、token 失效时可在 Bar 内直接重登一次。
 ///
-/// Keycloak 后台只允许 redirect_uri 白名单（含 https://www.codebuddy.cn/auth/callback），
+/// Keycloak 后台只允许 redirect_uri 白名单（含 https://www.workbuddy.cn/auth/callback），
 /// localhost / 自定义 scheme 全被拒（实测 console client 配置严格），所以用
 /// ASWebAuthenticationSession 在系统认证窗口中拦截官方 callback URL。
 enum WorkBuddyOAuthConstants {
-    static let issuer = "https://www.codebuddy.cn/auth/realms/copilot"
+    static let issuer = "https://www.workbuddy.cn/auth/realms/copilot"
     static let authURL = "\(issuer)/protocol/openid-connect/auth"
     static let tokenURL = "\(issuer)/protocol/openid-connect/token"
 
@@ -21,7 +21,7 @@ enum WorkBuddyOAuthConstants {
     static let clientID = "console"
 
     /// Keycloak 白名单允许的 redirect_uri（不接受 localhost / custom scheme）
-    static let redirectURI = "https://www.codebuddy.cn/auth/callback"
+    static let redirectURI = "https://www.workbuddy.cn/auth/callback"
 
     /// scope：openid 拿 id_token，profile/email 拿账号信息，offline_access 拿长效 refresh_token
     static let scopes = "openid profile email offline_access"
@@ -65,7 +65,7 @@ enum WorkBuddyOAuthError: LocalizedError, Equatable {
 
 /// WorkBuddy OAuth 服务：Authorization Code + PKCE 流程。
 ///
-/// 调用 `startOAuthLogin()` → 弹出系统认证窗口 → 用户在 codebuddy.cn 登录 →
+/// 调用 `startOAuthLogin()` → 弹出系统认证窗口 → 用户在 workbuddy.cn 登录 →
 /// ASWebAuthenticationSession 拦截 callback URL → 解析 code → 用 code+code_verifier
 /// 换 token → 解析 JWT 拿 uid 和 preferred_username → 返回 WorkBuddyCredential。
 final class WorkBuddyOAuthService {
@@ -122,7 +122,7 @@ final class WorkBuddyOAuthService {
         }
 
         // 在系统认证窗口中打开授权 URL；callbackURLScheme=nil 让 session 接受任何 scheme 跳转
-        // （Keycloak 会让浏览器跳到 https://www.codebuddy.cn/auth/callback?code=...&state=...）
+        // （Keycloak 会让浏览器跳到 https://www.workbuddy.cn/auth/callback?code=...&state=...）
         let callbackURL: URL
         do {
             callbackURL = try await WorkBuddyAuthSessionManager.shared.start(
@@ -225,7 +225,7 @@ final class WorkBuddyOAuthService {
             nickname: preferredUsername,
             accessToken: resp.access_token,
             refreshToken: refreshToken,
-            domain: "www.codebuddy.cn",
+            domain: "www.workbuddy.cn",
             // 浏览器登录拿不到 account/auth 快照，签到和切换走 token 直调 API 即可
             accountSnapshot: nil,
             authSnapshot: nil,
@@ -274,7 +274,7 @@ final class WorkBuddyAuthSessionManager {
     private var provider: WorkBuddyAuthPresentationProvider?
 
     /// 启动 session 等待回调 URL。callbackURLScheme=nil 时接受任何 scheme 的跳转
-    /// （Keycloak 会让浏览器跳到 https://www.codebuddy.cn/auth/callback?code=...&state=...）。
+    /// （Keycloak 会让浏览器跳到 https://www.workbuddy.cn/auth/callback?code=...&state=...）。
     func start(url: URL, callbackURLScheme: String?) async throws -> URL {
         // 取消上一个未结束的 session（避免并发调用）
         cancel()
