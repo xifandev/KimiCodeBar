@@ -529,117 +529,60 @@ private struct AddAccountSheet: View {
 
     // MARK: WorkBuddy 添加入口
 
-    /// WorkBuddy 平台添加入口：两种方式并列。
-    /// - 浏览器登录（推荐）：走 OAuth Authorization Code + PKCE，不依赖 WorkBuddy 桌面端切账号
-    /// - 读取本地：兼容旧方式，从 WorkBuddy 桌面端 auth 文件读当前登录账号
+    /// WorkBuddy 平台添加入口：从 WorkBuddy 桌面端 auth 文件读取当前登录账号。
     @State private var isReadingWorkBuddy = false
-    @State private var isOAuthingWorkBuddy = false
 
     private var workBuddyAddEntry: some View {
         VStack(alignment: .leading, spacing: 10) {
-            // 方式一：浏览器登录（推荐）
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 8) {
-                    Image(systemName: "person.badge.key")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.kimiTextTertiary)
-                    LText("浏览器授权登录（推荐）")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.kimiTextPrimary)
-                }
-
-                LText("将在系统私密浏览窗口中打开 WorkBuddy 登录页，登录任意账号后自动添加。token 失效时可用同样方式重新授权。")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.kimiTextSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                HStack(spacing: 10) {
-                    AccountPrimaryButton(
-                        title: isOAuthingWorkBuddy ? languageManager.tr("授权中…") : languageManager.tr("开始授权"),
-                        disabled: isOAuthingWorkBuddy,
-                        action: { submitWorkBuddyOAuth() }
-                    )
-
-                    if isOAuthingWorkBuddy {
-                        ProgressView()
-                            .controlSize(.small)
-                    }
-
-                    Spacer()
-                }
-            }
-            .padding(10)
-            .background(Color.kimiTextPrimary.opacity(0.04))
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-
-            // 方式二：读取本地（兼容旧方式）
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 8) {
-                    Image(systemName: "info.circle")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.kimiTextTertiary)
-                    LText("从 WorkBuddy 桌面端读取")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.kimiTextSecondary)
-                }
-
-                LText("需先在 WorkBuddy 客户端登录目标账号，再点下方按钮读取本地登录信息。")
+            HStack(spacing: 8) {
+                Image(systemName: "info.circle")
                     .font(.system(size: 11))
                     .foregroundStyle(.kimiTextTertiary)
+                LText("从 WorkBuddy 桌面端读取")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.kimiTextSecondary)
+            }
 
-                HStack(spacing: 10) {
-                    Button(action: { submitWorkBuddyAdd() }) {
-                        Text(isReadingWorkBuddy ? languageManager.tr("读取中…") : languageManager.tr("读取本地"))
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(.kimiTextSecondary)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 7)
-                            .background(Color.kimiTextPrimary.opacity(0.06))
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                    }
-                    .buttonStyle(.plain)
-                    .cursor(.pointingHand)
-                    .disabled(isReadingWorkBuddy)
+            LText("需先在 WorkBuddy 客户端登录目标账号，再点下方按钮读取本地登录信息。")
+                .font(.system(size: 11))
+                .foregroundStyle(.kimiTextTertiary)
 
-                    if isReadingWorkBuddy {
-                        ProgressView()
-                            .controlSize(.small)
-                    }
-
-                    Spacer()
-
-                    Button(action: onDismiss) {
-                        Text(languageManager.tr("取消"))
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(.kimiTextSecondary)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 7)
-                    }
-                    .buttonStyle(.plain)
-                    .cursor(.pointingHand)
-                    .disabled(isReadingWorkBuddy || isOAuthingWorkBuddy)
+            HStack(spacing: 10) {
+                Button(action: { submitWorkBuddyAdd() }) {
+                    Text(isReadingWorkBuddy ? languageManager.tr("读取中…") : languageManager.tr("读取本地"))
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.kimiTextSecondary)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
+                        .background(Color.kimiTextPrimary.opacity(0.06))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
+                .buttonStyle(.plain)
+                .cursor(.pointingHand)
+                .disabled(isReadingWorkBuddy)
+
+                if isReadingWorkBuddy {
+                    ProgressView()
+                        .controlSize(.small)
+                }
+
+                Spacer()
+
+                Button(action: onDismiss) {
+                    Text(languageManager.tr("取消"))
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.kimiTextSecondary)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
+                }
+                .buttonStyle(.plain)
+                .cursor(.pointingHand)
+                .disabled(isReadingWorkBuddy)
             }
 
             if let apiKeyError {
                 ErrorMessageView(message: apiKeyError)
                     .padding(.horizontal, 4)
-            }
-        }
-    }
-
-    private func submitWorkBuddyOAuth() {
-        isOAuthingWorkBuddy = true
-        apiKeyError = nil
-        Task {
-            let error = await KimiCodeBarModel.shared.startWorkBuddyOAuthLogin()
-            await MainActor.run {
-                isOAuthingWorkBuddy = false
-                if let error {
-                    apiKeyError = error
-                } else {
-                    onDismiss()
-                }
             }
         }
     }
@@ -815,7 +758,8 @@ private struct AccountRow: View {
     @StateObject private var languageManager = LanguageManager.shared
     @State private var isHoveredGrip = false
 
-    /// 是否走 OAuth 流程（可重新授权）：Kimi OAuth、Antigravity OAuth、WorkBuddy OAuth 均属于此类。
+    /// 是否走 OAuth 流程（可重新授权）：Kimi OAuth、Antigravity OAuth 属于此类。
+    /// WorkBuddy 也按 OAuth 展示会员等级标签，但不提供重新授权按钮（仅支持本地读取）。
     /// API Key 账号走「修改 Key」入口，不在此列。
     private var isOAuth: Bool {
         if case .oauth = credential { return true }
@@ -942,7 +886,8 @@ private struct AccountRow: View {
                 )
 
                 if case .unauthorized = state {
-                    if isOAuth {
+                    // WorkBuddy 不展示重新授权/修改 Key 按钮，token 失效后用户需重新读取本地或删除账号
+                    if isOAuth, provider != .workbuddy {
                         AccountActionButton(
                             title: languageManager.tr("重新授权"),
                             color: .kimiBlue,
@@ -950,7 +895,7 @@ private struct AccountRow: View {
                             disabled: reauthorizeDisabled,
                             action: onReauthorize
                         )
-                    } else {
+                    } else if provider != .workbuddy {
                         AccountActionButton(
                             title: languageManager.tr("修改 Key"),
                             color: .kimiBlue,

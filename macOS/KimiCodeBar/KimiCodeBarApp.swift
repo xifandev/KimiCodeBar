@@ -1843,7 +1843,6 @@ private struct WorkBuddyCard: View {
     @StateObject private var languageManager = LanguageManager.shared
 
     @State private var isHoveredLaunch = false
-    @State private var isHoveredReauth = false
 
     private var credits: WorkBuddyCredits? {
         model.accountWorkBuddyCredits[account.id]
@@ -1924,7 +1923,7 @@ private struct WorkBuddyCard: View {
                 .onHover { isHoveredLaunch = $0 }
                 .help(languageManager.tr("启动 WorkBuddy"))
             } else if case .unauthorized = state {
-                // 登录失效：红字提示 + 「重新授权」按钮（走 OAuth 浏览器登录）
+                // 登录失效：仅显示红字提示（WorkBuddy 只支持本地读取，不提供在线重新授权）
                 HStack(spacing: 6) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.system(size: 10, weight: .medium))
@@ -1933,24 +1932,6 @@ private struct WorkBuddyCard: View {
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(.red)
                 }
-
-                Button(action: { model.reauthorizeWorkBuddyAccount() }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 10, weight: .medium))
-                        LText("重新授权")
-                            .font(.system(size: 11, weight: .medium))
-                    }
-                    .foregroundStyle(isHoveredReauth ? .white : .white.opacity(0.95))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(isHoveredReauth ? Color.kimiBlue.opacity(0.85) : Color.kimiBlue)
-                    .clipShape(RoundedRectangle(cornerRadius: 5))
-                }
-                .buttonStyle(.plain)
-                .cursor(.pointingHand)
-                .onHover { isHoveredReauth = $0 }
-                .help(languageManager.tr("通过浏览器重新登录该 WorkBuddy 账号"))
             } else {
                 Text("--")
                     .font(.system(size: 15, weight: .semibold, design: .rounded))
@@ -6235,14 +6216,6 @@ final class KimiCodeBarModel: ObservableObject {
             return
         }
 
-        if account.provider == .workbuddy {
-            // WorkBuddy 浏览器 OAuth 重新登录：浏览器里登录哪个账号由用户决定，
-            // 登录后按 uid 匹配现有账号覆盖（不存在则新增）。失败时不挂到 id 的 state，
-            // 因为可能影响任意账号；用 errorMessage 全局提示。
-            reauthorizeWorkBuddyAccount()
-            return
-        }
-
         runDeviceAuthorizationFlow(autoOpenBrowser: false) { token in
             var identifier: String?
             if case .success(let quota) = await self.service.fetchQuota(token: token.accessToken) {
@@ -6550,56 +6523,6 @@ final class KimiCodeBarModel: ObservableObject {
         WorkBuddyService.shared.restartWorkBuddy { [weak self] in
             self?.isWorkBuddyRunning = WorkBuddyService.shared.isWorkBuddyRunning()
             self?.workBuddyActiveUID = WorkBuddyService.shared.currentActiveUID()
-        }
-    }
-
-    // MARK: - WorkBuddy OAuth 浏览器登录
-
-    /// 通过 OAuth Authorization Code + PKCE 浏览器登录添加 WorkBuddy 账号。
-    /// 不依赖 WorkBuddy 桌面端切账号，每个账号浏览器登录一次 30 秒搞定。
-    /// 成功返回 nil；失败返回错误描述（用于弹窗显示）。
-    func startWorkBuddyOAuthLogin() async -> String? {
-        do {
-            let cred = try await WorkBuddyOAuthService.shared.startOAuthLogin()
-            let store = KimiAccountStore.shared
-            // 去重：相同 uid 的已有账号直接更新 credential（相当于重新授权）
-            if let existing = store.snapshot.accounts.first(where: { $0.accountIdentifier == cred.uid }) {
-                store.updateWorkBuddyCredential(id: existing.id, credential: cred)
-            } else {
-                store.addAccount(KimiAccount(
-                    id: UUID(),
-                    alias: nil,
-                    provider: .workbuddy,
-                    credential: .workbuddy(cred),
-                    accountIdentifier: cred.uid
-                ))
-            }
-            store.ensurePrimaryAccount()
-            let snapshot = store.snapshot
-            accounts = snapshot.accounts
-            primaryAccountID = snapshot.primaryAccountID
-            refresh(showsLoading: false)
-            return nil
-        } catch {
-            return error.localizedDescription
-        }
-    }
-
-    /// 重新授权已失效的 WorkBuddy 账号：跑一遍 OAuth 浏览器登录。
-    /// 浏览器里登录哪个账号由用户决定，登录后按 uid 匹配现有账号（已有则更新，没有则新增），
-    /// 不预先指定目标账号——避免「点了 A 的重新授权却拿到 B 的 token」错位。
-    func reauthorizeWorkBuddyAccount() {
-        Task {
-            let error = await startWorkBuddyOAuthLogin()
-            await MainActor.run {
-                if let error {
-                    // 直接显示在 errorMessage 让用户看到，不挂到具体账号 state 上（可能涉及任意账号）
-                    self.errorMessage = error
-                } else {
-                    // startWorkBuddyOAuthLogin 内部已 refresh()
-                    self.refresh(showsLoading: false)
-                }
-            }
         }
     }
 
