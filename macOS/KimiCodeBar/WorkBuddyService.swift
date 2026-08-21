@@ -45,7 +45,7 @@ final class WorkBuddyService {
 
     private let session: URLSession
     private let baseURL = "https://copilot.tencent.com"
-    private let refreshURL = "https://www.workbuddy.cn/auth/realms/copilot/protocol/openid-connect/token"
+    private let refreshURL = "https://www.codebuddy.cn/auth/realms/copilot/protocol/openid-connect/token"
 
     /// WorkBuddy 控制台（用量 / 套餐页），底部「控制台」按钮跳转入口
     static let consoleURL = URL(string: "https://www.workbuddy.cn/profile/plans-usage")!
@@ -79,7 +79,7 @@ final class WorkBuddyService {
         let cred = WorkBuddyCredential(
             uid: uid, nickname: nickname,
             accessToken: accessToken, refreshToken: refreshToken,
-            domain: "www.workbuddy.cn",
+            domain: "www.codebuddy.cn",
             accountSnapshot: accountSnapshot, authSnapshot: authSnapshot,
             lastCheckinDate: nil
         )
