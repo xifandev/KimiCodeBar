@@ -75,7 +75,11 @@ struct AccountsSettingsView: View {
                                     onSwitchCli: { requestCliSwitch(account) },
                                     onRename: {
                                         renamingAccount = account
-                                        renameText = account.alias ?? ""
+                                        if let alias = account.alias?.trimmingCharacters(in: .whitespacesAndNewlines), !alias.isEmpty {
+                                            renameText = alias
+                                        } else {
+                                            renameText = model.displayName(for: account)
+                                        }
                                         showRenameAlert = true
                                     },
                                     onDelete: {
