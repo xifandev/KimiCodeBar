@@ -32,7 +32,9 @@ struct BoosterWallet: Equatable {
 }
 
 struct KimiQuota: Equatable {
-    let weekly: QuotaDetail
+    /// 7 天（周）用量。新会员体系（月度计费套餐）已取消每周额度，
+    /// 后端响应中不再有该窗口，此时为 nil，UI 不展示周维度。
+    let weekly: QuotaDetail?
     let fiveHour: QuotaDetail
     let totalQuota: QuotaDetail
     /// 月度总额度（新会员体系的月限额）。仅部分账号的后端响应包含该字段：
@@ -94,6 +96,13 @@ final class KimiCodeBarQuotaService {
         return f
     }()
 
+    /// 不带毫秒部分的 ISO8601（新会员体系 usages 下的 reset_time 就是这种格式）
+    private let isoFormatterNoFraction: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime]
+        return f
+    }()
+
     /// 查询配额。token 可以是 API Key（sk-kimi- 前缀）或 OAuth access token，
     /// 两者均以同样的 `Authorization: Bearer` 头携带，服务端不做区分。
     func fetchQuota(token: String) async -> Result<KimiQuota, QuotaError> {
@@ -132,7 +141,13 @@ final class KimiCodeBarQuotaService {
         let result = await fetchQuota(token: token)
         switch result {
         case .success(let quota):
-            return LanguageManager.tr("周%1$d%% 5h %2$d%%", arguments: [quota.weekly.percentage, quota.fiveHour.percentage])
+            if let weekly = quota.weekly {
+                return LanguageManager.tr("周%1$d%% 5h %2$d%%", arguments: [weekly.percentage, quota.fiveHour.percentage])
+            }
+            if let monthly = quota.monthly {
+                return LanguageManager.tr("30d %1$d%% · 5h %2$d%%", arguments: [monthly.percentage, quota.fiveHour.percentage])
+            }
+            return LanguageManager.tr("5h %d%%", arguments: [quota.fiveHour.percentage])
         case .failure:
             return "--"
         }
@@ -180,6 +195,12 @@ final class KimiCodeBarQuotaService {
                 struct RatioEntry: Codable {
                     let usedRatio: Double?
                     let resetTime: String?
+
+                    // usages 下的子字段是蛇形命名（与 limits.detail 的 camelCase 不同）
+                    enum CodingKeys: String, CodingKey {
+                        case usedRatio = "used_ratio"
+                        case resetTime = "reset_time"
+                    }
                 }
                 let limit5h: RatioEntry?
                 let limit7d: RatioEntry?
@@ -232,12 +253,35 @@ final class KimiCodeBarQuotaService {
             return nil
         }
 
-        let weekly = makeDetail(
-            limit: resp.usage?.limit,
-            used: resp.usage?.used,
-            remaining: resp.usage?.remaining,
-            resetTime: resp.usage?.resetTime
-        )
+        // 新会员体系的按窗口用量汇总只下发 used_ratio（0~1 小数）+ reset_time，
+        // 换算为百分比存进 QuotaDetail（used=百分比、limit=100）以复用现有展示逻辑。
+        func makePercentDetail(usedRatio: Double?, resetTime: String?) -> QuotaDetail? {
+            guard let usedRatio else { return nil }
+            let pct = max(0, min(100, Int((usedRatio * 100).rounded())))
+            return QuotaDetail(
+                used: pct,
+                limit: 100,
+                remaining: 100 - pct,
+                resetTime: parseDate(resetTime),
+                percentage: pct
+            )
+        }
+
+        // 周用量：老套餐走 usage 对象的绝对数值；新会员体系（月度计费套餐）没有 7 天窗口，
+        // usage 与 usages.limit_7d 都不返回，此时 weekly 为 nil，UI 按字段有无动态展示。
+        let weekly: QuotaDetail?
+        if let usage = resp.usage {
+            weekly = makeDetail(
+                limit: usage.limit,
+                used: usage.used,
+                remaining: usage.remaining,
+                resetTime: usage.resetTime
+            )
+        } else if let entry = resp.usages?.limit7d {
+            weekly = makePercentDetail(usedRatio: entry.usedRatio, resetTime: entry.resetTime)
+        } else {
+            weekly = nil
+        }
 
         var fiveHour = QuotaDetail(used: 0, limit: 0, remaining: 0, resetTime: nil, percentage: 0)
         if let limit = resp.limits?.first(where: { $0.window.duration == 300 }) {
@@ -256,19 +300,11 @@ final class KimiCodeBarQuotaService {
             resetTime: nil
         )
 
-        // 月度总额度：used_ratio 是 0~1 小数，换算为百分比存进 QuotaDetail（limit=100）。
-        // 后端未返回该字段（老计划可能不返回）时为 nil，UI 按字段有无动态展示。
-        let monthly: QuotaDetail? = resp.usages?.limitMonthTotal.flatMap { entry in
-            guard let ratio = entry.usedRatio else { return nil }
-            let pct = max(0, min(100, Int((ratio * 100).rounded())))
-            return QuotaDetail(
-                used: pct,
-                limit: 100,
-                remaining: 100 - pct,
-                resetTime: parseDate(entry.resetTime),
-                percentage: pct
-            )
-        }
+        // 月度总额度：后端未返回该字段（老计划可能不返回）时为 nil，UI 按字段有无动态展示。
+        let monthly = makePercentDetail(
+            usedRatio: resp.usages?.limitMonthTotal?.usedRatio,
+            resetTime: resp.usages?.limitMonthTotal?.resetTime
+        )
 
         let membershipLevel = resp.user?.membership?.level
 
@@ -337,6 +373,9 @@ final class KimiCodeBarQuotaService {
     private func parseDate(_ string: String?) -> Date? {
         guard let string = string else { return nil }
         if let date = isoFormatter.date(from: string) {
+            return date
+        }
+        if let date = isoFormatterNoFraction.date(from: string) {
             return date
         }
         let fallback = DateFormatter()

@@ -128,8 +128,28 @@
     "✨" : {
 
     },
+    "30d %1$d%% · 5h %2$d%%" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "30D %1$d%% · 5H %2$d%%"
+          }
+        }
+      }
+    },
     "5H" : {
 
+    },
+    "5h %d%%" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "5H %d%%"
+          }
+        }
+      }
     },
     "5小时用量" : {
       "extractionState" : "stale",

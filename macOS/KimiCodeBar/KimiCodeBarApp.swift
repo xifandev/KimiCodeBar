@@ -214,7 +214,7 @@ struct KimiLabel: View {
         } else if let quota = model.quota {
             Image(nsImage: MenuBarTextRenderer.image(
                 scheme: model.menuBarDisplayScheme,
-                weekly: quota.weekly.percentage,
+                weekly: quota.weekly?.percentage,
                 fiveHour: quota.fiveHour.percentage,
                 monthly: quota.monthly?.percentage
             ))
@@ -289,7 +289,8 @@ enum MenuBarTextRenderer {
     // 模板图只读取 alpha 通道，实际染色由系统按菜单栏明暗外观决定，此处颜色只需保证不透明
     private static let textColor = Color.black
 
-    static func image(scheme: MenuBarDisplayScheme, weekly: Int, fiveHour: Int, monthly: Int? = nil) -> NSImage {
+    /// weekly 为 nil 表示新会员体系（月度计费套餐）没有 7 天窗口，7D 行不渲染。
+    static func image(scheme: MenuBarDisplayScheme, weekly: Int?, fiveHour: Int, monthly: Int? = nil) -> NSImage {
         switch scheme {
         case .compact:
             return compactImage(weekly: weekly, fiveHour: fiveHour, monthly: monthly)
@@ -370,22 +371,26 @@ enum MenuBarTextRenderer {
     /// 原始紧凑样式：48pt 宽，两行 7D/5H。
     /// 这是用户已经深度微调过的样式，原封不动保留。
     /// 后端返回月限额时追加第三行 30D，标签列加宽并整体加高以容纳三行。
-    private static func compactImage(weekly: Int, fiveHour: Int, monthly: Int?) -> NSImage {
+    /// 新会员体系没有 7 天窗口（weekly 为 nil）时跳过 7D 行，只渲染 5H（+30D）。
+    private static func compactImage(weekly: Int?, fiveHour: Int, monthly: Int?) -> NSImage {
         let showsMonthly = monthly != nil
+        let rowCount = (weekly != nil ? 1 : 0) + 1 + (monthly != nil ? 1 : 0)
         // "30D" 比 "7D"/"5H" 多一个字符，有月限额时三行标签列统一加宽到 20 保持百分比对齐
         let labelWidth: CGFloat = showsMonthly ? 20 : 16
         let totalWidth: CGFloat = showsMonthly ? 52 : 48
 
-        let content = VStack(alignment: .trailing, spacing: showsMonthly ? -2 : -1) {
-            HStack(spacing: 2) {
-                Text("7D")
-                    .font(.system(size: 10, weight: .medium, design: .default))
-                    .monospacedDigit()
-                    .frame(width: labelWidth, alignment: .leading)
-                Text(percentageText(weekly))
-                    .font(percentageFont(for: weekly))
-                    .monospacedDigit()
-                    .frame(width: 30, alignment: .trailing)
+        let content = VStack(alignment: .trailing, spacing: rowCount >= 3 ? -2 : -1) {
+            if let weekly {
+                HStack(spacing: 2) {
+                    Text("7D")
+                        .font(.system(size: 10, weight: .medium, design: .default))
+                        .monospacedDigit()
+                        .frame(width: labelWidth, alignment: .leading)
+                    Text(percentageText(weekly))
+                        .font(percentageFont(for: weekly))
+                        .monospacedDigit()
+                        .frame(width: 30, alignment: .trailing)
+                }
             }
             HStack(spacing: 2) {
                 Text("5H")
@@ -411,17 +416,18 @@ enum MenuBarTextRenderer {
             }
         }
         .foregroundStyle(textColor)
-        .frame(width: totalWidth, height: showsMonthly ? 32 : 20, alignment: .trailing)
+        .frame(width: totalWidth, height: rowCount >= 3 ? 32 : 20, alignment: .trailing)
 
         return render(content)
     }
 
     /// 前缀样式：K / Kimi 作为左侧大字号前缀，右侧上下两行百分比。
-    /// 有月限额时追加第三行百分比，整体加高。
-    private static func prefixImage(prefix: String, weekly: Int, fiveHour: Int, monthly: Int?) -> NSImage {
+    /// 有月限额时追加第三行百分比，整体加高。新会员体系 weekly 为 nil 时首行跳过。
+    private static func prefixImage(prefix: String, weekly: Int?, fiveHour: Int, monthly: Int?) -> NSImage {
         let prefixWidth: CGFloat = prefix == "K" ? 14 : 38
         let percentageWidth: CGFloat = 36
         let totalWidth: CGFloat = prefixWidth + 3 + percentageWidth
+        let rowCount = (weekly != nil ? 1 : 0) + 1 + (monthly != nil ? 1 : 0)
 
         let content = HStack(alignment: .center, spacing: 3) {
             Text(prefix)
@@ -430,10 +436,12 @@ enum MenuBarTextRenderer {
                 .frame(width: prefixWidth, height: 20, alignment: .leading)
 
             VStack(alignment: .trailing, spacing: 0) {
-                Text(percentageText(weekly))
-                    .font(percentageFont(for: weekly))
-                    .monospacedDigit()
-                    .frame(width: percentageWidth, alignment: .trailing)
+                if let weekly {
+                    Text(percentageText(weekly))
+                        .font(percentageFont(for: weekly))
+                        .monospacedDigit()
+                        .frame(width: percentageWidth, alignment: .trailing)
+                }
                 Text(percentageText(fiveHour))
                     .font(percentageFont(for: fiveHour))
                     .monospacedDigit()
@@ -447,21 +455,23 @@ enum MenuBarTextRenderer {
             }
         }
         .foregroundStyle(textColor)
-        .frame(width: totalWidth, height: monthly != nil ? 34 : 20, alignment: .trailing)
+        .frame(width: totalWidth, height: rowCount >= 3 ? 34 : 20, alignment: .trailing)
 
         return render(content)
     }
 
-    /// 单行样式：Kimi 84% · 6%（有月限额时追加 · 32%）
-    private static func singleLineImage(weekly: Int, fiveHour: Int, monthly: Int?) -> NSImage {
+    /// 单行样式：Kimi 84% · 6%（有月限额时追加 · 32%；新会员体系无 7 天窗口时从 5h 开始）
+    private static func singleLineImage(weekly: Int?, fiveHour: Int, monthly: Int?) -> NSImage {
         let content = HStack(spacing: 4) {
             Text("Kimi")
                 .font(.system(size: 12, weight: .bold, design: .default))
-            Text(percentageText(weekly))
-                .font(.system(size: 12, weight: .medium, design: .default))
-                .monospacedDigit()
-            Text("·")
-                .font(.system(size: 12, weight: .medium))
+            if let weekly {
+                Text(percentageText(weekly))
+                    .font(.system(size: 12, weight: .medium, design: .default))
+                    .monospacedDigit()
+                Text("·")
+                    .font(.system(size: 12, weight: .medium))
+            }
             Text(percentageText(fiveHour))
                 .font(.system(size: 12, weight: .medium, design: .default))
                 .monospacedDigit()
@@ -2169,7 +2179,8 @@ private struct AntigravityQuotaBar: View {
 
 // MARK: - 单账号完整卡片组
 
-/// 单账号：直接展示本周/5小时/本月用量大卡片 + 加油包卡片（本月仅后端返回时展示）。
+/// 单账号：直接展示本周/5小时/本月用量大卡片 + 加油包卡片。
+/// 本周仅老套餐返回（新会员体系无 7 天窗口）、本月仅后端返回时展示。
 private struct SingleAccountQuotaCards: View {
     let account: KimiAccount
 
@@ -2196,17 +2207,20 @@ private struct SingleAccountQuotaCards: View {
             AccountUnauthorizedHint()
         } else {
             VStack(spacing: 8) {
-                // 卡片自带 .frame(maxWidth: .infinity)，三列 HStack 随字段有无自动均分：
-                // 无月限额时保持本周/5小时双列，有月限额时三列等宽
+                // 卡片自带 .frame(maxWidth: .infinity)，HStack 随字段有无自动均分：
+                // 老套餐为本周/5小时双列（有月限额时三列），新会员体系无 7 天窗口，为 5小时/本月双列。
+                // 首次拉取完成前（quota == nil）无法判断套餐类型，先按老套餐占位，避免布局跳动。
                 HStack(spacing: 12) {
-                    UsageCard(
-                        title: languageManager.tr("本周用量"),
-                        subtitle: nil,
-                        percentage: quota?.weekly.percentage ?? 0,
-                        reset: quota?.weekly.timeUntilReset ?? "--",
-                        color: .kimiBlue,
-                        isLoading: isLoadingState
-                    )
+                    if quota == nil || quota?.weekly != nil {
+                        UsageCard(
+                            title: languageManager.tr("本周用量"),
+                            subtitle: nil,
+                            percentage: quota?.weekly?.percentage ?? 0,
+                            reset: quota?.weekly?.timeUntilReset ?? "--",
+                            color: .kimiBlue,
+                            isLoading: isLoadingState
+                        )
+                    }
 
                     UsageCard(
                         title: languageManager.tr("5小时用量"),
@@ -2337,21 +2351,24 @@ private struct AccountQuotaCard: View {
                 switch model.multiAccountCardStyle {
                 case .classic:
                     // 经典风格：左右双列，大百分比 + 进度条 + 标题/重置时间分列；
-                    // 有月限额时追加第三列，各列等宽自适应
+                    // 有月限额时追加第三列，各列等宽自适应。
+                    // 新会员体系无 7 天窗口时本周列不渲染（首次拉取前 quota == nil，先按老套餐占位）。
                     HStack(spacing: 12) {
-                        CompactQuotaColumn(
-                            title: languageManager.tr("本周用量"),
-                            reset: quota?.weekly.timeUntilReset,
-                            percentage: quota?.weekly.percentage,
-                            color: .kimiBlue,
-                            isLoading: isLoadingState
-                        )
+                        if quota == nil || quota?.weekly != nil {
+                            CompactQuotaColumn(
+                                title: languageManager.tr("本周用量"),
+                                reset: quota?.weekly?.timeUntilReset,
+                                percentage: quota?.weekly?.percentage,
+                                color: .kimiBlue,
+                                isLoading: isLoadingState
+                            )
 
-                        // 两列之间的细分隔线，呼应「一边是周限额、一边是5小时限额」的分区感
-                        Rectangle()
-                            .fill(Color.kimiTextPrimary.opacity(0.08))
-                            .frame(width: 1)
-                            .padding(.vertical, 2)
+                            // 两列之间的细分隔线，呼应「一边是周限额、一边是5小时限额」的分区感
+                            Rectangle()
+                                .fill(Color.kimiTextPrimary.opacity(0.08))
+                                .frame(width: 1)
+                                .padding(.vertical, 2)
+                        }
 
                         CompactQuotaColumn(
                             title: languageManager.tr("5小时用量"),
@@ -2379,15 +2396,18 @@ private struct AccountQuotaCard: View {
                     }
 
                 case .minimal:
-                    // 极简风格：单行紧凑，短标签 + 百分比 + 进度条 + 重置时间
+                    // 极简风格：单行紧凑，短标签 + 百分比 + 进度条 + 重置时间。
+                    // 新会员体系无 7 天窗口时「7天」行不渲染（首次拉取前 quota == nil，先按老套餐占位）。
                     VStack(alignment: .leading, spacing: 6) {
-                        MinimalQuotaRow(
-                            label: "7天",
-                            reset: quota?.weekly.timeUntilReset,
-                            percentage: quota?.weekly.percentage,
-                            color: .kimiBlue,
-                            isLoading: isLoadingState
-                        )
+                        if quota == nil || quota?.weekly != nil {
+                            MinimalQuotaRow(
+                                label: "7天",
+                                reset: quota?.weekly?.timeUntilReset,
+                                percentage: quota?.weekly?.percentage,
+                                color: .kimiBlue,
+                                isLoading: isLoadingState
+                            )
+                        }
 
                         MinimalQuotaRow(
                             label: "5时",
@@ -4774,7 +4794,7 @@ struct PanelCustomSettingsView: View {
                             if let quota = model.quota {
                                 Image(nsImage: MenuBarTextRenderer.image(
                                     scheme: model.menuBarDisplayScheme,
-                                    weekly: quota.weekly.percentage,
+                                    weekly: quota.weekly?.percentage,
                                     fiveHour: quota.fiveHour.percentage,
                                     monthly: quota.monthly?.percentage
                                 ))
@@ -6088,10 +6108,15 @@ final class KimiCodeBarModel: ObservableObject {
         case .kimi:
             if let primaryQuota = accountQuotas[primaryID] {
                 quota = primaryQuota
-                if let monthly = primaryQuota.monthly {
-                    text = LanguageManager.tr("周 %1$d%% · 5h %2$d%% · 30d %3$d%%", arguments: [primaryQuota.weekly.percentage, primaryQuota.fiveHour.percentage, monthly.percentage])
+                if let weekly = primaryQuota.weekly, let monthly = primaryQuota.monthly {
+                    text = LanguageManager.tr("周 %1$d%% · 5h %2$d%% · 30d %3$d%%", arguments: [weekly.percentage, primaryQuota.fiveHour.percentage, monthly.percentage])
+                } else if let weekly = primaryQuota.weekly {
+                    text = LanguageManager.tr("周 %1$d%% · 5h %2$d%%", arguments: [weekly.percentage, primaryQuota.fiveHour.percentage])
+                } else if let monthly = primaryQuota.monthly {
+                    // 新会员体系（月度计费套餐）：无 7 天窗口，展示本月 + 5 小时
+                    text = LanguageManager.tr("30d %1$d%% · 5h %2$d%%", arguments: [monthly.percentage, primaryQuota.fiveHour.percentage])
                 } else {
-                    text = LanguageManager.tr("周 %1$d%% · 5h %2$d%%", arguments: [primaryQuota.weekly.percentage, primaryQuota.fiveHour.percentage])
+                    text = LanguageManager.tr("5h %d%%", arguments: [primaryQuota.fiveHour.percentage])
                 }
             } else {
                 quota = nil
