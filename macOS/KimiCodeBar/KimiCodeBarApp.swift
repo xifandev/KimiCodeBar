@@ -375,7 +375,7 @@ enum MenuBarTextRenderer {
     private static func compactImage(weekly: Int?, fiveHour: Int, monthly: Int?) -> NSImage {
         let rowCount = (weekly != nil ? 1 : 0) + 1 + (monthly != nil ? 1 : 0)
 
-        let content = VStack(alignment: .trailing, spacing: rowCount >= 3 ? -2 : -1) {
+        let content = VStack(alignment: .leading, spacing: rowCount >= 3 ? -2 : -1) {
             if let weekly {
                 HStack(spacing: 2) {
                     Text("7D")
@@ -385,7 +385,7 @@ enum MenuBarTextRenderer {
                     Text(percentageText(weekly))
                         .font(percentageFont(for: weekly))
                         .monospacedDigit()
-                        .frame(width: 30, alignment: .trailing)
+                        .frame(width: 30, alignment: .leading)
                 }
             }
             HStack(spacing: 2) {
@@ -396,7 +396,7 @@ enum MenuBarTextRenderer {
                 Text(percentageText(fiveHour))
                     .font(percentageFont(for: fiveHour))
                     .monospacedDigit()
-                    .frame(width: 30, alignment: .trailing)
+                    .frame(width: 30, alignment: .leading)
             }
             if let monthly {
                 HStack(spacing: 2) {
@@ -407,12 +407,12 @@ enum MenuBarTextRenderer {
                     Text(percentageText(monthly))
                         .font(percentageFont(for: monthly))
                         .monospacedDigit()
-                        .frame(width: 30, alignment: .trailing)
+                        .frame(width: 30, alignment: .leading)
                 }
             }
         }
         .foregroundStyle(textColor)
-        .frame(width: 48, height: rowCount >= 3 ? 32 : 20, alignment: .trailing)
+        .frame(width: 48, height: rowCount >= 3 ? 32 : 20, alignment: .leading)
 
         return render(content)
     }
