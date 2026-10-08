@@ -5651,10 +5651,11 @@ final class KimiCodeBarModel: ObservableObject {
 
     @AppStorage("quotaRefreshInterval") var quotaRefreshInterval: Double = 3
     @AppStorage("updateCheckInterval") var updateCheckInterval: Double = 10
-    /// 是否启用 KimiCode CLI 更新检查。关闭后：后台 Timer 不启动、面板打开不联网检查、
+    /// 是否启用 KimiCode CLI 更新检查。默认关闭：Kimi Code 已推出官方客户端，
+    /// CLI 更新提醒交由客户端/CLI 自身负责。关闭后：后台 Timer 不启动、面板打开不联网检查、
     /// 不基于缓存弹窗、不发系统通知；本地版本号读取（loadKimiVersion）不受影响，
     /// 版本行仍可正常显示当前 CLI 版本号（供用户排查/反馈 issue 时查看）。
-    @AppStorage("enableKimiCLIUpdateCheck") var enableKimiCLIUpdateCheck: Bool = true
+    @AppStorage("enableKimiCLIUpdateCheck") var enableKimiCLIUpdateCheck: Bool = false
     @AppStorage("menuBarDisplayScheme") var menuBarDisplayScheme: MenuBarDisplayScheme = .compact
     @AppStorage("ignoredAppUpdateVersion") var ignoredAppUpdateVersion: String = ""
     @AppStorage("cachedKimiLatestVersion") var cachedKimiLatestVersion: String = ""
