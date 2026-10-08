@@ -2420,7 +2420,7 @@ private struct AccountQuotaCard: View {
                         // 月限额仅新会员体系下发，后端未返回时不展示
                         if let monthly = quota?.monthly {
                             MinimalQuotaRow(
-                                label: "30天",
+                                label: "月",
                                 reset: monthly.timeUntilReset,
                                 percentage: monthly.percentage,
                                 color: .green,
@@ -2755,7 +2755,7 @@ private struct MultiAccountCardStylePreview: View {
             VStack(alignment: .leading, spacing: 4) {
                 PreviewMinimalRow(label: "7天", percentage: 56, reset: "3天2时", color: .kimiBlue)
                 PreviewMinimalRow(label: "5时", percentage: 0, reset: "2时28分", color: .orange)
-                PreviewMinimalRow(label: "30天", percentage: 32, reset: "12天3时", color: .green)
+                PreviewMinimalRow(label: "月", percentage: 32, reset: "12天3时", color: .green)
             }
         }
         .padding(10)
