@@ -370,14 +370,10 @@ enum MenuBarTextRenderer {
 
     /// 原始紧凑样式：48pt 宽，两行 7D/5H。
     /// 这是用户已经深度微调过的样式，原封不动保留。
-    /// 后端返回月限额时追加第三行 30D，标签列加宽并整体加高以容纳三行。
-    /// 新会员体系没有 7 天窗口（weekly 为 nil）时跳过 7D 行，只渲染 5H（+30D）。
+    /// 后端返回月限额时追加第三行「月」，整体加高以容纳三行。
+    /// 新会员体系没有 7 天窗口（weekly 为 nil）时跳过 7D 行，只渲染 5H（+月）。
     private static func compactImage(weekly: Int?, fiveHour: Int, monthly: Int?) -> NSImage {
-        let showsMonthly = monthly != nil
         let rowCount = (weekly != nil ? 1 : 0) + 1 + (monthly != nil ? 1 : 0)
-        // "30D" 比 "7D"/"5H" 多一个字符，有月限额时三行标签列统一加宽到 20 保持百分比对齐
-        let labelWidth: CGFloat = showsMonthly ? 20 : 16
-        let totalWidth: CGFloat = showsMonthly ? 52 : 48
 
         let content = VStack(alignment: .trailing, spacing: rowCount >= 3 ? -2 : -1) {
             if let weekly {
@@ -385,7 +381,7 @@ enum MenuBarTextRenderer {
                     Text("7D")
                         .font(.system(size: 10, weight: .medium, design: .default))
                         .monospacedDigit()
-                        .frame(width: labelWidth, alignment: .leading)
+                        .frame(width: 16, alignment: .leading)
                     Text(percentageText(weekly))
                         .font(percentageFont(for: weekly))
                         .monospacedDigit()
@@ -396,7 +392,7 @@ enum MenuBarTextRenderer {
                 Text("5H")
                     .font(.system(size: 10, weight: .medium, design: .default))
                     .monospacedDigit()
-                    .frame(width: labelWidth, alignment: .leading)
+                    .frame(width: 16, alignment: .leading)
                 Text(percentageText(fiveHour))
                     .font(percentageFont(for: fiveHour))
                     .monospacedDigit()
@@ -404,10 +400,10 @@ enum MenuBarTextRenderer {
             }
             if let monthly {
                 HStack(spacing: 2) {
-                    Text("30D")
+                    Text("月")
                         .font(.system(size: 10, weight: .medium, design: .default))
                         .monospacedDigit()
-                        .frame(width: labelWidth, alignment: .leading)
+                        .frame(width: 16, alignment: .leading)
                     Text(percentageText(monthly))
                         .font(percentageFont(for: monthly))
                         .monospacedDigit()
@@ -416,7 +412,7 @@ enum MenuBarTextRenderer {
             }
         }
         .foregroundStyle(textColor)
-        .frame(width: totalWidth, height: rowCount >= 3 ? 32 : 20, alignment: .trailing)
+        .frame(width: 48, height: rowCount >= 3 ? 32 : 20, alignment: .trailing)
 
         return render(content)
     }

@@ -55,7 +55,7 @@ App 支持应用内语言切换（跟随系统 / 中文 / English），机制见
   - String 类型场景（组件 title 参数、枚举 displayName 等）用 `languageManager.tr("中文")`（View 内需有 `@StateObject private var languageManager = LanguageManager.shared`）或静态 `LanguageManager.tr("中文")`。
   - 插值用 `%@`（多个用 `%1$@`/`%2$@`），字面量 `%` 写 `%%`。
   - 同时在 `Localizable.xcstrings` 补上 `en` 翻译，术语与已有条目保持一致（如 加油包 Booster Pack、归档 Archive）。
-- 品牌名（Kimi / KimiCodeBar / Kimi Web）、菜单栏图形样式的 `7D`/`5H` 标注不做本地化。
+- 品牌名（Kimi / KimiCodeBar / Kimi Web）、菜单栏图形样式的 `7D`/`5H`/`月` 标注不做本地化。
 
 ## 版本号管理
 
