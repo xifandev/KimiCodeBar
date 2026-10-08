@@ -375,7 +375,7 @@ enum MenuBarTextRenderer {
     private static func compactImage(weekly: Int?, fiveHour: Int, monthly: Int?) -> NSImage {
         let rowCount = (weekly != nil ? 1 : 0) + 1 + (monthly != nil ? 1 : 0)
 
-        let content = VStack(alignment: .leading, spacing: rowCount >= 3 ? -2 : -1) {
+        let content = VStack(alignment: .trailing, spacing: rowCount >= 3 ? -2 : -1) {
             if let weekly {
                 HStack(spacing: 2) {
                     Text("7D")
@@ -385,7 +385,7 @@ enum MenuBarTextRenderer {
                     Text(percentageText(weekly))
                         .font(percentageFont(for: weekly))
                         .monospacedDigit()
-                        .frame(width: 30, alignment: .leading)
+                        .frame(width: 30, alignment: .trailing)
                 }
             }
             HStack(spacing: 2) {
@@ -396,23 +396,25 @@ enum MenuBarTextRenderer {
                 Text(percentageText(fiveHour))
                     .font(percentageFont(for: fiveHour))
                     .monospacedDigit()
-                    .frame(width: 30, alignment: .leading)
+                    .frame(width: 30, alignment: .trailing)
             }
             if let monthly {
                 HStack(spacing: 2) {
+                    // CJK 字形自带左侧留白，负偏移让「月」的字形左边缘与 7D/5H 视觉对齐
                     Text("月")
                         .font(.system(size: 10, weight: .medium, design: .default))
                         .monospacedDigit()
                         .frame(width: 16, alignment: .leading)
+                        .offset(x: -1)
                     Text(percentageText(monthly))
                         .font(percentageFont(for: monthly))
                         .monospacedDigit()
-                        .frame(width: 30, alignment: .leading)
+                        .frame(width: 30, alignment: .trailing)
                 }
             }
         }
         .foregroundStyle(textColor)
-        .frame(width: 48, height: rowCount >= 3 ? 32 : 20, alignment: .leading)
+        .frame(width: 48, height: rowCount >= 3 ? 32 : 20, alignment: .trailing)
 
         return render(content)
     }
@@ -2420,7 +2422,8 @@ private struct AccountQuotaCard: View {
                                 reset: monthly.timeUntilReset,
                                 percentage: monthly.percentage,
                                 color: .green,
-                                isLoading: isLoadingState
+                                isLoading: isLoadingState,
+                                labelOffset: -1
                             )
                         }
                     }
@@ -2554,6 +2557,9 @@ private struct MinimalQuotaRow: View {
     let percentage: Int?
     let color: Color
     let isLoading: Bool
+    /// 标签左偏移：单字 CJK 标签（如「月」）字形自带左侧留白，
+    /// 传 -1 让其字形左边缘与「7天」「5时」的数字左边缘视觉对齐
+    var labelOffset: CGFloat = 0
 
     private var clampedPercentage: Int {
         min(percentage ?? 0, 100)
@@ -2576,6 +2582,7 @@ private struct MinimalQuotaRow: View {
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(.kimiTextSecondary)
                 .frame(width: 20, alignment: .leading)
+                .offset(x: labelOffset)
 
             // 百分比：固定宽度，保证两行进度条起点一致
             Group {
