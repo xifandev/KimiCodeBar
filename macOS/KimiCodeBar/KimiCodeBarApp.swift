@@ -4702,21 +4702,6 @@ struct PanelCustomSettingsView: View {
 
                         SettingsCardDivider()
 
-                        // 「Kimi Web 卡片」已弃用（2026-07）：官方砍掉 server 服务，
-                        // 置灰禁用展示，保留用户历史开关状态但不可操作。
-                        SettingsCardRow(
-                            title: languageManager.tr("Kimi Web 卡片"),
-                            subtitle: languageManager.tr("官方砍掉了 server 服务，临时弃用。")
-                        ) {
-                            Toggle("", isOn: $model.showKimiServerCard)
-                                .labelsHidden()
-                                .toggleStyle(.switch)
-                                .disabled(true)
-                        }
-                        .opacity(0.5)
-
-                        SettingsCardDivider()
-
                         SettingsCardRow(
                             title: languageManager.tr("KimiCode CLI 版本号"),
                             subtitle: languageManager.tr("发现新版本时会强制显示")
@@ -5664,7 +5649,6 @@ final class KimiCodeBarModel: ObservableObject {
 
     // MARK: - 卡片显示（用户控制各卡片是否显示）
     @AppStorage("showLocalUsageCard") var showLocalUsageCard: Bool = true
-    @AppStorage("showKimiServerCard") var showKimiServerCard: Bool = true
     @AppStorage("showKimiVersionRow") var showKimiVersionRow: Bool = false
     @AppStorage("showAppUpdateRow") var showAppUpdateRow: Bool = false
 
