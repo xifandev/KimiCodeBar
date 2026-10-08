@@ -400,12 +400,11 @@ enum MenuBarTextRenderer {
             }
             if let monthly {
                 HStack(spacing: 2) {
-                    // CJK 字形自带左侧留白，负偏移让「月」的字形左边缘与 7D/5H 视觉对齐
+                    // 「月」为单字，靠右对齐贴近百分比数字，与 7D/5H 行的右边缘节奏一致
                     Text("月")
                         .font(.system(size: 10, weight: .medium, design: .default))
                         .monospacedDigit()
-                        .frame(width: 16, alignment: .leading)
-                        .offset(x: -1)
+                        .frame(width: 16, alignment: .trailing)
                     Text(percentageText(monthly))
                         .font(percentageFont(for: monthly))
                         .monospacedDigit()
@@ -2423,7 +2422,7 @@ private struct AccountQuotaCard: View {
                                 percentage: monthly.percentage,
                                 color: .green,
                                 isLoading: isLoadingState,
-                                labelOffset: -1
+                                labelAlignment: .trailing
                             )
                         }
                     }
@@ -2557,9 +2556,8 @@ private struct MinimalQuotaRow: View {
     let percentage: Int?
     let color: Color
     let isLoading: Bool
-    /// 标签左偏移：单字 CJK 标签（如「月」）字形自带左侧留白，
-    /// 传 -1 让其字形左边缘与「7天」「5时」的数字左边缘视觉对齐
-    var labelOffset: CGFloat = 0
+    /// 标签对齐方式：单字标签（如「月」）传 .trailing，贴近右侧百分比数字
+    var labelAlignment: Alignment = .leading
 
     private var clampedPercentage: Int {
         min(percentage ?? 0, 100)
@@ -2581,8 +2579,7 @@ private struct MinimalQuotaRow: View {
             Text(label)
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(.kimiTextSecondary)
-                .frame(width: 20, alignment: .leading)
-                .offset(x: labelOffset)
+                .frame(width: 20, alignment: labelAlignment)
 
             // 百分比：固定宽度，保证两行进度条起点一致
             Group {
