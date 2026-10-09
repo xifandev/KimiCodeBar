@@ -205,6 +205,9 @@ final class KimiCodeBarQuotaService {
                 let limit5h: RatioEntry?
                 let limit7d: RatioEntry?
                 let limitMonthTotal: RatioEntry?
+                // 月额度中 Kimi Code 消耗的部分（新会员体系下发）。当前 UI 只展示总额度
+                // limitMonthTotal（与 Kimi 网页/App 共用额度池，是真正会触顶的限额），
+                // 该字段暂仅解析保留，未消费。
                 let limitMonthCode: RatioEntry?
 
                 enum CodingKeys: String, CodingKey {
@@ -269,8 +272,9 @@ final class KimiCodeBarQuotaService {
 
         // 周用量：老套餐走 usage 对象的绝对数值；新会员体系（月度计费套餐）没有 7 天窗口，
         // usage 与 usages.limit_7d 都不返回，此时 weekly 为 nil，UI 按字段有无动态展示。
+        // usage 对象存在但字段全空（服务端可能返回空壳对象）时视为未下发，继续回退 limit_7d。
         let weekly: QuotaDetail?
-        if let usage = resp.usage {
+        if let usage = resp.usage, usage.limit != nil || usage.used != nil || usage.remaining != nil {
             weekly = makeDetail(
                 limit: usage.limit,
                 used: usage.used,
@@ -283,6 +287,8 @@ final class KimiCodeBarQuotaService {
             weekly = nil
         }
 
+        // 5 小时用量：优先 limits 数组（window 300 分钟）的绝对数值；
+        // 数组缺失时回退 usages.limit_5h 的 used_ratio（与周/月维度同一兜底策略）。
         var fiveHour = QuotaDetail(used: 0, limit: 0, remaining: 0, resetTime: nil, percentage: 0)
         if let limit = resp.limits?.first(where: { $0.window.duration == 300 }) {
             fiveHour = makeDetail(
@@ -291,6 +297,11 @@ final class KimiCodeBarQuotaService {
                 remaining: limit.detail.remaining,
                 resetTime: limit.detail.resetTime
             )
+        } else if let detail = makePercentDetail(
+            usedRatio: resp.usages?.limit5h?.usedRatio,
+            resetTime: resp.usages?.limit5h?.resetTime
+        ) {
+            fiveHour = detail
         }
 
         let totalQuota = makeDetail(

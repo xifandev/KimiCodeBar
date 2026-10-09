@@ -128,20 +128,11 @@
     "✨" : {
 
     },
-    "30d %1$d%% · 5h %2$d%%" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "30D %1$d%% · 5H %2$d%%"
-          }
-        }
-      }
-    },
     "5H" : {
 
     },
     "5h %d%%" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -183,6 +174,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "7D"
+          }
+        }
+      }
+    },
+    "30d %1$d%% · 5h %2$d%%" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "30D %1$d%% · 5H %2$d%%"
           }
         }
       }
@@ -703,6 +705,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Switch Anyway"
+          }
+        }
+      }
+    },
+    "从 WorkBuddy 桌面端读取" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Read from WorkBuddy Desktop"
           }
         }
       }
@@ -1269,6 +1282,7 @@
       }
     },
     "周 %1$d%% · 5h %2$d%% · 30d %3$d%%" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1476,6 +1490,17 @@
         }
       }
     },
+    "将在系统私密浏览窗口中打开 WorkBuddy 登录页，登录任意账号后自动添加。token 失效时可用同样方式重新授权。" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opens the WorkBuddy sign-in page in a private system browser window. Sign in to any account and it will be added automatically. Re-authorize the same way when tokens expire."
+          }
+        }
+      }
+    },
     "将把「%1$@」的凭证写入 Kimi CLI，之后新启动的 CLI 会话将使用该账号。\n\n%2$@" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1593,6 +1618,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "When enabled, KimiCodeBar checks local Kimi Code sessions every hour and automatically archives sessions that have passed the retention period."
+          }
+        }
+      }
+    },
+    "开始授权" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start Authorization"
           }
         }
       }
@@ -1780,6 +1816,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Drag to reorder"
+          }
+        }
+      }
+    },
+    "授权中…" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Authorizing…"
           }
         }
       }
@@ -2136,6 +2183,17 @@
         }
       }
     },
+    "暂无记录" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No Records"
+          }
+        }
+      }
+    },
     "更新于 %@" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2168,6 +2226,9 @@
           }
         }
       }
+    },
+    "月" : {
+
     },
     "月之亮面" : {
       "extractionState" : "stale",
@@ -2290,16 +2351,6 @@
         }
       }
     },
-    "本月用量" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Monthly Usage"
-          }
-        }
-      }
-    },
     "本月消费" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2307,6 +2358,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Spent This Month"
+          }
+        }
+      }
+    },
+    "本月用量" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Monthly Usage"
           }
         }
       }
@@ -2505,6 +2567,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Browser authorization (recommended)"
+          }
+        }
+      }
+    },
+    "浏览器授权登录（推荐）" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in with Browser (Recommended)"
           }
         }
       }
@@ -3147,17 +3220,6 @@
         }
       }
     },
-    "暂无记录" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No Records"
-          }
-        }
-      }
-    },
     "近期更新日志" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -3279,6 +3341,17 @@
         }
       }
     },
+    "通过浏览器重新登录该 WorkBuddy 账号" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Re-authorize this WorkBuddy account via browser"
+          }
+        }
+      }
+    },
     "重启" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -3378,6 +3451,17 @@
         }
       }
     },
+    "需先在 WorkBuddy 客户端登录目标账号，再点下方按钮读取本地登录信息。" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in to the target account in the WorkBuddy client first, then click the button below to read local credentials."
+          }
+        }
+      }
+    },
     "面板自定义" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -3429,105 +3513,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Default"
-          }
-        }
-      }
-    },
-    "浏览器授权登录（推荐）" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sign in with Browser (Recommended)"
-          }
-        }
-      }
-    },
-    "开始授权" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Start Authorization"
-          }
-        }
-      }
-    },
-    "授权中…" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Authorizing…"
-          }
-        }
-      }
-    },
-    "将在系统私密浏览窗口中打开 WorkBuddy 登录页，登录任意账号后自动添加。token 失效时可用同样方式重新授权。" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Opens the WorkBuddy sign-in page in a private system browser window. Sign in to any account and it will be added automatically. Re-authorize the same way when tokens expire."
-          }
-        }
-      }
-    },
-    "从 WorkBuddy 桌面端读取" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Read from WorkBuddy Desktop"
-          }
-        }
-      }
-    },
-    "需先在 WorkBuddy 客户端登录目标账号，再点下方按钮读取本地登录信息。" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sign in to the target account in the WorkBuddy client first, then click the button below to read local credentials."
-          }
-        }
-      }
-    },
-    "读取本地" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Read Local"
-          }
-        }
-      }
-    },
-    "读取中…" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reading…"
-          }
-        }
-      }
-    },
-    "通过浏览器重新登录该 WorkBuddy 账号" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Re-authorize this WorkBuddy account via browser"
           }
         }
       }

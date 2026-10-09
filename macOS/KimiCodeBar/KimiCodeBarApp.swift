@@ -2755,7 +2755,7 @@ private struct MultiAccountCardStylePreview: View {
             VStack(alignment: .leading, spacing: 4) {
                 PreviewMinimalRow(label: "7天", percentage: 56, reset: "3天2时", color: .kimiBlue)
                 PreviewMinimalRow(label: "5时", percentage: 0, reset: "2时28分", color: .orange)
-                PreviewMinimalRow(label: "月", percentage: 32, reset: "12天3时", color: .green)
+                PreviewMinimalRow(label: "月", percentage: 32, reset: "12天3时", color: .green, labelAlignment: .trailing)
             }
         }
         .padding(10)
@@ -2837,13 +2837,15 @@ private struct PreviewMinimalRow: View {
     let percentage: Int
     let reset: String
     let color: Color
+    /// 与 MinimalQuotaRow 一致：单字标签（如「月」）传 .trailing
+    var labelAlignment: Alignment = .leading
 
     var body: some View {
         HStack(spacing: 5) {
             Text(label)
                 .font(.system(size: 7, weight: .medium))
                 .foregroundStyle(.kimiTextSecondary)
-                .frame(width: 16, alignment: .leading)
+                .frame(width: 16, alignment: labelAlignment)
 
             Text("\(percentage)%")
                 .font(.system(size: 8, weight: .bold, design: .rounded))
