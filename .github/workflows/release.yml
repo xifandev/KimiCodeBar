@@ -244,12 +244,13 @@ jobs:
             -o appcast.xml \
             updates/
 
-          # 从 CHANGELOG.md 生成干净的 release notes HTML 页面
+          # 从 CHANGELOG.md 生成 release notes HTML 页面：纯文本，不加样式，
+          # 每条更新一行 <p>（保留行首小减号），致谢行同样一行 <p>
           VERSION="${GITHUB_REF_NAME#v}"
           RELEASE_DATE=$(date -u +"%Y 年 %m 月 %d 日")
           NOTES_HTML=$(sed -n "/^## v${VERSION} 更新内容/,/^## v/p" CHANGELOG.md | \
             grep -E "^- |^感谢" | \
-            sed 's/^- /<li>/; s/$/<\/li>/; s/^感谢 \(.*\)/<div class="thanks">\1<\/div>/' | \
+            sed 's/^- /<p>- /; s/^感谢/<p>感谢/; s/$/<\/p>/' | \
             tr '\n' ' ')
 
           # Release body 只取当前版本段落（CHANGELOG.md 含全部历史版本，不能整文件塞入）
@@ -266,49 +267,6 @@ jobs:
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>KimiCodeBar 更新日志</title>
-            <style>
-              * { margin: 0; padding: 0; box-sizing: border-box; }
-              body {
-                font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif;
-                background: #0d1117;
-                color: #e6edf3;
-                line-height: 1.6;
-                padding: 20px;
-                max-width: 600px;
-                margin: 0 auto;
-              }
-              .thanks {
-                font-size: 14px;
-                color: #8b949e;
-                margin-bottom: 16px;
-                padding: 10px 14px;
-                background: rgba(88, 166, 255, 0.08);
-                border-radius: 8px;
-                border: 1px solid rgba(88, 166, 255, 0.2);
-              }
-              .thanks a {
-                color: #58a6ff;
-                text-decoration: none;
-              }
-              ul {
-                list-style: none;
-                padding-left: 0;
-              }
-              li {
-                position: relative;
-                padding-left: 18px;
-                margin-bottom: 12px;
-                font-size: 14px;
-                color: #c9d1d9;
-              }
-              li::before {
-                content: "•";
-                position: absolute;
-                left: 0;
-                color: #58a6ff;
-                font-weight: bold;
-              }
-            </style>
           </head>
           <body>
             ${NOTES_HTML}
