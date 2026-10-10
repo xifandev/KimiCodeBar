@@ -1,5 +1,6 @@
 import Foundation
 import AppKit
+import CryptoKit
 
 // MARK: - WorkBuddy 积分
 
@@ -57,29 +58,162 @@ final class WorkBuddyService {
         session = URLSession(configuration: config)
     }
 
+    // MARK: - At-Rest 加密信封（WorkBuddy 5.6+）
+
+    /// WorkBuddy 5.6 起 auth 文件的敏感字段改为加密信封：
+    /// `{"$wbEncrypted": 1, "envelope": "<base64>"}`，envelope 解 base64 后为
+    /// `{"suite":1,"keyId":"…","nonce":"…","authTag":"…","ciphertext":"…"}`（AES-256-GCM）。
+    /// 密钥不落盘，通过 WorkBuddy 自带的 Electron 运行时调原生绑定取得（见 atRestKey）。
+    private struct AtRestEnvelope: Decodable {
+        let suite: Int
+        let keyId: String
+        let nonce: String
+        let authTag: String
+        let ciphertext: String
+    }
+
+    /// SHA256(atRestSecretKey) 派生的 AES-256-GCM 密钥，进程内缓存
+    private var cachedAtRestKey: SymmetricKey?
+
+    /// 取 WorkBuddy 的 at-rest 密钥：以 ELECTRON_RUN_AS_NODE 模式跑 WorkBuddy 自带的
+    /// Electron 二进制，调原生绑定 electron_browser_workbuddy_storage.loggerGet() 拿到
+    /// atRestSecretKey，再做一次 SHA256 得到 AES-256 密钥。WorkBuddy 未安装或官方改版时返回 nil。
+    private func atRestKey() -> SymmetricKey? {
+        if let cachedAtRestKey { return cachedAtRestKey }
+        let js = #"try{process.stdout.write(process._linkedBinding('electron_browser_workbuddy_storage').loggerGet())}catch(e){process.exit(1)}"#
+        let scriptURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("wb-atrest-\(UUID().uuidString).js")
+        guard let _ = try? js.write(to: scriptURL, atomically: true, encoding: .utf8) else { return nil }
+        defer { try? FileManager.default.removeItem(at: scriptURL) }
+
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/Applications/WorkBuddy.app/Contents/MacOS/Electron")
+        task.arguments = [scriptURL.path]
+        task.environment = [
+            "ELECTRON_RUN_AS_NODE": "1",
+            "HOME": NSHomeDirectory(),
+            "PATH": "/usr/bin:/bin:/usr/local/bin",
+        ]
+        let pipe = Pipe()
+        task.standardOutput = pipe
+        task.standardError = FileHandle.nullDevice
+        guard let _ = try? task.run() else { return nil }
+        let output = pipe.fileHandleForReading.readDataToEndOfFile()
+        task.waitUntilExit()
+        guard task.terminationStatus == 0,
+              let json = try? JSONSerialization.jsonObject(with: output) as? [String: Any],
+              let secret = json["atRestSecretKey"] as? String,
+              let secretData = secret.data(using: .utf8) else { return nil }
+
+        let key = SymmetricKey(data: SHA256.hash(data: secretData))
+        cachedAtRestKey = key
+        return key
+    }
+
+    /// 字段信封的 AAD（附加认证数据），构造与 WorkBuddy 内部一致：长度前缀 transcript
+    private func fieldAAD(keyId: String, suite: Int) -> Data {
+        func lengthPrefixed(_ s: String) -> Data {
+            let bytes = Data(s.utf8)
+            var len = UInt32(bytes.count).bigEndian
+            return Data(bytes: &len, count: 4) + bytes
+        }
+        var aad = Data("WB-AAD\0".utf8)
+        aad.append(0x01)
+        aad.append(lengthPrefixed("WBEV1"))
+        aad.append(lengthPrefixed("sym-v1"))
+        var suiteBE = UInt32(suite).bigEndian
+        aad.append(Data(bytes: &suiteBE, count: 4))
+        aad.append(lengthPrefixed(keyId))
+        aad.append(0x02)
+        aad.append(0x00)
+        aad.append(0x00)
+        return aad
+    }
+
+    /// 读取 auth 文件里的字段值：5.5.x 及更早是明文字符串，5.6+ 是加密信封，两种都支持。
+    func decryptField(_ value: Any?) -> String? {
+        if let plain = value as? String { return plain }
+        guard let wrapper = value as? [String: Any],
+              (wrapper["$wbEncrypted"] as? Int) == 1,
+              let envelopeBase64 = wrapper["envelope"] as? String,
+              let envelopeData = Data(base64Encoded: envelopeBase64),
+              let envelope = try? JSONDecoder().decode(AtRestEnvelope.self, from: envelopeData),
+              let key = atRestKey(),
+              let nonceData = Data(base64Encoded: envelope.nonce),
+              let ciphertext = Data(base64Encoded: envelope.ciphertext),
+              let tag = Data(base64Encoded: envelope.authTag),
+              let nonce = try? AES.GCM.Nonce(data: nonceData),
+              let box = try? AES.GCM.SealedBox(nonce: nonce, ciphertext: ciphertext, tag: tag),
+              let plainData = try? AES.GCM.open(box, using: key, authenticating: fieldAAD(keyId: envelope.keyId, suite: envelope.suite)) else {
+            return nil
+        }
+        return String(data: plainData, encoding: .utf8)
+    }
+
+    /// 当前 auth 文件使用的 keyId（加密写回时与 WorkBuddy 当前密钥保持一致）
+    private func currentKeyId() -> String? {
+        guard let data = try? Data(contentsOf: authFileURL),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let auth = json["auth"] as? [String: Any] else { return nil }
+        for field in ["accessToken", "refreshToken"] {
+            if let wrapper = auth[field] as? [String: Any],
+               let envelopeBase64 = wrapper["envelope"] as? String,
+               let envelopeData = Data(base64Encoded: envelopeBase64),
+               let envelope = try? JSONDecoder().decode(AtRestEnvelope.self, from: envelopeData) {
+                return envelope.keyId
+            }
+        }
+        return nil
+    }
+
+    /// 把明文加密成 WorkBuddy 5.6+ 的字段信封；取不到密钥时返回 nil
+    private func encryptField(_ plaintext: String) -> [String: Any]? {
+        guard let key = atRestKey(), let keyId = currentKeyId(),
+              let box = try? AES.GCM.seal(Data(plaintext.utf8), using: key, authenticating: fieldAAD(keyId: keyId, suite: 1)) else {
+            return nil
+        }
+        let envelope: [String: Any] = [
+            "suite": 1,
+            "keyId": keyId,
+            "nonce": box.nonce.withUnsafeBytes { Data($0) }.base64EncodedString(),
+            "authTag": box.tag.base64EncodedString(),
+            "ciphertext": box.ciphertext.base64EncodedString(),
+        ]
+        guard let envelopeData = try? JSONSerialization.data(withJSONObject: envelope, options: [.sortedKeys]) else {
+            return nil
+        }
+        return ["$wbEncrypted": 1, "envelope": envelopeData.base64EncodedString()]
+    }
+
+    /// 写回 auth 文件用的字段值：优先加密信封（5.6+），取不到密钥时回退明文（5.5.x 旧版）
+    private func fieldValueForWrite(_ plaintext: String) -> Any {
+        encryptField(plaintext) ?? plaintext
+    }
+
     // MARK: - 从本地 auth 文件添加账号
 
     /// 读取当前 WorkBuddy auth 文件，构建一个 KimiAccount（provider=.workbuddy）。
-    /// 调用方负责去重后存入 KimiAccountStore。失败返回 nil。
+    /// 5.6+ 的加密字段走 decryptField 解密。调用方负责去重后存入 KimiAccountStore。失败返回 nil。
     func addCurrentAccount() -> KimiAccount? {
         guard let data = try? Data(contentsOf: authFileURL),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let accountInfo = json["account"] as? [String: Any],
               let authInfo = json["auth"] as? [String: Any],
               let uid = accountInfo["uid"] as? String,
-              let accessToken = authInfo["accessToken"] as? String,
-              let refreshToken = authInfo["refreshToken"] as? String else {
+              let accessToken = decryptField(authInfo["accessToken"]),
+              let refreshToken = decryptField(authInfo["refreshToken"]) else {
             return nil
         }
 
-        let nickname = (accountInfo["nickname"] as? String) ?? "Unknown"
+        let nickname = decryptField(accountInfo["nickname"]) ?? "Unknown"
+        let domain = (authInfo["domain"] as? String) ?? "www.codebuddy.cn"
         let accountSnapshot = try? JSONSerialization.data(withJSONObject: accountInfo, options: [.sortedKeys])
         let authSnapshot = try? JSONSerialization.data(withJSONObject: authInfo, options: [.sortedKeys])
 
         let cred = WorkBuddyCredential(
             uid: uid, nickname: nickname,
             accessToken: accessToken, refreshToken: refreshToken,
-            domain: "www.codebuddy.cn",
+            domain: domain,
             accountSnapshot: accountSnapshot, authSnapshot: authSnapshot,
             lastCheckinDate: nil
         )
@@ -341,9 +475,9 @@ final class WorkBuddyService {
             accountObj = (curJson["account"] as? [String: Any]) ?? [:]
             authObj = (curJson["auth"] as? [String: Any]) ?? [:]
             accountObj["uid"] = cred.uid
-            accountObj["nickname"] = cred.nickname
-            authObj["accessToken"] = cred.accessToken
-            authObj["refreshToken"] = cred.refreshToken
+            accountObj["nickname"] = fieldValueForWrite(cred.nickname)
+            authObj["accessToken"] = fieldValueForWrite(cred.accessToken)
+            authObj["refreshToken"] = fieldValueForWrite(cred.refreshToken)
             authObj["domain"] = cred.domain
             if authObj["tokenType"] == nil {
                 authObj["tokenType"] = "Bearer"
