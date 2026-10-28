@@ -1950,6 +1950,14 @@ private struct WorkBuddyCard: View {
                 .lineLimit(1)
                 .layoutPriority(1)
 
+            // 签到异常警示：仅签到失败时显示（正常签到 / 已签到不展示任何签到状态与图标）
+            if let checkinError = model.accountCheckinErrors[account.id] {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.orange)
+                    .help(LanguageManager.tr("签到失败：%@", arguments: [checkinError]))
+            }
+
             // 备注手机号：手机图标，点击复制并弹轻提示
             if let phone = account.phone?.trimmingCharacters(in: .whitespacesAndNewlines), !phone.isEmpty {
                 PhoneCopyIcon(phone: phone, copiedToast: $showCopiedToast)
@@ -5708,8 +5716,10 @@ final class KimiCodeBarModel: ObservableObject {
     // MARK: - WorkBuddy 集成
     /// 每个账号的积分（key = account UUID），失败时保留旧值
     @Published var accountWorkBuddyCredits: [UUID: WorkBuddyCredits] = [:]
-    /// 每个账号的签到日期（UUID → "yyyy-MM-dd"），驱动 UI 显示「已签到」标签
+    /// 每个账号的签到日期（UUID → "yyyy-MM-dd"），仅用于内部判断今日是否已签
     @Published var accountCheckinDates: [UUID: String] = [:]
+    /// 每个账号的签到失败原因（UUID → 错误描述）；签到正常 / 已签到时无记录，面板只在失败时展示
+    @Published var accountCheckinErrors: [UUID: String] = [:]
     /// WorkBuddy 客户端是否在运行
     @Published var isWorkBuddyRunning = false
     /// 当前在 WorkBuddy 中登录的账号 uid（读 auth 文件得到）
@@ -5987,6 +5997,7 @@ final class KimiCodeBarModel: ObservableObject {
             accountStates = [:]
             accountWorkBuddyCredits = [:]
             accountCheckinDates = [:]
+            accountCheckinErrors = [:]
             syncPrimaryCompat()
             return
         }
@@ -5999,6 +6010,7 @@ final class KimiCodeBarModel: ObservableObject {
         accountStates = accountStates.filter { validIDs.contains($0.key) }
         accountWorkBuddyCredits = accountWorkBuddyCredits.filter { validIDs.contains($0.key) }
         accountCheckinDates = accountCheckinDates.filter { validIDs.contains($0.key) }
+        accountCheckinErrors = accountCheckinErrors.filter { validIDs.contains($0.key) }
 
         for account in snapshot.accounts where account.provider != .workbuddy {
             // WorkBuddy 账号的 loading / 结果态由 refreshWorkBuddyAccounts() 独立维护
@@ -6120,6 +6132,7 @@ final class KimiCodeBarModel: ObservableObject {
                 self.accountStates = self.accountStates.filter { validIDs.contains($0.key) }
                 self.accountWorkBuddyCredits = self.accountWorkBuddyCredits.filter { validIDs.contains($0.key) }
                 self.accountCheckinDates = self.accountCheckinDates.filter { validIDs.contains($0.key) }
+                self.accountCheckinErrors = self.accountCheckinErrors.filter { validIDs.contains($0.key) }
                 if showsLoading {
                     self.isLoading = false
                 }
@@ -6311,6 +6324,7 @@ final class KimiCodeBarModel: ObservableObject {
         accountStates.removeValue(forKey: id)
         accountWorkBuddyCredits.removeValue(forKey: id)
         accountCheckinDates.removeValue(forKey: id)
+        accountCheckinErrors.removeValue(forKey: id)
         syncPrimaryCompat()
     }
 
@@ -6596,6 +6610,8 @@ final class KimiCodeBarModel: ObservableObject {
     /// - 积分：每次调用都会重新查询，保证面板数据新鲜。
     /// - 签到：仅当 credentials.json 里持久化的 lastCheckinDate 落后于今天（北京时间）
     ///   时才真正发签到请求，每日每账号最多一次；跨天后下一次定时刷新自动补签。
+    /// - 签到结果展示：正常 / 已签到不显示任何状态；失败时原因记入 accountCheckinErrors，
+    ///   面板卡片显示警示图标，便于快速定位问题。
     ///
     /// 多账号串行执行，实际发过签到请求的账号之间间隔 1 秒，避免集中打服务端。
     func refreshWorkBuddyAccounts() {
@@ -6617,10 +6633,19 @@ final class KimiCodeBarModel: ObservableObject {
                     let result = await WorkBuddyService.shared.checkin(account: account)
                     if result.success {
                         KimiAccountStore.shared.updateWorkBuddyCheckinDate(id: account.id, date: today)
-                        await MainActor.run { accountCheckinDates[account.id] = today }
+                        await MainActor.run {
+                            accountCheckinDates[account.id] = today
+                            accountCheckinErrors.removeValue(forKey: account.id)
+                        }
+                    } else {
+                        // 签到失败：记录原因，面板卡片显示警示图标；因 lastCheckinDate 未更新，下次刷新自动重试
+                        await MainActor.run { accountCheckinErrors[account.id] = result.error ?? "未知错误" }
                     }
                 } else {
-                    await MainActor.run { accountCheckinDates[account.id] = today }
+                    await MainActor.run {
+                        accountCheckinDates[account.id] = today
+                        accountCheckinErrors.removeValue(forKey: account.id)
+                    }
                 }
 
                 // Reload account (checkin may have refreshed token)

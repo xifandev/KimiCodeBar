@@ -280,9 +280,10 @@ final class WorkBuddyService {
     }
 
     /// 每日签到（幂等）。Token 快过期时自动刷新。
-    /// 返回 (success, already)：success=true 表示签到成功或今日已签到，already=true 表示今日已签过。
-    func checkin(account: KimiAccount) async -> (success: Bool, already: Bool) {
-        guard var cred = account.workBuddyCredential else { return (false, false) }
+    /// 返回 (success, already, error)：success=true 表示签到成功或今日已签到，already=true 表示今日已签过；
+    /// 失败时 error 给出原因（网络错误 / 服务端 msg / 错误码），用于面板展示定位问题。
+    func checkin(account: KimiAccount) async -> (success: Bool, already: Bool, error: String?) {
+        guard var cred = account.workBuddyCredential else { return (false, false, "账号凭证缺失") }
         if isTokenExpiringSoon(cred.accessToken) {
             if let refreshed = await refreshToken(cred: cred) {
                 cred = refreshed
@@ -290,21 +291,26 @@ final class WorkBuddyService {
             }
         }
 
-        guard let (data, _) = try? await session.data(for: makeRequest(path: "/v2/billing/meter/daily-checkin", cred: cred)),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            return (false, false)
+        let data: Data
+        do {
+            (data, _) = try await session.data(for: makeRequest(path: "/v2/billing/meter/daily-checkin", cred: cred))
+        } catch {
+            return (false, false, error.localizedDescription)
+        }
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return (false, false, "响应解析失败")
         }
 
         let code = (json["code"] as? NSNumber)?.intValue ?? (json["code"] as? Int) ?? -1
         let msg = (json["msg"] as? String) ?? ""
 
-        if code == 0 { return (true, false) }
-        if code == 10001 { return (true, true) }
+        if code == 0 { return (true, false, nil) }
+        if code == 10001 { return (true, true, nil) }
         let lowerMsg = msg.lowercased()
         if lowerMsg.contains("already") || msg.contains("已签") || msg.contains("已领") || msg.contains("今日已") {
-            return (true, true)
+            return (true, true, nil)
         }
-        return (false, false)
+        return (false, false, msg.isEmpty ? "code \(code)" : msg)
     }
 
     // MARK: - 查积分
