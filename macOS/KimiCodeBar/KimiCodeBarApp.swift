@@ -4781,6 +4781,18 @@ struct PanelCustomSettingsView: View {
                                 .toggleStyle(.switch)
                                 .cursor(.pointingHand)
                         }
+
+                        SettingsCardDivider()
+
+                        SettingsCardRow(
+                            title: languageManager.tr("WorkBuddy积分自动排序"),
+                            subtitle: languageManager.tr("积分刷新完成后，按剩余积分从高到低排列 WorkBuddy 账号")
+                        ) {
+                            Toggle("", isOn: $model.workBuddyAutoSort)
+                                .labelsHidden()
+                                .toggleStyle(.switch)
+                                .cursor(.pointingHand)
+                        }
                     }
                 }
 
@@ -5709,6 +5721,8 @@ final class KimiCodeBarModel: ObservableObject {
     @AppStorage("showLocalUsageCard") var showLocalUsageCard: Bool = true
     @AppStorage("showKimiVersionRow") var showKimiVersionRow: Bool = false
     @AppStorage("showAppUpdateRow") var showAppUpdateRow: Bool = false
+    /// WorkBuddy 积分自动排序：开启后每次 WorkBuddy 积分刷新完成，按剩余积分降序重排 WorkBuddy 卡片
+    @AppStorage("workBuddyAutoSort") var workBuddyAutoSort: Bool = false
 
     // MARK: - 多账号卡片显示风格
     @AppStorage("multiAccountCardStyle") var multiAccountCardStyle: MultiAccountCardStyle = .classic
@@ -6669,8 +6683,51 @@ final class KimiCodeBarModel: ObservableObject {
                     try? await Task.sleep(nanoseconds: 1_000_000_000)
                 }
             }
-            await MainActor.run { self.isRefreshingWorkBuddy = false }
+            await MainActor.run {
+                self.isRefreshingWorkBuddy = false
+                // 全部 WorkBuddy 账号积分刷新完成后，按设置开关执行积分自动排序
+                self.applyWorkBuddyAutoSort()
+            }
         }
+    }
+
+    /// WorkBuddy 积分自动排序（由「WorkBuddy积分自动排序」开关控制，默认关闭）：
+    /// 仅在 WorkBuddy 账号内部按剩余积分降序重排，Kimi / DeepSeek / Antigravity 等其他平台
+    /// 账号的位置保持不变。顺序复用拖拽排序的 setAccountsOrder 通道落盘，避免被下一次
+    /// 刷新的磁盘快照覆盖。无积分的账号（登录失效 / 刷新失败 / 未加载）排在 WorkBuddy
+    /// 组末尾并保持原相对顺序（sorted 稳定排序）。
+    @MainActor
+    private func applyWorkBuddyAutoSort() {
+        guard workBuddyAutoSort else { return }
+        // 以磁盘最新账号为准：刷新过程中 token / 签到日期可能已更新落盘，
+        // 用内存旧账号整体回写会把这些更新覆盖掉
+        var result = KimiAccountStore.shared.freshAccounts()
+        let wbIndices = result.indices.filter { result[$0].provider == .workbuddy }
+        guard wbIndices.count > 1 else { return }
+
+        let wbAccounts = wbIndices.map { result[$0] }
+        let sorted = wbAccounts.sorted { lhs, rhs in
+            let lhsCredits = accountWorkBuddyCredits[lhs.id]?.remaining
+            let rhsCredits = accountWorkBuddyCredits[rhs.id]?.remaining
+            switch (lhsCredits, rhsCredits) {
+            case (.some(let l), .some(let r)):
+                return l > r
+            case (.some, .none):
+                return true   // 有积分的排前面
+            case (.none, .some):
+                return false  // 无积分（登录失效 / 刷新失败）排末尾
+            default:
+                return false  // 双方都无积分，保持原相对顺序
+            }
+        }
+
+        // 顺序无变化时不落盘，避免多余的磁盘写入
+        guard sorted.map(\.id) != wbAccounts.map(\.id) else { return }
+        for (slot, index) in wbIndices.enumerated() {
+            result[index] = sorted[slot]
+        }
+        KimiAccountStore.shared.setAccountsOrder(result)
+        accounts = result
     }
 
     /// 从本地 auth 文件添加当前 WorkBuddy 登录账号。

@@ -566,6 +566,17 @@
     "v%@" : {
 
     },
+    "WorkBuddy积分自动排序" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auto-sort WorkBuddy by credits"
+          }
+        }
+      }
+    },
     "WorkBuddy 账号 Key 由 WorkBuddy 客户端管理" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -3579,6 +3590,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Not checked in today"
+          }
+        }
+      }
+    },
+    "积分刷新完成后，按剩余积分从高到低排列 WorkBuddy 账号" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "After credits refresh, sort WorkBuddy accounts by remaining credits (high to low)"
           }
         }
       }

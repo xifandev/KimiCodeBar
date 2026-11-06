@@ -242,6 +242,12 @@ final class KimiAccountStore {
         Self.loadFromDisk()?.accounts.first(where: { $0.id == id })
     }
 
+    /// 读磁盘上最新的账号列表（一次落盘读取，不触碰内存状态），
+    /// 用于需要以最新落盘数据为准的操作（如 WorkBuddy 积分自动排序）。
+    func freshAccounts() -> [KimiAccount] {
+        Self.loadFromDisk()?.accounts ?? snapshot.accounts
+    }
+
     // MARK: 写入（全部串行 + 原子落盘）
 
     func addAccount(_ account: KimiAccount) {
