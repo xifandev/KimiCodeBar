@@ -1746,10 +1746,10 @@ struct AccountQuotaListView: View {
                     SingleAccountQuotaCards(account: account)
                 }
             } else {
-                // 卡包模式：托管账号 >2 的服务商折叠为总卡片（手风琴互斥）；
-                // ≤2 的服务商保持现有平铺卡片，现状设计零改动
+                // 卡包模式：托管账号 >1（即 ≥2）的服务商折叠为总卡片（手风琴互斥）；
+                // 单账号服务商保持现有平铺卡片，现状设计零改动
                 ForEach(providerSections, id: \.provider) { section in
-                    if section.accounts.count > 2 {
+                    if section.accounts.count > 1 {
                         ProviderFoldCard(
                             provider: section.provider,
                             accounts: section.accounts,
@@ -1774,7 +1774,7 @@ struct AccountQuotaListView: View {
             // 默认展开含主账号的折叠卡，面板打开即见正在使用的服务商
             if expandedProvider == nil,
                let primary = model.primaryAccount?.provider,
-               providerSections.contains(where: { $0.provider == primary && $0.accounts.count > 2 }) {
+               providerSections.contains(where: { $0.provider == primary && $0.accounts.count > 1 }) {
                 expandedProvider = primary
             }
         }
@@ -1835,7 +1835,15 @@ private struct ProviderAccountCard: View {
     }
 }
 
-/// 卡包模式：某服务商托管账号 >2 时，整组收进一张「总卡片」。
+/// 卡包展开区内容实测高度的 PreferenceKey
+private struct FoldListHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
+/// 卡包模式：某服务商托管账号 >1（即 ≥2）时，整组收进一张「总卡片」。
 /// - 折叠态：服务商 logo + 账号数 / 异常数 + Σ 积分（或 Σ 余额），不展开也能扫出总量
 /// - 展开态：卡内原样渲染现有账号卡片（含悬停描边 / 点击设主账号），高度封顶、卡内滚动
 /// - 手风琴：expandedProvider 全面板共享，展开一个自动收起其他，面板高度天然可控
@@ -1847,6 +1855,8 @@ private struct ProviderFoldCard: View {
 
     @StateObject private var model = KimiCodeBarModel.shared
     @State private var isHoveredHeader = false
+    /// 展开区内容实测高度（菜单栏面板是按内容自适应的窗口，ScrollView 无显式高度会被压成 0）
+    @State private var contentHeight: CGFloat = 0
 
     private var isOpen: Bool { expandedProvider == provider }
 
@@ -1869,6 +1879,9 @@ private struct ProviderFoldCard: View {
             header
 
             if isOpen {
+                // 菜单栏面板是「按内容自适应尺寸」的窗口，ScrollView 没有显式高度约束时会被压成 0 高
+                // （表现为点卡头只翻箭头、列表不出现）。先用 PreferenceKey 实测内容高度，
+                // 再显式 frame(height:) 封顶：内容矮于上限整段露出，高于上限卡内滚动。
                 ScrollView(.vertical) {
                     VStack(spacing: 8) {
                         ForEach(accounts) { account in
@@ -1882,8 +1895,15 @@ private struct ProviderFoldCard: View {
                         }
                     }
                     .padding(8)
+                    .background(
+                        GeometryReader { proxy in
+                            Color.clear.preference(key: FoldListHeightKey.self, value: proxy.size.height)
+                        }
+                    )
                 }
-                .frame(maxHeight: listMaxHeight)
+                .frame(height: min(max(contentHeight, 1), listMaxHeight))
+                .onPreferenceChange(FoldListHeightKey.self) { contentHeight = $0 }
+                .animation(.easeOut(duration: 0.2), value: contentHeight)
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
@@ -1944,6 +1964,8 @@ private struct ProviderFoldCard: View {
         .overlay(
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color.kimiTextPrimary.opacity(isHoveredHeader ? 0.06 : 0))
+                // 悬停高亮层盖在按钮上方，必须放行点击，否则卡头点不动
+                .allowsHitTesting(false)
         )
         .cursor(.pointingHand)
         .onHover { isHoveredHeader = $0 }
