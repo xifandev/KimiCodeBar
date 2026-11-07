@@ -1875,10 +1875,12 @@ private struct ProviderFoldCard: View {
         return min(max(visibleHeight * 0.85 - 420, 180), 640)
     }
 
-    private var drawerAnimation: Animation {
-        isOpen
-            ? .timingCurve(0.22, 1, 0.36, 1, duration: 0.42)
-            : .timingCurve(0.4, 0, 0.2, 1, duration: 0.28)
+    private var expandAnimation: Animation {
+        .timingCurve(0.22, 1, 0.36, 1, duration: 0.42)
+    }
+
+    private var collapseAnimation: Animation {
+        .timingCurve(0.4, 0, 0.2, 1, duration: 0.28)
     }
 
     private var chevronAnimation: Animation {
@@ -1928,8 +1930,7 @@ private struct ProviderFoldCard: View {
             .clipped()
             .allowsHitTesting(isOpen)
             .onPreferenceChange(FoldListHeightKey.self) { contentHeight = $0 }
-            .animation(drawerAnimation, value: isOpen)
-            .animation(.timingCurve(0.22, 1, 0.36, 1, duration: 0.42), value: contentHeight)
+            .animation(expandAnimation, value: contentHeight)
         }
         .background(Color.kimiCardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -1942,7 +1943,11 @@ private struct ProviderFoldCard: View {
 
     private var header: some View {
         Button {
-            expandedProvider = isOpen ? nil : provider
+            // 显式事务覆盖整个账号区：抽屉高度、卡包外框与下方卡片位置必须同帧插值，
+            // 否则收起时兄弟卡片会按最终布局提前上移，撞上仍在收缩的卡包边缘。
+            withAnimation(isOpen ? collapseAnimation : expandAnimation) {
+                expandedProvider = isOpen ? nil : provider
+            }
         } label: {
             HStack(spacing: 10) {
                 Image(provider.logoImageName)
