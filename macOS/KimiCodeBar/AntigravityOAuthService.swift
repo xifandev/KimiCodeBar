@@ -361,6 +361,19 @@ public final class AntigravityOAuthService: Sendable {
 
 // MARK: - Loopback 本地回调服务器
 
+private final class OAuthContinuationResumeGate: @unchecked Sendable {
+    private let lock = NSLock()
+    private var hasResumed = false
+
+    func claim() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        guard !hasResumed else { return false }
+        hasResumed = true
+        return true
+    }
+}
+
 private final class LoopbackOAuthServer: @unchecked Sendable {
     private(set) var port: UInt16
     private(set) var redirectURI: String
@@ -395,10 +408,9 @@ private final class LoopbackOAuthServer: @unchecked Sendable {
         }
 
         return try await withCheckedThrowingContinuation { continuation in
-            var resumed = false
-            func resumeOnce(_ result: Result<LoopbackOAuthServer, Error>) {
-                guard !resumed else { return }
-                resumed = true
+            let resumeGate = OAuthContinuationResumeGate()
+            @Sendable func resumeOnce(_ result: Result<LoopbackOAuthServer, Error>) {
+                guard resumeGate.claim() else { return }
                 continuation.resume(with: result)
             }
 
