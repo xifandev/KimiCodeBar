@@ -1875,60 +1875,74 @@ private struct ProviderFoldCard: View {
         return min(max(visibleHeight * 0.85 - 420, 180), 640)
     }
 
+    private var drawerAnimation: Animation {
+        isOpen
+            ? .timingCurve(0.22, 1, 0.36, 1, duration: 0.42)
+            : .timingCurve(0.4, 0, 0.2, 1, duration: 0.28)
+    }
+
+    private var chevronAnimation: Animation {
+        isOpen
+            ? .timingCurve(0.22, 1, 0.36, 1, duration: 0.38)
+            : .timingCurve(0.4, 0, 0.2, 1, duration: 0.28)
+    }
+
+    private func revealAnimation(for index: Int) -> Animation {
+        guard isOpen else { return .easeIn(duration: 0.1) }
+        return .timingCurve(0.22, 1, 0.36, 1, duration: 0.3)
+            .delay(0.075 + Double(min(index, 5)) * 0.024)
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             header
 
-            if isOpen {
-                // 菜单栏面板是「按内容自适应尺寸」的窗口，ScrollView 没有显式高度约束时会被压成 0 高
-                // （表现为点卡头只翻箭头、列表不出现）。先用 PreferenceKey 实测内容高度，
-                // 再显式 frame(height:) 封顶：内容矮于上限整段露出，高于上限卡内滚动。
-                ScrollView(.vertical) {
-                    VStack(spacing: 8) {
-                        ForEach(accounts) { account in
-                            ProviderAccountCard(account: account)
-                                .modifier(AccountCardHover(
-                                    accountID: account.id,
-                                    isPrimary: account.id == model.primaryAccountID,
-                                    hoveredID: $hoveredAccountID,
-                                    onTap: { model.setPrimaryAccount(account.id) }
-                                ))
-                        }
+            // 菜单栏面板是「按内容自适应尺寸」的窗口，ScrollView 没有显式高度约束时会被压成 0 高。
+            // 列表始终挂载并实测内容高度，展开与收起共用可中断的高度动画，避免移除视图造成跳变。
+            ScrollView(.vertical) {
+                VStack(spacing: 8) {
+                    ForEach(Array(accounts.enumerated()), id: \.element.id) { index, account in
+                        ProviderAccountCard(account: account)
+                            .modifier(AccountCardHover(
+                                accountID: account.id,
+                                isPrimary: account.id == model.primaryAccountID,
+                                hoveredID: $hoveredAccountID,
+                                onTap: { model.setPrimaryAccount(account.id) }
+                            ))
+                            .opacity(isOpen ? 1 : 0)
+                            .offset(y: isOpen ? 0 : 5)
+                            .animation(revealAnimation(for: index), value: isOpen)
                     }
-                    .padding(8)
-                    .background(
-                        GeometryReader { proxy in
-                            Color.clear.preference(key: FoldListHeightKey.self, value: proxy.size.height)
-                        }
-                    )
                 }
-                .frame(height: min(max(contentHeight, 1), listMaxHeight))
-                // 展开区独立凹陷底色：卡头「封面」恒定保持实心卡片色，
-                // 展开动画只发生在卡头下方，不会扫过封面
-                .background(Color.kimiPanelBackground)
-                .onPreferenceChange(FoldListHeightKey.self) { contentHeight = $0 }
-                .animation(.easeOut(duration: 0.2), value: contentHeight)
-                .transition(.opacity)
+                .padding(8)
+                .background(
+                    GeometryReader { proxy in
+                        Color.clear.preference(key: FoldListHeightKey.self, value: proxy.size.height)
+                    }
+                )
             }
+            .frame(height: isOpen ? min(max(contentHeight, 1), listMaxHeight) : 0)
+            // 展开区独立凹陷底色：卡头「封面」恒定保持实心卡片色，
+            // 展开动画只发生在卡头下方，不会扫过封面
+            .background(Color.kimiPanelBackground)
+            .clipped()
+            .allowsHitTesting(isOpen)
+            .onPreferenceChange(FoldListHeightKey.self) { contentHeight = $0 }
+            .animation(drawerAnimation, value: isOpen)
+            .animation(.timingCurve(0.22, 1, 0.36, 1, duration: 0.42), value: contentHeight)
         }
         .background(Color.kimiCardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.kimiBlue.opacity(isOpen ? 0.45 : 0), lineWidth: 1)
+                .animation(.easeOut(duration: isOpen ? 0.24 : 0.18), value: isOpen)
         )
-        .animation(.easeOut(duration: 0.22), value: isOpen)
     }
 
     private var header: some View {
         Button {
-            if isOpen {
-                expandedProvider = nil
-            } else {
-                // 先清零实测高度：展开时高度从 0 像抽屉一样生长，避免整段高度瞬间弹出
-                contentHeight = 0
-                expandedProvider = provider
-            }
+            expandedProvider = isOpen ? nil : provider
         } label: {
             HStack(spacing: 10) {
                 Image(provider.logoImageName)
@@ -1964,6 +1978,7 @@ private struct ProviderFoldCard: View {
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(isOpen ? Color.kimiBlue : Color.kimiTextTertiary)
                     .rotationEffect(.degrees(isOpen ? 180 : 0))
+                    .animation(chevronAnimation, value: isOpen)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
