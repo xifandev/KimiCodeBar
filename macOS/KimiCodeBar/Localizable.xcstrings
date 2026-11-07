@@ -546,6 +546,127 @@
     "Open Source" : {
 
     },
+    "Qoder CN 凭据由客户端管理，请重新读取本机登录态" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Qoder CN credentials are managed by the client; read the local session again"
+          }
+        }
+      }
+    },
+    "Qoder CN 接口响应格式异常" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The Qoder CN API response had an unexpected format"
+          }
+        }
+      }
+    },
+    "Qoder CN 接口返回 HTTP %@" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The Qoder CN API returned HTTP %@"
+          }
+        }
+      }
+    },
+    "Qoder CN 用量接口返回了未识别的积分结构" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The Qoder CN usage API returned an unrecognized credit structure"
+          }
+        }
+      }
+    },
+    "Qoder CN 登录凭据已失效，请在客户端重新登录后再读取" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The Qoder CN credential has expired; sign in again in the client and reread it"
+          }
+        }
+      }
+    },
+    "Qoder CN 登录态中未找到访问凭据" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No access credential was found in the Qoder CN session"
+          }
+        }
+      }
+    },
+    "Qoder CN 登录文件无效或过大" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The Qoder CN session file is invalid or too large"
+          }
+        }
+      }
+    },
+    "Qoder CN 登录文件格式暂不兼容" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This Qoder CN session-file format is not supported yet"
+          }
+        }
+      }
+    },
+    "Qoder CN 登录文件正在变化，请稍后重试" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The Qoder CN session file is changing; try again shortly"
+          }
+        }
+      }
+    },
+    "Qoder CN 账号快照缺失" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The Qoder CN account snapshot is missing"
+          }
+        }
+      }
+    },
+    "Qoder CN 账号请使用读取本机方式添加" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add Qoder CN accounts by reading the local session"
+          }
+        }
+      }
+    },
     "sk-..." : {
 
     },
@@ -566,17 +687,6 @@
     "v%@" : {
 
     },
-    "WorkBuddy积分自动排序" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Auto-sort WorkBuddy by credits"
-          }
-        }
-      }
-    },
     "WorkBuddy 账号 Key 由 WorkBuddy 客户端管理" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -595,6 +705,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "WorkBuddy accounts use the local-read flow"
+          }
+        }
+      }
+    },
+    "WorkBuddy积分自动排序" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auto-sort WorkBuddy by credits"
           }
         }
       }
@@ -676,6 +797,17 @@
         }
       }
     },
+    "为该账号设置便于区分的别名和备注手机号，手机号可留空。" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set an alias and phone number to tell accounts apart. Phone is optional."
+          }
+        }
+      }
+    },
     "主账号" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -709,6 +841,17 @@
         }
       }
     },
+    "今日未签到" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not checked in today"
+          }
+        }
+      }
+    },
     "仍然切换" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -738,6 +881,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Add from local WorkBuddy"
+          }
+        }
+      }
+    },
+    "从本机客户端读取" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Read from Local Client"
           }
         }
       }
@@ -1248,6 +1402,17 @@
         }
       }
     },
+    "启动 Qoder CN" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Launch Qoder CN"
+          }
+        }
+      }
+    },
     "启用检查更新" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1578,6 +1743,17 @@
         }
       }
     },
+    "已复制到剪贴板" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copied to clipboard"
+          }
+        }
+      }
+    },
     "已归档" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1761,6 +1937,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Enter an API Key manually"
+          }
+        }
+      }
+    },
+    "手机号" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phone"
           }
         }
       }
@@ -2007,6 +2194,17 @@
         }
       }
     },
+    "无法从 Qoder CN 账号资料接口识别用户" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not identify the user from the Qoder CN profile API"
+          }
+        }
+      }
+    },
     "无法写入 CLI 凭证文件：%@" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2036,6 +2234,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Unable to parse the authorization service response"
+          }
+        }
+      }
+    },
+    "无法访问 Qoder CN 的 macOS 安全存储项" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not access the Qoder CN macOS secure-storage item"
           }
         }
       }
@@ -2318,6 +2527,17 @@
         }
       }
     },
+    "未检测到 Qoder CN 本地登录态" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No Qoder CN local session was found"
+          }
+        }
+      }
+    },
     "未检测到 WorkBuddy 登录信息，请先在 WorkBuddy 中登录" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2593,6 +2813,28 @@
         }
       }
     },
+    "添加" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add"
+          }
+        }
+      }
+    },
+    "添加中…" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adding…"
+          }
+        }
+      }
+    },
     "添加失败" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2633,6 +2875,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Click the button below to open Google authorization in your default browser. The Antigravity account will be added automatically once authorized."
+          }
+        }
+      }
+    },
+    "点击复制手机号" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Click to copy phone number"
           }
         }
       }
@@ -2813,6 +3066,28 @@
         }
       }
     },
+    "积分" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "credits"
+          }
+        }
+      }
+    },
+    "积分刷新完成后，按剩余积分从高到低排列 WorkBuddy 账号" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "After credits refresh, sort WorkBuddy accounts by remaining credits (high to low)"
+          }
+        }
+      }
+    },
     "稍后再说" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2890,6 +3165,17 @@
         }
       }
     },
+    "签到失败：%@" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check-in failed: %@"
+          }
+        }
+      }
+    },
     "累计" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2930,6 +3216,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Cache Hit Rate"
+          }
+        }
+      }
+    },
+    "网络请求失败" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Network request failed"
           }
         }
       }
@@ -3077,6 +3374,28 @@
         }
       }
     },
+    "读取 Qoder CN 本机登录态" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Read Qoder CN local session"
+          }
+        }
+      }
+    },
+    "读取 Qoder CN 登录凭据需要访问钥匙串" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reading Qoder CN sign-in credentials requires access to your keychain"
+          }
+        }
+      }
+    },
     "读取中…" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -3095,6 +3414,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Read locally"
+          }
+        }
+      }
+    },
+    "读取本机" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Read local session"
           }
         }
       }
@@ -3330,86 +3660,6 @@
         }
       }
     },
-    "从本机客户端读取" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Read from Local Client"
-          }
-        }
-      }
-    },
-    "使用个人访问令牌（PAT）" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Use a Personal Access Token (PAT)"
-          }
-        }
-      }
-    },
-    "在 qoder.cn/account/integrations 创建 PAT，粘贴到此处即可添加对应账号，无需本机客户端登录。令牌仅存于本地账号库，用于查询积分和签到。" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Create a PAT at qoder.cn/account/integrations and paste it here to add that account, no local client sign-in required. The token is stored only in the local account library and used for credit queries and check-in."
-          }
-        }
-      }
-    },
-    "粘贴 PAT（pt- 开头）" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Paste PAT (starts with pt-)"
-          }
-        }
-      }
-    },
-    "添加" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add"
-          }
-        }
-      }
-    },
-    "添加中…" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Adding…"
-          }
-        }
-      }
-    },
-    "请先粘贴 PAT" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Paste a PAT first"
-          }
-        }
-      }
-    },
-    "PAT 无效或已过期，请在 qoder.cn 重新创建后再添加" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The PAT is invalid or expired. Create a new one at qoder.cn and add it again."
-          }
-        }
-      }
-    },
     "选择登录方式" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -3542,6 +3792,17 @@
         }
       }
     },
+    "需先在 Qoder CN 客户端登录目标账号，再读取本机加密登录态。令牌只在内存中用于查询积分和签到。" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in to the target account in Qoder CN first, then read its encrypted local session. The token stays in memory for credit queries and check-in."
+          }
+        }
+      }
+    },
     "需先在 WorkBuddy 客户端登录目标账号，再点下方按钮读取本地登录信息。" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -3607,150 +3868,6 @@
           }
         }
       }
-    },
-    "为该账号设置便于区分的别名和备注手机号，手机号可留空。" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Set an alias and phone number to tell accounts apart. Phone is optional."
-          }
-        }
-      }
-    },
-    "已复制" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Copied"
-          }
-        }
-      }
-    },
-    "手机号" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Phone"
-          }
-        }
-      }
-    },
-    "点击复制手机号" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Click to copy phone number"
-          }
-        }
-      }
-    },
-    "已复制到剪贴板" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Copied to clipboard"
-          }
-        }
-      }
-    },
-    "今日未签到" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Not checked in today"
-          }
-        }
-      }
-    },
-    "积分刷新完成后，按剩余积分从高到低排列 WorkBuddy 账号" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "After credits refresh, sort WorkBuddy accounts by remaining credits (high to low)"
-          }
-        }
-      }
-    },
-    "签到失败：%@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Check-in failed: %@"
-          }
-        }
-      }
-    },
-    "读取 Qoder CN 本机登录态" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Read Qoder CN local session" } } }
-    },
-    "需先在 Qoder CN 客户端登录目标账号，再读取本机加密登录态。令牌只在内存中用于查询积分和签到。" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Sign in to the target account in Qoder CN first, then read its encrypted local session. The token stays in memory for credit queries and check-in." } } }
-    },
-    "Qoder CN 账号请使用读取本机方式添加" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Add Qoder CN accounts by reading the local session" } } }
-    },
-    "Qoder CN 凭据由客户端管理，请重新读取本机登录态" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Qoder CN credentials are managed by the client; read the local session again" } } }
-    },
-    "积分" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "credits" } } }
-    },
-    "未检测到 Qoder CN 本地登录态" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "No Qoder CN local session was found" } } }
-    },
-    "无法访问 Qoder CN 的 macOS 安全存储项" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Could not access the Qoder CN macOS secure-storage item" } } }
-    },
-    "Qoder CN 登录文件无效或过大" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "The Qoder CN session file is invalid or too large" } } }
-    },
-    "Qoder CN 登录文件正在变化，请稍后重试" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "The Qoder CN session file is changing; try again shortly" } } }
-    },
-    "Qoder CN 登录文件格式暂不兼容" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "This Qoder CN session-file format is not supported yet" } } }
-    },
-    "Qoder CN 登录态中未找到访问凭据" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "No access credential was found in the Qoder CN session" } } }
-    },
-    "Qoder CN 登录凭据已失效，请在客户端重新登录后再读取" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "The Qoder CN credential has expired; sign in again in the client and reread it" } } }
-    },
-    "无法从 Qoder CN 账号资料接口识别用户" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Could not identify the user from the Qoder CN profile API" } } }
-    },
-    "Qoder CN 用量接口返回了未识别的积分结构" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "The Qoder CN usage API returned an unrecognized credit structure" } } }
-    },
-    "Qoder CN 接口响应格式异常" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "The Qoder CN API response had an unexpected format" } } }
-    },
-    "Qoder CN 接口返回 HTTP %@" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "The Qoder CN API returned HTTP %@" } } }
-    },
-    "Qoder CN 账号快照缺失" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "The Qoder CN account snapshot is missing" } } }
-    },
-    "网络请求失败" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Network request failed" } } }
-    },
-    "读取本机" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Read local session" } } }
     }
   },
   "version" : "1.0"

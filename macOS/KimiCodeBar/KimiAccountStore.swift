@@ -116,15 +116,12 @@ struct WorkBuddyCredential: Codable, Equatable {
     var hasSnapshot: Bool { accountSnapshot != nil && authSnapshot != nil }
 }
 
-/// Qoder CN 账号：保存客户端原始 safeStorage 密文快照（解密 token 不落盘），
-/// 或用户提供的个人访问令牌 PAT（与 WorkBuddy token 同级，仅存本地账号库）。
+/// Qoder CN 账号：保存客户端原始 safeStorage 密文快照（解密 token 不落盘）。
 struct QoderCredential: Codable, Equatable {
     var uid: String
-    /// 客户端 auth 文件密文快照；PAT 账号为空
+    /// 客户端 auth 文件密文快照
     var authSnapshot: Data
     var profileOverlaySnapshot: Data?
-    /// 个人访问令牌（pt- 开头）；存在时优先走 PAT 换 jobToken 链路
-    var personalToken: String?
     var lastCheckinDate: String?
 }
 

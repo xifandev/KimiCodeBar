@@ -1,4 +1,5 @@
 import Foundation
+import AppKit
 import Combine
 import Security
 import CommonCrypto
@@ -51,7 +52,6 @@ final class QoderService {
     private let session: URLSession
     private let keyLock = NSLock()
     private var cachedAESKey: [UInt8]?
-    private var jobTokenCache: JobTokenCache?
 
     private init() {
         let configuration = URLSessionConfiguration.ephemeral
@@ -80,25 +80,77 @@ final class QoderService {
             uid: profile.uid,
             authSnapshot: authSnapshot,
             profileOverlaySnapshot: overlaySnapshot,
-            personalToken: nil,
             lastCheckinDate: nil
         )
         return (credential, profile)
     }
 
-    /// 用个人访问令牌（PAT）导入账号：先换 jobToken 校验令牌有效性并识别 UID。
-    /// PAT 账号不依赖本机客户端登录态与解密链路。
-    func importAccount(personalToken pat: String) async throws -> (credential: QoderCredential, profile: QoderAccountProfile) {
-        let token = try await jobToken(pat: pat, forceRefresh: true)
-        let profile = try await fetchProfile(token: token)
-        let credential = QoderCredential(
-            uid: profile.uid,
-            authSnapshot: Data(),
-            profileOverlaySnapshot: nil,
-            personalToken: pat,
-            lastCheckinDate: nil
+    // MARK: - 切换账号（写 auth 文件）
+
+    /// 当前 Qoder CN 客户端登录账号的 UID（解密 auth.v1.dat 本地识别，不联网）。
+    /// 用于面板「当前」标签；解密失败（未登录 / 格式变化）返回 nil。
+    func currentActiveUID() -> String? {
+        guard FileManager.default.fileExists(atPath: authFileURL.path),
+              let snapshot = try? readStableFile(authFileURL) else { return nil }
+        return uid(from: snapshot)
+    }
+
+    /// 将指定账号的加密快照原样写回 auth 文件 + profile overlay，使下次启动 Qoder CN
+    /// 使用该账号。快照是 safeStorage 密文，写回不碰密钥、不重加密。
+    /// 账号无 auth 快照时返回 false。
+    @discardableResult
+    func switchTo(account: KimiAccount) -> Bool {
+        guard let cred = account.qoderCredential, !cred.authSnapshot.isEmpty else { return false }
+        backupAuthFiles()
+        do {
+            try cred.authSnapshot.write(to: authFileURL, options: .atomic)
+            if let overlay = cred.profileOverlaySnapshot, !overlay.isEmpty {
+                try overlay.write(to: profileOverlayURL, options: .atomic)
+            } else {
+                // 目标账号无 profile overlay 快照：移除当前 overlay，避免残留上一账号的资料
+                try? FileManager.default.removeItem(at: profileOverlayURL)
+            }
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    func isQoderRunning() -> Bool {
+        NSWorkspace.shared.runningApplications.contains {
+            $0.bundleIdentifier == "com.qodercn.app" || $0.bundleURL?.lastPathComponent == "Qoder CN.app"
+        }
+    }
+
+    func restartQoder(completion: (@MainActor () -> Void)? = nil) {
+        let apps = NSWorkspace.shared.runningApplications.filter {
+            $0.bundleIdentifier == "com.qodercn.app" || $0.bundleURL?.lastPathComponent == "Qoder CN.app"
+        }
+        for app in apps { app.terminate() }
+        Task {
+            try? await Task.sleep(nanoseconds: 1_200_000_000)
+            let url = URL(fileURLWithPath: "/Applications/Qoder CN.app")
+            _ = try? await NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            await MainActor.run { completion?() }
+        }
+    }
+
+    private func backupAuthFiles() {
+        let backupDir = dataDirectory.appendingPathComponent("auth-backups", isDirectory: true)
+        try? FileManager.default.createDirectory(at: backupDir, withIntermediateDirectories: true)
+        let ts = ISO8601DateFormatter().string(from: Date())
+            .replacingOccurrences(of: ":", with: "-")
+        try? FileManager.default.copyItem(
+            at: authFileURL,
+            to: backupDir.appendingPathComponent("auth.v1.\(ts).dat")
         )
-        return (credential, profile)
+        if FileManager.default.fileExists(atPath: profileOverlayURL.path) {
+            try? FileManager.default.copyItem(
+                at: profileOverlayURL,
+                to: backupDir.appendingPathComponent("auth-profile-overlays.v1.\(ts).dat")
+            )
+        }
     }
 
     func fetchCredits(credential: QoderCredential) async throws -> QoderCredits {
@@ -157,75 +209,10 @@ final class QoderService {
         }
     }
 
-    // MARK: - PAT 换 jobToken
-
-    private struct JobTokenCache {
-        let pat: String
-        let token: String
-        let expiresAt: Date
-    }
-
-    /// PAT 账号取 token：换 jobToken（内存缓存，临期 5 分钟重换）；快照账号解本地密文。
-    private func accessToken(for credential: QoderCredential) async throws -> String {
-        if let pat = credential.personalToken, !pat.isEmpty {
-            return try await jobToken(pat: pat)
-        }
-        return try accessToken(from: credential.authSnapshot)
-    }
-
-    /// 带凭证身份的请求；PAT 账号遇 401/403 自动重换 jobToken 重试一次。
+    /// 带凭证身份的请求：解本地密文取 token 后调用底层 requestJSON。
     private func requestJSON(credential: QoderCredential, path: String, method: String = "GET") async throws -> [String: Any] {
-        do {
-            let token = try await accessToken(for: credential)
-            return try await requestJSON(path: path, token: token, method: method)
-        } catch QoderError.unauthorized {
-            guard let pat = credential.personalToken, !pat.isEmpty else { throw QoderError.unauthorized }
-            invalidateJobToken(pat: pat)
-            let token = try await jobToken(pat: pat)
-            return try await requestJSON(path: path, token: token, method: method)
-        }
-    }
-
-    /// 官方交换端点：PAT 换短期 jobToken（cosy-clienttype: 5），后续接口仍用 clientType 10。
-    private func jobToken(pat: String, forceRefresh: Bool = false) async throws -> String {
-        if !forceRefresh {
-            keyLock.lock()
-            let cached = jobTokenCache
-            keyLock.unlock()
-            if let cached, cached.pat == pat, cached.expiresAt.timeIntervalSinceNow > 5 * 60 {
-                return cached.token
-            }
-        }
-        let payload = try await requestJSON(
-            path: "/api/v1/jobToken/exchange",
-            token: nil,
-            method: "POST",
-            body: ["personal_token": pat],
-            clientType: "5"
-        )
-        guard let token = stringValue(payload, keys: Self.tokenKeys), !token.isEmpty else {
-            throw QoderError.patInvalid
-        }
-        let expiresAt: Date
-        if let timestamp = numericValue(payload, keys: ["expires_at", "expiresAt", "expireTime"]) {
-            expiresAt = timestamp > 1e11
-                ? Date(timeIntervalSince1970: timestamp / 1000)
-                : Date(timeIntervalSince1970: timestamp)
-        } else if let ttl = numericValue(payload, keys: ["expires_in", "expiresIn"]) {
-            expiresAt = Date().addingTimeInterval(ttl)
-        } else {
-            expiresAt = Date().addingTimeInterval(3600)
-        }
-        keyLock.lock()
-        jobTokenCache = JobTokenCache(pat: pat, token: token, expiresAt: expiresAt)
-        keyLock.unlock()
-        return token
-    }
-
-    private func invalidateJobToken(pat: String) {
-        keyLock.lock()
-        if jobTokenCache?.pat == pat { jobTokenCache = nil }
-        keyLock.unlock()
+        let token = try accessToken(from: credential.authSnapshot)
+        return try await requestJSON(path: path, token: token, method: method)
     }
 
     // MARK: - 登录态解密
@@ -258,6 +245,36 @@ final class QoderService {
             }
         }
         throw decryptedOnce ? QoderError.missingToken : QoderError.unsupportedAuthFormat
+    }
+
+    /// 从 auth 快照密文解密并提取 UID（本地，不联网），用于「当前账号」判断。
+    /// 与 accessToken(from:) 同一套解密链，只是最后提取 UID 而非 token。
+    private func uid(from snapshot: Data) -> String? {
+        guard let prefix = String(data: snapshot.prefix(3), encoding: .ascii),
+              prefix == "v10" || prefix == "v11" else { return nil }
+        if let cached = cachedKey(), let uid = uidFromSnapshot(snapshot, key: cached) { return uid }
+        let passwords = keychainPasswords()
+        guard !passwords.isEmpty else { return nil }
+        for password in passwords {
+            for key in candidateKeys(for: password) {
+                guard let plaintext = decryptEnvelope(snapshot, key: key) else { continue }
+                guard let uid = uidFromPlaintext(plaintext), !uid.isEmpty else { continue }
+                cacheKey(key)
+                return uid
+            }
+        }
+        return nil
+    }
+
+    private func uidFromSnapshot(_ snapshot: Data, key: [UInt8]) -> String? {
+        guard let plaintext = decryptEnvelope(snapshot, key: key) else { return nil }
+        return uidFromPlaintext(plaintext)
+    }
+
+    private func uidFromPlaintext(_ plaintext: Data) -> String? {
+        guard let object = try? JSONSerialization.jsonObject(with: plaintext) else { return nil }
+        guard let uid = findString(in: object, matching: ["uid", "userId", "user_id"]), !uid.isEmpty else { return nil }
+        return uid
     }
 
     private func tokenFromSnapshot(_ snapshot: Data, key: [UInt8]) -> String? {
@@ -527,7 +544,6 @@ private enum QoderError: LocalizedError {
     case unsupportedAuthFormat
     case missingToken
     case unauthorized
-    case patInvalid
     case profileUnavailable
     case unrecognizedQuota
     case invalidResponse
@@ -542,7 +558,6 @@ private enum QoderError: LocalizedError {
         case .unsupportedAuthFormat: return LanguageManager.tr("Qoder CN 登录文件格式暂不兼容")
         case .missingToken: return LanguageManager.tr("Qoder CN 登录态中未找到访问凭据")
         case .unauthorized: return LanguageManager.tr("Qoder CN 登录凭据已失效，请在客户端重新登录后再读取")
-        case .patInvalid: return LanguageManager.tr("PAT 无效或已过期，请在 qoder.cn 重新创建后再添加")
         case .profileUnavailable: return LanguageManager.tr("无法从 Qoder CN 账号资料接口识别用户")
         case .unrecognizedQuota: return LanguageManager.tr("Qoder CN 用量接口返回了未识别的积分结构")
         case .invalidResponse: return LanguageManager.tr("Qoder CN 接口响应格式异常")

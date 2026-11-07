@@ -2083,9 +2083,26 @@ private struct QoderCNCard: View {
     @StateObject private var model = KimiCodeBarModel.shared
     @StateObject private var languageManager = LanguageManager.shared
 
+    @State private var isHoveredLaunch = false
+
     private var credits: QoderCredits? { manager.credits[account.id] }
     private var error: String? { manager.errors[account.id] }
     private var checkinError: String? { manager.checkinErrors[account.id] }
+
+    /// 该账号是否是当前 Qoder CN 客户端登录的账号
+    private var isActive: Bool {
+        model.qoderActiveUID == account.qoderCredential?.uid
+    }
+
+    private func tagPill(_ text: String, color: Color) -> some View {
+        Text(text)
+            .font(.system(size: 9, weight: .medium))
+            .foregroundStyle(color)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 1)
+            .background(color.opacity(0.12))
+            .clipShape(RoundedRectangle(cornerRadius: 4))
+    }
 
     var body: some View {
         HStack(spacing: 8) {
@@ -2106,6 +2123,11 @@ private struct QoderCNCard: View {
                     .help(languageManager.tr("签到失败：%@", arguments: [checkinError]))
             }
 
+            // 标签：仅展示「当前」
+            if isActive {
+                tagPill(languageManager.tr("当前"), color: .kimiBlue)
+            }
+
             Spacer(minLength: 8)
 
             if manager.loadingIDs.contains(account.id) && credits == nil {
@@ -2123,6 +2145,23 @@ private struct QoderCNCard: View {
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.kimiTextSecondary)
                 }
+
+                // 启动按钮：设为主账号 → 写该账号快照回 auth 文件 → 重启 Qoder CN（切换 + 启动）
+                Button(action: {
+                    model.setPrimaryAccount(account.id)
+                    model.launchQoder(account: account)
+                }) {
+                    Image(systemName: "play.fill")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(isHoveredLaunch ? .kimiTextPrimary : .kimiTextSecondary)
+                        .frame(width: 22, height: 22)
+                        .background(isHoveredLaunch ? Color.kimiTextPrimary.opacity(0.14) : Color.kimiTextPrimary.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                }
+                .buttonStyle(.plain)
+                .cursor(.pointingHand)
+                .onHover { isHoveredLaunch = $0 }
+                .help(languageManager.tr("启动 Qoder CN"))
             } else if let error {
                 Text("--")
                     .font(.system(size: 14, weight: .semibold, design: .rounded))
@@ -5827,6 +5866,8 @@ final class KimiCodeBarModel: ObservableObject {
     @Published var isWorkBuddyRunning = false
     /// 当前在 WorkBuddy 中登录的账号 uid（读 auth 文件得到）
     @Published var workBuddyActiveUID: String?
+    /// 当前在 Qoder CN 中登录的账号 uid（解密 auth.v1.dat 得到）
+    @Published var qoderActiveUID: String?
 
     @Published var text = "-- · --"
     @Published var quota: KimiQuota?
@@ -5979,6 +6020,7 @@ final class KimiCodeBarModel: ObservableObject {
         refreshAllAccounts(showsLoading: showsLoading)
         refreshWorkBuddyAccounts()
         QoderAccountManager.shared.refresh()
+        qoderActiveUID = QoderService.shared.currentActiveUID()
     }
 
     /// 解析单个 OAuth 账号当前可用的 access token。
@@ -6729,54 +6771,35 @@ final class KimiCodeBarModel: ObservableObject {
     /// 由 refresh() 统一触发（启动 / 定时器 / 面板打开 / 手动刷新）。
     ///
     /// 签到与积分刷新解耦：
-    /// - 积分：每次调用都会重新查询，保证面板数据新鲜。
-    /// - 签到：仅当 credentials.json 里持久化的 lastCheckinDate 落后于今天（北京时间）
-    ///   时才真正发签到请求，每日每账号最多一次；跨天后下一次定时刷新自动补签。
-    /// - 签到结果展示：正常 / 已签到不显示任何状态；失败时原因记入 accountCheckinErrors，
-    ///   面板卡片显示警示图标，便于快速定位问题。
-    ///
-    /// 多账号串行执行，实际发过签到请求的账号之间间隔 1 秒，避免集中打服务端。
+    /// - 积分：每次调用都会重新查询，保证面板数据新鲜。账号之间随机延时 3~10 秒，
+    ///   避免批量刷新集中打服务端触发风控（防风控硬下限，与网络耗时无关）。
+    /// - 签到：已拆到独立的后台调度链 startWorkBuddyCheckinChain()（账号间随机延时 3~10 分钟），
+    ///   此处只负责保证链在跑。
+    /// - 多账号串行执行，同一时刻只有一个刷新轮在跑（isRefreshingWorkBuddy 守卫）。
     func refreshWorkBuddyAccounts() {
         isWorkBuddyRunning = WorkBuddyService.shared.isWorkBuddyRunning()
         workBuddyActiveUID = WorkBuddyService.shared.currentActiveUID()
+        // 签到调度链幂等启动：已在跑则直接跳过，链内部按「今日未签」逐个推进
+        startWorkBuddyCheckinChain()
 
         let wbAccounts = accounts.filter { $0.provider == .workbuddy }
         guard !wbAccounts.isEmpty, !isRefreshingWorkBuddy else { return }
         isRefreshingWorkBuddy = true
 
         Task {
-            let today = WorkBuddyService.todayString()
+            // 本轮刷新真正拉取成功的账号集合：排序时只有这些账号的积分才可信，
+            // 失败/未加载的账号即使字典里残留旧积分也必须沉底
+            var succeededIDs = Set<UUID>()
             for account in wbAccounts {
                 await MainActor.run { accountStates[account.id] = .loading }
 
-                var didCallCheckinAPI = false
-                if account.workBuddyCredential?.lastCheckinDate != today {
-                    didCallCheckinAPI = true
-                    let result = await WorkBuddyService.shared.checkin(account: account)
-                    if result.success {
-                        KimiAccountStore.shared.updateWorkBuddyCheckinDate(id: account.id, date: today)
-                        await MainActor.run {
-                            accountCheckinDates[account.id] = today
-                            accountCheckinErrors.removeValue(forKey: account.id)
-                        }
-                    } else {
-                        // 签到失败：记录原因，面板卡片显示警示图标；因 lastCheckinDate 未更新，下次刷新自动重试
-                        await MainActor.run { accountCheckinErrors[account.id] = result.error ?? "未知错误" }
-                    }
-                } else {
-                    await MainActor.run {
-                        accountCheckinDates[account.id] = today
-                        accountCheckinErrors.removeValue(forKey: account.id)
-                    }
-                }
-
-                // Reload account (checkin may have refreshed token)
                 let refreshed = KimiAccountStore.shared.freshAccount(id: account.id) ?? account
                 let outcome = await WorkBuddyService.shared.fetchCredits(account: refreshed)
                 await MainActor.run {
                     switch outcome {
                     case .success(let credits):
                         accountWorkBuddyCredits[account.id] = credits
+                        succeededIDs.insert(account.id)
                         accountStates[account.id] = .loaded
                     case .unauthorized:
                         // SSO session 失效：清掉旧积分避免 UI 残留显示，状态置 unauthorized 触发红字 + 重新授权按钮
@@ -6787,14 +6810,60 @@ final class KimiCodeBarModel: ObservableObject {
                     }
                 }
 
-                if didCallCheckinAPI && account.id != wbAccounts.last?.id {
-                    try? await Task.sleep(nanoseconds: 1_000_000_000)
+                // 账号之间随机延时 3~10 秒（最后一个除外），风控防连发
+                if account.id != wbAccounts.last?.id {
+                    let delaySeconds = Double.random(in: 3...10)
+                    try? await Task.sleep(nanoseconds: UInt64(delaySeconds * 1_000_000_000))
                 }
             }
             await MainActor.run {
                 self.isRefreshingWorkBuddy = false
                 // 全部 WorkBuddy 账号积分刷新完成后，按设置开关执行积分自动排序
-                self.applyWorkBuddyAutoSort()
+                self.applyWorkBuddyAutoSort(succeeded: succeededIDs)
+            }
+        }
+    }
+
+    // MARK: - WorkBuddy 签到调度链（账号间随机延时 3~10 分钟，慢签防风控）
+
+    /// 正在运行的签到链任务；非 nil 表示链在跑。链全部签完或被取消后置回 nil。
+    @MainActor private var workBuddyCheckinTask: Task<Void, Never>?
+
+    /// WorkBuddy 每日签到调度链（防风控设计）：
+    /// 串行后台任务，每轮从磁盘读最新账号，找第一个「今日（北京时间）未签」的 WorkBuddy
+    /// 账号执行签到，签完若还有未签账号则随机睡 3~10 分钟再签下一个，直到全部签完自动退出。
+    /// 24 小时内天然摊开（10 来个账号即便全按 10 分钟也约 1 小时签完）；App 退出后链随之中断，
+    /// 下次启动/刷新时按 lastCheckinDate 判断自动续签剩余账号（签到幂等，不会重复签）。
+    /// 签到结果：成功/已签更新 accountCheckinDates 并清错误；失败原因记入 accountCheckinErrors
+    /// 显示警示图标，lastCheckinDate 不更新，后续轮次自动重试。
+    @MainActor
+    private func startWorkBuddyCheckinChain() {
+        guard workBuddyCheckinTask == nil else { return }
+        workBuddyCheckinTask = Task { @MainActor in
+            defer { self.workBuddyCheckinTask = nil }
+            while !Task.isCancelled {
+                let today = WorkBuddyService.todayString()
+                // 以磁盘最新数据为准：链运行期间 token / 签到日期可能已被自己或其他流程更新
+                let pending = KimiAccountStore.shared.freshAccounts()
+                    .filter { $0.provider == .workbuddy && $0.workBuddyCredential?.lastCheckinDate != today }
+                guard let account = pending.first else { return }
+
+                let result = await WorkBuddyService.shared.checkin(account: account)
+                if result.success {
+                    KimiAccountStore.shared.updateWorkBuddyCheckinDate(id: account.id, date: today)
+                    self.accountCheckinDates[account.id] = today
+                    self.accountCheckinErrors.removeValue(forKey: account.id)
+                } else {
+                    // 签到失败：记录原因，面板卡片显示警示图标；lastCheckinDate 未更新，后续轮次自动重试
+                    self.accountCheckinErrors[account.id] = result.error ?? "未知错误"
+                }
+
+                // 还有未签账号时，随机睡 3~10 分钟再签下一个；没有则直接退出，等下次刷新再启动
+                let remaining = KimiAccountStore.shared.freshAccounts()
+                    .filter { $0.provider == .workbuddy && $0.workBuddyCredential?.lastCheckinDate != today }
+                guard !remaining.isEmpty else { return }
+                let delayMinutes = Double.random(in: 3...10)
+                try? await Task.sleep(nanoseconds: UInt64(delayMinutes * 60 * 1_000_000_000))
             }
         }
     }
@@ -6802,10 +6871,12 @@ final class KimiCodeBarModel: ObservableObject {
     /// WorkBuddy 积分自动排序（由「WorkBuddy积分自动排序」开关控制，默认关闭）：
     /// 仅在 WorkBuddy 账号内部按剩余积分降序重排，Kimi / DeepSeek / Antigravity 等其他平台
     /// 账号的位置保持不变。顺序复用拖拽排序的 setAccountsOrder 通道落盘，避免被下一次
-    /// 刷新的磁盘快照覆盖。无积分的账号（登录失效 / 刷新失败 / 未加载）排在 WorkBuddy
-    /// 组末尾并保持原相对顺序（sorted 稳定排序）。
+    /// 刷新的磁盘快照覆盖。本轮刷新未成功的账号（登录失效 / 刷新失败 / 未加载）排在
+    /// WorkBuddy 组末尾；积分相同或均无积分时按原相对顺序（下标作决胜项，保证稳定）。
+    /// - Parameter succeeded: 本轮刷新真正拉取成功的账号 ID 集合，只有这些账号的积分参与排序，
+    ///   防止失败账号拿字典里残留的旧积分排在中间。
     @MainActor
-    private func applyWorkBuddyAutoSort() {
+    private func applyWorkBuddyAutoSort(succeeded: Set<UUID>) {
         guard workBuddyAutoSort else { return }
         // 以磁盘最新账号为准：刷新过程中 token / 签到日期可能已更新落盘，
         // 用内存旧账号整体回写会把这些更新覆盖掉
@@ -6814,20 +6885,27 @@ final class KimiCodeBarModel: ObservableObject {
         guard wbIndices.count > 1 else { return }
 
         let wbAccounts = wbIndices.map { result[$0] }
-        let sorted = wbAccounts.sorted { lhs, rhs in
-            let lhsCredits = accountWorkBuddyCredits[lhs.id]?.remaining
-            let rhsCredits = accountWorkBuddyCredits[rhs.id]?.remaining
-            switch (lhsCredits, rhsCredits) {
-            case (.some(let l), .some(let r)):
-                return l > r
-            case (.some, .none):
-                return true   // 有积分的排前面
-            case (.none, .some):
-                return false  // 无积分（登录失效 / 刷新失败）排末尾
-            default:
-                return false  // 双方都无积分，保持原相对顺序
+        // 装饰排序：比较平手时按下标决胜，确保积分相同（或均无积分）的账号保持原相对顺序
+        let sorted = wbAccounts.enumerated()
+            .sorted { lhs, rhs in
+                let lhsCredits = succeeded.contains(lhs.element.id)
+                    ? accountWorkBuddyCredits[lhs.element.id]?.remaining
+                    : nil
+                let rhsCredits = succeeded.contains(rhs.element.id)
+                    ? accountWorkBuddyCredits[rhs.element.id]?.remaining
+                    : nil
+                switch (lhsCredits, rhsCredits) {
+                case (.some(let l), .some(let r)):
+                    return l > r
+                case (.some, .none):
+                    return true   // 有积分的排前面
+                case (.none, .some):
+                    return false  // 无积分（登录失效 / 刷新失败）排末尾
+                default:
+                    return lhs.offset < rhs.offset  // 双方均无积分，按原下标保持相对顺序
+                }
             }
-        }
+            .map(\.element)
 
         // 顺序无变化时不落盘，避免多余的磁盘写入
         guard sorted.map(\.id) != wbAccounts.map(\.id) else { return }
@@ -6861,17 +6939,10 @@ final class KimiCodeBarModel: ObservableObject {
         return nil
     }
 
-    /// 从 Qoder CN 客户端导入当前登录账号（只持久化其加密 auth 快照），
-    /// 或传入个人访问令牌走 PAT 导入（不依赖本机客户端登录态）。
-    func addQoderCNAccount(personalToken: String? = nil) async -> String? {
+    /// 从 Qoder CN 客户端导入当前登录账号（只持久化其加密 auth 快照）。
+    func addQoderCNAccount() async -> String? {
         do {
-            let trimmedPAT = personalToken?.trimmingCharacters(in: .whitespacesAndNewlines)
-            let imported: (credential: QoderCredential, profile: QoderAccountProfile)
-            if let trimmedPAT, !trimmedPAT.isEmpty {
-                imported = try await QoderService.shared.importAccount(personalToken: trimmedPAT)
-            } else {
-                imported = try await QoderService.shared.importCurrentAccount()
-            }
+            let imported = try await QoderService.shared.importCurrentAccount()
             let store = KimiAccountStore.shared
             if let existing = store.snapshot.accounts.first(where: {
                 $0.provider == .qoderCN && $0.accountIdentifier == imported.profile.uid
@@ -6906,6 +6977,16 @@ final class KimiCodeBarModel: ObservableObject {
         WorkBuddyService.shared.restartWorkBuddy { [weak self] in
             self?.isWorkBuddyRunning = WorkBuddyService.shared.isWorkBuddyRunning()
             self?.workBuddyActiveUID = WorkBuddyService.shared.currentActiveUID()
+        }
+    }
+
+    /// 切换到指定 Qoder CN 账号并重启客户端。
+    /// 先把该账号的加密快照写回 auth 文件（使 Qoder CN 启动后使用该账号），
+    /// 再终止旧进程并重新启动。机制与 WorkBuddy 切换一致，但快照为密文原样写回。
+    func launchQoder(account: KimiAccount) {
+        QoderService.shared.switchTo(account: account)
+        QoderService.shared.restartQoder { [weak self] in
+            self?.qoderActiveUID = QoderService.shared.currentActiveUID()
         }
     }
 
