@@ -231,8 +231,10 @@ final class QoderService {
 
     private static let tokenKeys = ["accessToken", "access_token", "jobToken", "job_token", "token"]
 
-    /// 信封版本：v10 为 0.2.x 时期的 PBKDF2 + AES-128-CBC；0.5.x 起客户端改用
-    /// AES-256-GCM 且密钥以原始字节存钥匙串（v11 明确声明密钥在系统钥匙环）。
+    /// 信封版本：Electron safeStorage 在 macOS 上统一用 "v10" + AES-128-CBC，
+    /// 密钥 = PBKDF2-HMAC-SHA1(钥匙串密码串, "saltysalt", 1003 轮, 16 字节)，
+    /// IV 为 16 个空格（0x20）。2026-11 实测当前 Qoder CN 客户端仍走 v10 布局，
+    /// 只是钥匙串服务名从「Qoder CN Safe Storage」换成了「Qoder CN App Safe Storage」。
     /// 协议未公开且随客户端版本漂移，因此按「候选密钥 × 密钥派生 × 加密布局」
     /// 逐一尝试，第一个能解出含 token 的合法 JSON 的组合生效。
     private func accessToken(from snapshot: Data) throws -> String {
@@ -356,6 +358,7 @@ final class QoderService {
     /// 钥匙串服务名白名单：只查询 Qoder 系客户端的 Safe Storage 项，不枚举其他应用凭据。
     /// 不约束 account：账户命名（如「Qoder CN Key」）随客户端版本漂移，服务名命中即可。
     private static let keychainServices = [
+        "Qoder CN App Safe Storage",
         "Qoder CN Safe Storage",
         "Qoder App Safe Storage",
         "Qoder Safe Storage",
