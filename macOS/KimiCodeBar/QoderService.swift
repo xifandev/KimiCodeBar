@@ -50,6 +50,7 @@ final class QoderService {
     private let session: URLSession
     private let keyLock = NSLock()
     private var cachedAESKey: [UInt8]?
+    private var jobTokenCache: JobTokenCache?
 
     private init() {
         let configuration = URLSessionConfiguration.ephemeral
@@ -78,14 +79,29 @@ final class QoderService {
             uid: profile.uid,
             authSnapshot: authSnapshot,
             profileOverlaySnapshot: overlaySnapshot,
+            personalToken: nil,
+            lastCheckinDate: nil
+        )
+        return (credential, profile)
+    }
+
+    /// 用个人访问令牌（PAT）导入账号：先换 jobToken 校验令牌有效性并识别 UID。
+    /// PAT 账号不依赖本机客户端登录态与解密链路。
+    func importAccount(personalToken pat: String) async throws -> (credential: QoderCredential, profile: QoderAccountProfile) {
+        let token = try await jobToken(pat: pat, forceRefresh: true)
+        let profile = try await fetchProfile(token: token)
+        let credential = QoderCredential(
+            uid: profile.uid,
+            authSnapshot: Data(),
+            profileOverlaySnapshot: nil,
+            personalToken: pat,
             lastCheckinDate: nil
         )
         return (credential, profile)
     }
 
     func fetchCredits(credential: QoderCredential) async throws -> QoderCredits {
-        let token = try accessToken(from: credential.authSnapshot)
-        let payload = try await requestJSON(path: "/api/v2/quota/usage", token: token)
+        let payload = try await requestJSON(credential: credential, path: "/api/v2/quota/usage")
         guard let values = allNumericFields(in: payload) else {
             throw QoderError.unrecognizedQuota
         }
@@ -104,10 +120,9 @@ final class QoderService {
     /// 查询活动状态后仅领取明确可领的积分福利；不重复领取已完成活动。
     func checkin(credential: QoderCredential) async -> QoderCheckinOutcome {
         do {
-            let token = try accessToken(from: credential.authSnapshot)
             let campaignsPayload = try await requestJSON(
-                path: "/sash/api/v1/me/campaigns?clientType=10",
-                token: token
+                credential: credential,
+                path: "/sash/api/v1/me/campaigns?clientType=10"
             )
             guard let campaigns = campaignsPayload["campaigns"] as? [[String: Any]] else {
                 return .noCampaign
@@ -124,8 +139,8 @@ final class QoderService {
                 let pathComponentSet = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~")
                 let escapedID = campaignID.addingPercentEncoding(withAllowedCharacters: pathComponentSet) ?? campaignID
                 let result = try await requestJSON(
+                    credential: credential,
                     path: "/sash/api/v1/me/campaigns/\(escapedID)/claim",
-                    token: token,
                     method: "POST"
                 )
                 let resultAmount = numericValue(result["benefit"] as? [String: Any], keys: ["amount"])
@@ -139,6 +154,77 @@ final class QoderService {
         } catch {
             return .failed(LanguageManager.tr("网络请求失败"))
         }
+    }
+
+    // MARK: - PAT 换 jobToken
+
+    private struct JobTokenCache {
+        let pat: String
+        let token: String
+        let expiresAt: Date
+    }
+
+    /// PAT 账号取 token：换 jobToken（内存缓存，临期 5 分钟重换）；快照账号解本地密文。
+    private func accessToken(for credential: QoderCredential) async throws -> String {
+        if let pat = credential.personalToken, !pat.isEmpty {
+            return try await jobToken(pat: pat)
+        }
+        return try accessToken(from: credential.authSnapshot)
+    }
+
+    /// 带凭证身份的请求；PAT 账号遇 401/403 自动重换 jobToken 重试一次。
+    private func requestJSON(credential: QoderCredential, path: String, method: String = "GET") async throws -> [String: Any] {
+        do {
+            let token = try await accessToken(for: credential)
+            return try await requestJSON(path: path, token: token, method: method)
+        } catch QoderError.unauthorized {
+            guard let pat = credential.personalToken, !pat.isEmpty else { throw QoderError.unauthorized }
+            invalidateJobToken(pat: pat)
+            let token = try await jobToken(pat: pat)
+            return try await requestJSON(path: path, token: token, method: method)
+        }
+    }
+
+    /// 官方交换端点：PAT 换短期 jobToken（cosy-clienttype: 5），后续接口仍用 clientType 10。
+    private func jobToken(pat: String, forceRefresh: Bool = false) async throws -> String {
+        if !forceRefresh {
+            keyLock.lock()
+            let cached = jobTokenCache
+            keyLock.unlock()
+            if let cached, cached.pat == pat, cached.expiresAt.timeIntervalSinceNow > 5 * 60 {
+                return cached.token
+            }
+        }
+        let payload = try await requestJSON(
+            path: "/api/v1/jobToken/exchange",
+            token: nil,
+            method: "POST",
+            body: ["personal_token": pat],
+            clientType: "5"
+        )
+        guard let token = stringValue(payload, keys: Self.tokenKeys), !token.isEmpty else {
+            throw QoderError.patInvalid
+        }
+        let expiresAt: Date
+        if let timestamp = numericValue(payload, keys: ["expires_at", "expiresAt", "expireTime"]) {
+            expiresAt = timestamp > 1e11
+                ? Date(timeIntervalSince1970: timestamp / 1000)
+                : Date(timeIntervalSince1970: timestamp)
+        } else if let ttl = numericValue(payload, keys: ["expires_in", "expiresIn"]) {
+            expiresAt = Date().addingTimeInterval(ttl)
+        } else {
+            expiresAt = Date().addingTimeInterval(3600)
+        }
+        keyLock.lock()
+        jobTokenCache = JobTokenCache(pat: pat, token: token, expiresAt: expiresAt)
+        keyLock.unlock()
+        return token
+    }
+
+    private func invalidateJobToken(pat: String) {
+        keyLock.lock()
+        if jobTokenCache?.pat == pat { jobTokenCache = nil }
+        keyLock.unlock()
     }
 
     // MARK: - 登录态解密
@@ -326,18 +412,29 @@ final class QoderService {
         return QoderAccountProfile(uid: uid, displayName: name)
     }
 
-    private func requestJSON(path: String, token: String, method: String = "GET") async throws -> [String: Any] {
+    private func requestJSON(
+        path: String,
+        token: String?,
+        method: String = "GET",
+        body: [String: Any]? = nil,
+        clientType: String = "10"
+    ) async throws -> [String: Any] {
         guard let url = URL(string: path, relativeTo: baseURL)?.absoluteURL else { throw QoderError.invalidResponse }
         var request = URLRequest(url: url)
         request.httpMethod = method
         request.timeoutInterval = 20
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.setValue("10", forHTTPHeaderField: "Cosy-ClientType")
+        if let token { request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
+        request.setValue(clientType, forHTTPHeaderField: "Cosy-ClientType")
         request.setValue("0.5.6", forHTTPHeaderField: "Cosy-Version")
         request.setValue("macos", forHTTPHeaderField: "Cosy-MachineOS")
         request.setValue("Qoder", forHTTPHeaderField: "User-Agent")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        if method == "POST" { request.setValue("application/json", forHTTPHeaderField: "Content-Type") }
+        if let body {
+            request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        } else if method == "POST" {
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        }
 
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse,
@@ -421,6 +518,7 @@ private enum QoderError: LocalizedError {
     case unsupportedAuthFormat
     case missingToken
     case unauthorized
+    case patInvalid
     case profileUnavailable
     case unrecognizedQuota
     case invalidResponse
@@ -435,6 +533,7 @@ private enum QoderError: LocalizedError {
         case .unsupportedAuthFormat: return LanguageManager.tr("Qoder CN 登录文件格式暂不兼容")
         case .missingToken: return LanguageManager.tr("Qoder CN 登录态中未找到访问凭据")
         case .unauthorized: return LanguageManager.tr("Qoder CN 登录凭据已失效，请在客户端重新登录后再读取")
+        case .patInvalid: return LanguageManager.tr("PAT 无效或已过期，请在 qoder.cn 重新创建后再添加")
         case .profileUnavailable: return LanguageManager.tr("无法从 Qoder CN 账号资料接口识别用户")
         case .unrecognizedQuota: return LanguageManager.tr("Qoder CN 用量接口返回了未识别的积分结构")
         case .invalidResponse: return LanguageManager.tr("Qoder CN 接口响应格式异常")

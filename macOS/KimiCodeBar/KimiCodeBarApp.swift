@@ -5968,17 +5968,21 @@ final class KimiCodeBarModel: ObservableObject {
     ///   设置窗口 onAppear）一律传 false，避免界面无谓闪烁。
     /// - Note: 正在刷新时直接跳过，避免并发刷新同一个 refresh_token 导致服务端轮换冲突。
     ///   WorkBuddy 账号的签到 + 积分刷新也随此入口统一触发（内部有独立的重入保护）。
+    /// - Important: 三条刷新轨道互相独立、互不等待——WorkBuddy 的防风控随机延时
+    ///   （签到 3~10 分钟/账号、刷额度 3~10 秒/账号）绝不能阻塞其他平台的刷新：
+    ///   isRefreshing 只覆盖下方非 WB 的并行刷新并在其完成时复位；WB 有自己的
+    ///   isRefreshingWorkBuddy 闸门。后续改动禁止把 WB 的等待逻辑并入总闸门。
     func refresh(showsLoading: Bool = true) {
         guard !isRefreshing else { return }
         isRefreshing = true
         refreshCliActiveAccount()
         refreshAllAccounts(showsLoading: showsLoading)
         refreshWorkBuddyAccounts()
+        QoderAccountManager.shared.refresh()
     }
 
     /// 解析单个 OAuth 账号当前可用的 access token。
     /// 过期前自动用 refresh_token 换新；刷新前再读一次磁盘，防御其他 Bar 实例刚刷新过；
-        QoderAccountManager.shared.refresh()
     /// 授权被吊销（unauthorized）时返回 nil，由调用方把账号标记为「登录失效」——
     /// 凭证保留在列表中等待用户重新授权，不删除。
     private func resolveAccessToken(for accountID: UUID) async -> String? {
@@ -6218,12 +6222,12 @@ final class KimiCodeBarModel: ObservableObject {
                                 }
                                 KimiAccountStore.shared.updateAntigravityCredential(id: id, credential: cred)
                             }
+                        case .qoderCN:
+                            break // Qoder CN 由 QoderAccountManager 独立刷新
                         }
                         self.accountStates[id] = .loaded
                     } else if let error {
                         self.accountStates[id] = .failed(self.errorDescription(error))
-                        case .qoderCN:
-                            break // Qoder CN 由 QoderAccountManager 独立刷新
                     } else {
                         self.accountStates[id] = .unauthorized
                     }
@@ -6301,10 +6305,6 @@ final class KimiCodeBarModel: ObservableObject {
             } else {
                 text = "--"
             }
-        }
-        switch accountStates[primaryID] {
-        case .failed(let message):
-            errorMessage = message
         case .qoderCN:
             quota = nil
             if let credits = QoderAccountManager.shared.credits[primaryID] {
@@ -6312,6 +6312,10 @@ final class KimiCodeBarModel: ObservableObject {
             } else {
                 text = "--"
             }
+        }
+        switch accountStates[primaryID] {
+        case .failed(let message):
+            errorMessage = message
         case .unauthorized:
             errorMessage = LanguageManager.tr("授权已失效，请重新登录")
         default:
@@ -6592,12 +6596,12 @@ final class KimiCodeBarModel: ObservableObject {
             return LanguageManager.tr("WorkBuddy 账号请用本地读取方式添加")
         case .antigravity:
             return LanguageManager.tr("Antigravity 账号请使用 Google 授权登录")
+        case .qoderCN:
+            return LanguageManager.tr("Qoder CN 账号请使用读取本机方式添加")
         }
     }
 
     /// 修改 API Key 账号的密钥（「登录失效」后的恢复入口）：验证通过才落盘。
-        case .qoderCN:
-            return LanguageManager.tr("Qoder CN 账号请使用读取本机方式添加")
     /// 按账号 provider 走对应验证服务。返回 nil 表示成功；否则返回面向用户的错误文案。
     @discardableResult
     func updateApiKey(for id: UUID, key: String) async -> String? {
@@ -6641,12 +6645,12 @@ final class KimiCodeBarModel: ObservableObject {
             return LanguageManager.tr("WorkBuddy 账号 Key 由 WorkBuddy 客户端管理")
         case .antigravity:
             return LanguageManager.tr("Antigravity 账号请使用重新授权")
+        case .qoderCN:
+            return LanguageManager.tr("Qoder CN 凭据由客户端管理，请重新读取本机登录态")
         }
     }
 
     // MARK: - CLI 账号切换
-        case .qoderCN:
-            return LanguageManager.tr("Qoder CN 凭据由客户端管理，请重新读取本机登录态")
 
     /// 重算 CLI 活跃账号：读 CLI 凭证文件并与账号列表比对 token。
     /// 账号列表展示「CLI 使用中」标签前调用；CLI 轮换 token 后匹配失效，标签自然消失。
@@ -6857,6 +6861,43 @@ final class KimiCodeBarModel: ObservableObject {
         return nil
     }
 
+    /// 从 Qoder CN 客户端导入当前登录账号（只持久化其加密 auth 快照），
+    /// 或传入个人访问令牌走 PAT 导入（不依赖本机客户端登录态）。
+    func addQoderCNAccount(personalToken: String? = nil) async -> String? {
+        do {
+            let trimmedPAT = personalToken?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let imported: (credential: QoderCredential, profile: QoderAccountProfile)
+            if let trimmedPAT, !trimmedPAT.isEmpty {
+                imported = try await QoderService.shared.importAccount(personalToken: trimmedPAT)
+            } else {
+                imported = try await QoderService.shared.importCurrentAccount()
+            }
+            let store = KimiAccountStore.shared
+            if let existing = store.snapshot.accounts.first(where: {
+                $0.provider == .qoderCN && $0.accountIdentifier == imported.profile.uid
+            }) {
+                store.updateQoderCredential(id: existing.id, credential: imported.credential)
+                store.setAlias(id: existing.id, alias: imported.profile.displayName)
+            } else {
+                store.addAccount(KimiAccount(
+                    id: UUID(),
+                    alias: imported.profile.displayName,
+                    provider: .qoderCN,
+                    credential: .qoderCN(imported.credential),
+                    accountIdentifier: imported.profile.uid
+                ))
+            }
+            store.ensurePrimaryAccount()
+            let snapshot = store.snapshot
+            accounts = snapshot.accounts
+            primaryAccountID = snapshot.primaryAccountID
+            refresh(showsLoading: false)
+            return nil
+        } catch {
+            return error.localizedDescription
+        }
+    }
+
     /// 切换到指定 WorkBuddy 账号并启动 / 重启客户端。
     /// 先把该账号的 token 对 + 快照写回 auth 文件（使 WorkBuddy 启动后使用该账号），
     /// 再终止旧进程并重新启动。逻辑迁移自 wbSwitch 项目。
@@ -6897,36 +6938,6 @@ final class KimiCodeBarModel: ObservableObject {
         dismissMenuBarPanel()
 
         // 若已有实例在跑，避免重复打开 Terminal 造成端口冲突
-    /// 从 Qoder CN 客户端导入当前登录账号。只持久化其加密 auth 快照。
-    func addQoderCNAccount() async -> String? {
-        do {
-            let imported = try await QoderService.shared.importCurrentAccount()
-            let store = KimiAccountStore.shared
-            if let existing = store.snapshot.accounts.first(where: {
-                $0.provider == .qoderCN && $0.accountIdentifier == imported.profile.uid
-            }) {
-                store.updateQoderCredential(id: existing.id, credential: imported.credential)
-                store.setAlias(id: existing.id, alias: imported.profile.displayName)
-            } else {
-                store.addAccount(KimiAccount(
-                    id: UUID(),
-                    alias: imported.profile.displayName,
-                    provider: .qoderCN,
-                    credential: .qoderCN(imported.credential),
-                    accountIdentifier: imported.profile.uid
-                ))
-            }
-            store.ensurePrimaryAccount()
-            let snapshot = store.snapshot
-            accounts = snapshot.accounts
-            primaryAccountID = snapshot.primaryAccountID
-            refresh(showsLoading: false)
-            return nil
-        } catch {
-            return error.localizedDescription
-        }
-    }
-
         let currentState = await detectKimiServerState()
         guard currentState.status != .running else {
             await refreshKimiServerState()

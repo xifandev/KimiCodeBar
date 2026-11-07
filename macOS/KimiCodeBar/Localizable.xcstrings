@@ -3330,6 +3330,86 @@
         }
       }
     },
+    "从本机客户端读取" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Read from Local Client"
+          }
+        }
+      }
+    },
+    "使用个人访问令牌（PAT）" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use a Personal Access Token (PAT)"
+          }
+        }
+      }
+    },
+    "在 qoder.cn/account/integrations 创建 PAT，粘贴到此处即可添加对应账号，无需本机客户端登录。令牌仅存于本地账号库，用于查询积分和签到。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create a PAT at qoder.cn/account/integrations and paste it here to add that account, no local client sign-in required. The token is stored only in the local account library and used for credit queries and check-in."
+          }
+        }
+      }
+    },
+    "粘贴 PAT（pt- 开头）" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paste PAT (starts with pt-)"
+          }
+        }
+      }
+    },
+    "添加" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add"
+          }
+        }
+      }
+    },
+    "添加中…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adding…"
+          }
+        }
+      }
+    },
+    "请先粘贴 PAT" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paste a PAT first"
+          }
+        }
+      }
+    },
+    "PAT 无效或已过期，请在 qoder.cn 重新创建后再添加" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The PAT is invalid or expired. Create a new one at qoder.cn and add it again."
+          }
+        }
+      }
+    },
     "选择登录方式" : {
       "extractionState" : "stale",
       "localizations" : {

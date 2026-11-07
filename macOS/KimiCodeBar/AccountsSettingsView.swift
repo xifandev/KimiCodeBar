@@ -323,6 +323,9 @@ private struct AddAccountSheet: View {
     @State private var isReadingQoder = false
     @State private var isHoveredQoderRead = false
     @State private var isHoveredQoderCancel = false
+    @State private var qoderPAT = ""
+    @State private var isAddingQoderPAT = false
+    @State private var isHoveredQoderPATAdd = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -554,7 +557,7 @@ private struct AddAccountSheet: View {
         case .workbuddy: return languageManager.tr("选择登录方式")
         case .antigravity: return languageManager.tr("登录 Google 账号")
         case .kimi: return languageManager.tr("选择登录方式")
-        case .qoderCN: return languageManager.tr("读取 Qoder CN 本机登录态")
+        case .qoderCN: return languageManager.tr("选择添加方式")
         }
     }
 
@@ -635,7 +638,13 @@ private struct AddAccountSheet: View {
     }
 
     private var qoderAddEntry: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        let patTrimmed = qoderPAT.trimmingCharacters(in: .whitespacesAndNewlines)
+        let patAddDisabled = isAddingQoderPAT || patTrimmed.isEmpty
+        return VStack(alignment: .leading, spacing: 10) {
+            LText("从本机客户端读取")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.kimiTextSecondary)
+
             LText("需先在 Qoder CN 客户端登录目标账号，再读取本机加密登录态。令牌只在内存中用于查询积分和签到。")
                 .font(.system(size: 11))
                 .foregroundStyle(.kimiTextTertiary)
@@ -671,6 +680,58 @@ private struct AddAccountSheet: View {
                 .cursor(isReadingQoder ? .arrow : .pointingHand)
                 .disabled(isReadingQoder)
             }
+
+            LText("使用个人访问令牌（PAT）")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.kimiTextSecondary)
+                .padding(.top, 4)
+
+            LText("在 qoder.cn/account/integrations 创建 PAT，粘贴到此处即可添加对应账号，无需本机客户端登录。令牌仅存于本地账号库，用于查询积分和签到。")
+                .font(.system(size: 11))
+                .foregroundStyle(.kimiTextTertiary)
+
+            HStack(spacing: 10) {
+                TextField(languageManager.tr("粘贴 PAT（pt- 开头）"), text: $qoderPAT)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.kimiTextPrimary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                    .background(Color.kimiTextPrimary.opacity(0.06))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .disabled(isAddingQoderPAT)
+
+                Button(action: submitQoderPATAdd) {
+                    Text(isAddingQoderPAT ? languageManager.tr("添加中…") : languageManager.tr("添加"))
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(isHoveredQoderPATAdd ? Color.kimiTextPrimary : Color.kimiTextSecondary)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
+                        .background(Color.kimiTextPrimary.opacity(isHoveredQoderPATAdd ? 0.14 : 0.06))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+                .buttonStyle(.plain)
+                .onHover { isHoveredQoderPATAdd = $0 }
+                .cursor(patAddDisabled ? .arrow : .pointingHand)
+                .disabled(patAddDisabled)
+                .opacity(patAddDisabled ? 0.5 : 1)
+
+                if isAddingQoderPAT { ProgressView().controlSize(.small) }
+            }
+        }
+    }
+
+    private func submitQoderPATAdd() {
+        let pat = qoderPAT.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !pat.isEmpty else {
+            apiKeyError = languageManager.tr("请先粘贴 PAT")
+            return
+        }
+        isAddingQoderPAT = true
+        Task {
+            let error = await KimiCodeBarModel.shared.addQoderCNAccount(personalToken: pat)
+            isAddingQoderPAT = false
+            if let error { apiKeyError = error } else { onDismiss() }
         }
     }
 
