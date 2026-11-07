@@ -1871,7 +1871,8 @@ private struct ProviderFoldCard: View {
     /// 账号行超出时卡内滚动，保证其他服务商卡片始终可见、面板不撑出屏幕
     private var listMaxHeight: CGFloat {
         let visibleHeight = NSScreen.main?.visibleFrame.height ?? 900
-        return min(max(visibleHeight * 0.85 - 420, 180), 420)
+        // 硬顶 640：大屏把 85vh 额度用满（约 15 行账号卡），小屏由公式自动收敛
+        return min(max(visibleHeight * 0.85 - 420, 180), 640)
     }
 
     var body: some View {
