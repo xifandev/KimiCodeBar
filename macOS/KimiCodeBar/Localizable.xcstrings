@@ -108,6 +108,26 @@
         }
       }
     },
+    "%d 个异常" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d invalid"
+          }
+        }
+      }
+    },
+    "%d 个账号" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d accounts"
+          }
+        }
+      }
+    },
     "%d分钟后重置" : {
       "extractionState" : "stale",
       "localizations" : {

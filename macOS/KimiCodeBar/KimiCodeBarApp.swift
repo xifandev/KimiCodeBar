@@ -1715,6 +1715,21 @@ struct AccountQuotaListView: View {
 
     /// 当前鼠标悬停的账号 ID（同一时刻最多一张卡高亮）
     @State private var hoveredAccountID: UUID?
+    /// 卡包模式：当前展开的服务商（手风琴——同一时刻最多展开一个，nil 为全收起）
+    @State private var expandedProvider: AccountProvider?
+
+    /// 按服务商分组且保持原有先后顺序：卡包折叠与组摘要依赖此分组
+    private var providerSections: [(provider: AccountProvider, accounts: [KimiAccount])] {
+        var order: [AccountProvider] = []
+        var grouped: [AccountProvider: [KimiAccount]] = [:]
+        for account in model.accounts {
+            if grouped[account.provider] == nil {
+                order.append(account.provider)
+            }
+            grouped[account.provider, default: []].append(account)
+        }
+        return order.map { (provider: $0, accounts: grouped[$0] ?? []) }
+    }
 
     var body: some View {
         VStack(spacing: 8) {
@@ -1731,31 +1746,36 @@ struct AccountQuotaListView: View {
                     SingleAccountQuotaCards(account: account)
                 }
             } else {
-                ForEach(model.accounts) { account in
-                    let isPrimary = account.id == model.primaryAccountID
-                    Group {
-                        if account.provider == .deepseek {
-                            DeepSeekBalanceCard(account: account)
-                        } else if account.provider == .workbuddy {
-                            WorkBuddyCard(account: account)
-                        } else if account.provider == .qoderCN {
-                            QoderCNCard(account: account)
-                        } else if account.provider == .antigravity {
-                            AntigravityQuotaCard(account: account, isPrimary: isPrimary)
-                        } else {
-                            AccountQuotaCard(
-                                account: account,
-                                isPrimary: isPrimary
-                            )
+                // 卡包模式：托管账号 >2 的服务商折叠为总卡片（手风琴互斥）；
+                // ≤2 的服务商保持现有平铺卡片，现状设计零改动
+                ForEach(providerSections, id: \.provider) { section in
+                    if section.accounts.count > 2 {
+                        ProviderFoldCard(
+                            provider: section.provider,
+                            accounts: section.accounts,
+                            expandedProvider: $expandedProvider,
+                            hoveredAccountID: $hoveredAccountID
+                        )
+                    } else {
+                        ForEach(section.accounts) { account in
+                            ProviderAccountCard(account: account)
+                                .modifier(AccountCardHover(
+                                    accountID: account.id,
+                                    isPrimary: account.id == model.primaryAccountID,
+                                    hoveredID: $hoveredAccountID,
+                                    onTap: { model.setPrimaryAccount(account.id) }
+                                ))
                         }
                     }
-                    .modifier(AccountCardHover(
-                        accountID: account.id,
-                        isPrimary: isPrimary,
-                        hoveredID: $hoveredAccountID,
-                        onTap: { model.setPrimaryAccount(account.id) }
-                    ))
                 }
+            }
+        }
+        .onAppear {
+            // 默认展开含主账号的折叠卡，面板打开即见正在使用的服务商
+            if expandedProvider == nil,
+               let primary = model.primaryAccount?.provider,
+               providerSections.contains(where: { $0.provider == primary && $0.accounts.count > 2 }) {
+                expandedProvider = primary
             }
         }
     }
@@ -1789,6 +1809,180 @@ private struct AccountCardHover: ViewModifier {
             }
             .onTapGesture { onTap() }
             .cursor(.pointingHand)
+    }
+}
+
+// MARK: - 卡包模式：服务商折叠卡
+
+/// 单账号卡片分发（现有设计原样搬移）：Kimi 配额卡 / DeepSeek 余额卡 / WorkBuddy 积分卡 /
+/// Qoder CN 积分卡 / Antigravity 配额卡。抽出来供平铺与卡包展开区共用，保证两种形态视觉完全一致。
+private struct ProviderAccountCard: View {
+    let account: KimiAccount
+
+    var body: some View {
+        let isPrimary = account.id == KimiCodeBarModel.shared.primaryAccountID
+        if account.provider == .deepseek {
+            DeepSeekBalanceCard(account: account)
+        } else if account.provider == .workbuddy {
+            WorkBuddyCard(account: account)
+        } else if account.provider == .qoderCN {
+            QoderCNCard(account: account)
+        } else if account.provider == .antigravity {
+            AntigravityQuotaCard(account: account, isPrimary: isPrimary)
+        } else {
+            AccountQuotaCard(account: account, isPrimary: isPrimary)
+        }
+    }
+}
+
+/// 卡包模式：某服务商托管账号 >2 时，整组收进一张「总卡片」。
+/// - 折叠态：服务商 logo + 账号数 / 异常数 + Σ 积分（或 Σ 余额），不展开也能扫出总量
+/// - 展开态：卡内原样渲染现有账号卡片（含悬停描边 / 点击设主账号），高度封顶、卡内滚动
+/// - 手风琴：expandedProvider 全面板共享，展开一个自动收起其他，面板高度天然可控
+private struct ProviderFoldCard: View {
+    let provider: AccountProvider
+    let accounts: [KimiAccount]
+    @Binding var expandedProvider: AccountProvider?
+    @Binding var hoveredAccountID: UUID?
+
+    @StateObject private var model = KimiCodeBarModel.shared
+    @State private var isHoveredHeader = false
+
+    private var isOpen: Bool { expandedProvider == provider }
+
+    private var unauthorizedCount: Int {
+        accounts.filter {
+            if case .unauthorized = model.accountStates[$0.id] ?? .idle { return true }
+            return false
+        }.count
+    }
+
+    /// 展开区高度上限：由屏幕可用高度的 ~85%（类似网页 85vh）扣除面板固定chrome推导；
+    /// 账号行超出时卡内滚动，保证其他服务商卡片始终可见、面板不撑出屏幕
+    private var listMaxHeight: CGFloat {
+        let visibleHeight = NSScreen.main?.visibleFrame.height ?? 900
+        return min(max(visibleHeight * 0.85 - 420, 180), 420)
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            header
+
+            if isOpen {
+                ScrollView(.vertical) {
+                    VStack(spacing: 8) {
+                        ForEach(accounts) { account in
+                            ProviderAccountCard(account: account)
+                                .modifier(AccountCardHover(
+                                    accountID: account.id,
+                                    isPrimary: account.id == model.primaryAccountID,
+                                    hoveredID: $hoveredAccountID,
+                                    onTap: { model.setPrimaryAccount(account.id) }
+                                ))
+                        }
+                    }
+                    .padding(8)
+                }
+                .frame(maxHeight: listMaxHeight)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        // 展开时容器降一档透明度作底色，让内部现有账号卡片仍保持自己的卡片层次
+        .background(isOpen ? Color.kimiCardBackground.opacity(0.45) : Color.kimiCardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.kimiBlue.opacity(isOpen ? 0.45 : 0), lineWidth: 1)
+        )
+        .animation(.easeOut(duration: 0.22), value: isOpen)
+    }
+
+    private var header: some View {
+        Button {
+            expandedProvider = isOpen ? nil : provider
+        } label: {
+            HStack(spacing: 10) {
+                Image(provider.logoImageName)
+                    .resizable()
+                    .interpolation(.high)
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 20, height: 20)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(provider.displayName)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.kimiTextPrimary)
+                        .lineLimit(1)
+
+                    HStack(spacing: 6) {
+                        LText("%d 个账号", accounts.count)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.kimiTextTertiary)
+
+                        if unauthorizedCount > 0 {
+                            LText("%d 个异常", unauthorizedCount)
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(.red)
+                        }
+                    }
+                }
+
+                Spacer(minLength: 8)
+
+                summaryView
+
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(isOpen ? Color.kimiBlue : Color.kimiTextTertiary)
+                    .rotationEffect(.degrees(isOpen ? 180 : 0))
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.kimiTextPrimary.opacity(isHoveredHeader ? 0.06 : 0))
+        )
+        .cursor(.pointingHand)
+        .onHover { isHoveredHeader = $0 }
+    }
+
+    /// 组摘要：仅对有数值总额的服务商聚合（WorkBuddy / Qoder CN 积分、DeepSeek 余额）；
+    /// Kimi / Antigravity 配额是百分比窗口，求和无意义，不显示 Σ
+    @ViewBuilder
+    private var summaryView: some View {
+        switch provider {
+        case .workbuddy:
+            let total = accounts.reduce(0.0) { $0 + (model.accountWorkBuddyCredits[$1.id]?.remaining ?? 0) }
+            summaryLabel(icon: "sparkle", text: "\(Int(floor(total)))")
+        case .qoderCN:
+            let total = accounts.reduce(0.0) { $0 + (QoderAccountManager.shared.credits[$1.id]?.remaining ?? 0) }
+            summaryLabel(icon: "sparkle", text: "\(Int(floor(total)))")
+        case .deepseek:
+            let balances = accounts.compactMap { model.accountBalances[$0.id] }
+            let total = balances.reduce(0.0) { $0 + $1.totalBalance }
+            let symbol = balances.first?.currency == "USD" ? "$" : "¥"
+            summaryLabel(icon: nil, text: "\(symbol)\(String(format: "%.2f", total))")
+        default:
+            EmptyView()
+        }
+    }
+
+    private func summaryLabel(icon: String?, text: String) -> some View {
+        HStack(spacing: 3) {
+            if let icon {
+                Image(systemName: icon)
+                    .font(.system(size: 10))
+                    .foregroundStyle(.kimiTextSecondary)
+            }
+            Text(text)
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(.kimiTextPrimary)
+                .lineLimit(1)
+        }
     }
 }
 
