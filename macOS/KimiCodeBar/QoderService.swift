@@ -3,6 +3,7 @@ import Combine
 import Security
 import CommonCrypto
 import CoreFoundation
+import CryptoKit
 
 // MARK: - Qoder CN 积分
 
@@ -142,28 +143,63 @@ final class QoderService {
 
     // MARK: - 登录态解密
 
+    private static let tokenKeys = ["accessToken", "access_token", "jobToken", "job_token", "token"]
+
+    /// 信封版本：v10 为 0.2.x 时期的 PBKDF2 + AES-128-CBC；0.5.x 起客户端改用
+    /// AES-256-GCM 且密钥以原始字节存钥匙串（v11 明确声明密钥在系统钥匙环）。
+    /// 协议未公开且随客户端版本漂移，因此按「候选密钥 × 密钥派生 × 加密布局」
+    /// 逐一尝试，第一个能解出含 token 的合法 JSON 的组合生效。
     private func accessToken(from snapshot: Data) throws -> String {
-        let plaintext = try decryptSafeStorage(snapshot)
-        guard let object = try? JSONSerialization.jsonObject(with: plaintext) else {
+        guard let prefix = String(data: snapshot.prefix(3), encoding: .ascii),
+              prefix == "v10" || prefix == "v11" else {
             throw QoderError.unsupportedAuthFormat
         }
-        let tokenKeys = ["accessToken", "access_token", "jobToken", "job_token", "token"]
-        guard let token = findString(in: object, matching: tokenKeys), !token.isEmpty else {
-            throw QoderError.missingToken
+        if let cached = cachedKey(), let token = tokenFromSnapshot(snapshot, key: cached) { return token }
+        let passwords = keychainPasswords()
+        guard !passwords.isEmpty else { throw QoderError.keychainUnavailable }
+
+        var decryptedOnce = false
+        for password in passwords {
+            for key in candidateKeys(for: password) {
+                guard let plaintext = decryptEnvelope(snapshot, key: key) else { continue }
+                decryptedOnce = true
+                guard let token = tokenFromPlaintext(plaintext) else { continue }
+                cacheKey(key)
+                return token
+            }
         }
+        throw decryptedOnce ? QoderError.missingToken : QoderError.unsupportedAuthFormat
+    }
+
+    private func tokenFromSnapshot(_ snapshot: Data, key: [UInt8]) -> String? {
+        guard let plaintext = decryptEnvelope(snapshot, key: key) else { return nil }
+        return tokenFromPlaintext(plaintext)
+    }
+
+    private func tokenFromPlaintext(_ plaintext: Data) -> String? {
+        guard let object = try? JSONSerialization.jsonObject(with: plaintext) else { return nil }
+        guard let token = findString(in: object, matching: Self.tokenKeys), !token.isEmpty else { return nil }
         return token
     }
 
-    private func decryptSafeStorage(_ encrypted: Data) throws -> Data {
-        guard encrypted.count > 3, String(data: encrypted.prefix(3), encoding: .ascii) == "v10" else {
-            throw QoderError.unsupportedAuthFormat
-        }
-        let key = try safeStorageAESKey()
+    private func candidateKeys(for password: Data) -> [[UInt8]] {
+        var keys = [derivePBKDF2Key(password)]
+        let raw = [UInt8](password)
+        if raw.count == kCCKeySizeAES128 || raw.count == kCCKeySizeAES256 { keys.append(raw) }
+        return keys
+    }
 
-        let ciphertext = Data(encrypted.dropFirst(3))
-        guard !ciphertext.isEmpty, ciphertext.count % kCCBlockSizeAES128 == 0 else {
-            throw QoderError.unsupportedAuthFormat
+    private func decryptEnvelope(_ snapshot: Data, key: [UInt8]) -> Data? {
+        let body = Data(snapshot.dropFirst(3))
+        switch key.count {
+        case kCCKeySizeAES128: return decryptCBC(body, key: key)
+        case kCCKeySizeAES256: return decryptGCM(body, key: key)
+        default: return nil
         }
+    }
+
+    private func decryptCBC(_ ciphertext: Data, key: [UInt8]) -> Data? {
+        guard !ciphertext.isEmpty, ciphertext.count % kCCBlockSizeAES128 == 0 else { return nil }
         let iv = Data(repeating: 0x20, count: kCCBlockSizeAES128)
         var output = Data(count: ciphertext.count + kCCBlockSizeAES128)
         let outputCapacity = output.count
@@ -187,19 +223,21 @@ final class QoderService {
                 }
             }
         }
-        guard status == kCCSuccess else { throw QoderError.unsupportedAuthFormat }
+        guard status == kCCSuccess else { return nil }
         output.removeSubrange(outputCount..<output.count)
         return output
     }
 
-    private func safeStorageAESKey() throws -> [UInt8] {
-        keyLock.lock()
-        defer { keyLock.unlock() }
-        if let cachedAESKey { return cachedAESKey }
-        guard let password = keychainPassword() else { throw QoderError.keychainUnavailable }
+    private func decryptGCM(_ blob: Data, key: [UInt8]) -> Data? {
+        guard let box = try? AES.GCM.SealedBox(combined: blob),
+              let plaintext = try? AES.GCM.open(box, using: SymmetricKey(data: Data(key))) else { return nil }
+        return plaintext
+    }
+
+    private func derivePBKDF2Key(_ password: Data) -> [UInt8] {
         var key = [UInt8](repeating: 0, count: kCCKeySizeAES128)
         let salt = Array("saltysalt".utf8)
-        let derivationStatus = password.withUnsafeBytes { passwordBytes in
+        password.withUnsafeBytes { passwordBytes in
             salt.withUnsafeBufferPointer { saltBytes in
                 CCKeyDerivationPBKDF(
                     CCPBKDFAlgorithm(kCCPBKDF2),
@@ -214,34 +252,51 @@ final class QoderService {
                 )
             }
         }
-        guard derivationStatus == kCCSuccess else { throw QoderError.unsupportedAuthFormat }
-        cachedAESKey = key
         return key
     }
 
-    /// 只查询 Qoder CN Electron safeStorage 的精确 Keychain 项，不枚举其他应用凭据。
-    private func keychainPassword() -> Data? {
-        let candidates: [(service: String, account: String?)] = [
-            (service: " Safe Storage", account: nil),
-            (service: " Safe Storage", account: "Qoder CN"),
-            (service: "Qoder CN Safe Storage", account: "Qoder CN Key"),
-            (service: "Safe Storage", account: "Qoder CN"),
-            (service: "Qoder CN Safe Storage", account: "Qoder CN"),
-            (service: "Chromium Safe Storage", account: "Qoder CN")
-        ]
-        for candidate in candidates {
-            var query: [String: Any] = [
+    private func cachedKey() -> [UInt8]? {
+        keyLock.lock()
+        defer { keyLock.unlock() }
+        return cachedAESKey
+    }
+
+    private func cacheKey(_ key: [UInt8]) {
+        keyLock.lock()
+        defer { keyLock.unlock() }
+        cachedAESKey = key
+    }
+
+    /// 钥匙串服务名白名单：只查询 Qoder 系客户端的 Safe Storage 项，不枚举其他应用凭据。
+    /// 不约束 account：账户命名（如「Qoder CN Key」）随客户端版本漂移，服务名命中即可。
+    private static let keychainServices = [
+        "Qoder CN Safe Storage",
+        "Qoder App Safe Storage",
+        "Qoder Safe Storage",
+        " Safe Storage",
+        "Safe Storage",
+        "Chromium Safe Storage"
+    ]
+
+    private func keychainPasswords() -> [Data] {
+        var passwords: [Data] = []
+        for service in Self.keychainServices {
+            let query: [String: Any] = [
                 kSecClass as String: kSecClassGenericPassword,
-                kSecAttrService as String: candidate.service,
+                kSecAttrService as String: service,
                 kSecReturnData as String: true,
-                kSecMatchLimit as String: kSecMatchLimitOne
+                kSecMatchLimit as String: kSecMatchLimitAll
             ]
-            if let account = candidate.account { query[kSecAttrAccount as String] = account }
             var result: CFTypeRef?
-            let status = SecItemCopyMatching(query as CFDictionary, &result)
-            if status == errSecSuccess, let data = result as? Data, !data.isEmpty { return data }
+            guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess else { continue }
+            if let one = result as? Data {
+                passwords.append(one)
+            } else if let many = result as? [Data] {
+                passwords.append(contentsOf: many)
+            }
         }
-        return nil
+        var seen = Set<Data>()
+        return passwords.filter { seen.insert($0).inserted }
     }
 
     private func readStableFile(_ url: URL) throws -> Data {
