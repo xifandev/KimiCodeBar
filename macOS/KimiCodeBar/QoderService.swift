@@ -4,6 +4,7 @@ import Security
 import CommonCrypto
 import CoreFoundation
 import CryptoKit
+import LocalAuthentication
 
 // MARK: - Qoder CN 积分
 
@@ -369,6 +370,11 @@ final class QoderService {
 
     private func keychainPasswords() -> [Data] {
         var passwords: [Data] = []
+        // 钥匙串锁定时，SecItemCopyMatching 默认直接返回错误而不弹解锁框；
+        // 传入 LAContext 让系统在需要时唤起「输入 Mac 密码解锁钥匙串」的授权 UI，
+        // 否则用户点「读取本机」会静默失败，体验上像是没反应。
+        let authContext = LAContext()
+        authContext.localizedReason = LanguageManager.tr("读取 Qoder CN 登录凭据需要访问钥匙串")
         for service in Self.keychainServices {
             // 注意：不能用 kSecMatchLimitAll —— 在本机实测会让 SecItemCopyMatching
             // 返回 -50 errSecParam（且不弹授权），导致全部 service 都拿不到密码。
@@ -376,7 +382,8 @@ final class QoderService {
             let query: [String: Any] = [
                 kSecClass as String: kSecClassGenericPassword,
                 kSecAttrService as String: service,
-                kSecReturnData as String: true
+                kSecReturnData as String: true,
+                kSecUseAuthenticationContext as String: authContext
             ]
             var result: CFTypeRef?
             guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
