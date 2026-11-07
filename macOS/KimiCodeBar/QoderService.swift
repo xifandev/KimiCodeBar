@@ -237,7 +237,7 @@ final class QoderService {
     private func derivePBKDF2Key(_ password: Data) -> [UInt8] {
         var key = [UInt8](repeating: 0, count: kCCKeySizeAES128)
         let salt = Array("saltysalt".utf8)
-        password.withUnsafeBytes { passwordBytes in
+        _ = password.withUnsafeBytes { passwordBytes in
             salt.withUnsafeBufferPointer { saltBytes in
                 CCKeyDerivationPBKDF(
                     CCPBKDFAlgorithm(kCCPBKDF2),
