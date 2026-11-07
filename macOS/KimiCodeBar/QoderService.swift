@@ -155,6 +155,7 @@ final class QoderService {
 
     func fetchCredits(credential: QoderCredential) async throws -> QoderCredits {
         let payload = try await requestJSON(credential: credential, path: "/api/v2/quota/usage")
+        if let bucketed = bucketedCredits(in: payload) { return bucketed }
         guard let values = allNumericFields(in: payload) else {
             throw QoderError.unrecognizedQuota
         }
@@ -167,6 +168,28 @@ final class QoderService {
         let remaining = values.first(where: { remainingKeys.contains($0.key.normalized) })?.value
         let total = values.first(where: { totalKeys.contains($0.key.normalized) })?.value
         guard let remaining else { throw QoderError.unrecognizedQuota }
+        return QoderCredits(remaining: remaining, total: total)
+    }
+
+    /// 官方 /usage 视图的合计口径：套餐内额度（userQuota）、个人资源包
+    /// （addOnQuota，签到奖励入此桶）、组织资源包（orgResourcePackage）三桶求和。
+    /// 只取第一个 remaining 会漏掉资源包，菜单栏显示比实际可用少。
+    private func bucketedCredits(in payload: [String: Any]) -> QoderCredits? {
+        var remaining = 0.0
+        var total = 0.0
+        var seenBucket = false
+        for key in ["userQuota", "addOnQuota", "orgResourcePackage"] {
+            guard let block = payload[key] as? [String: Any] else { continue }
+            if let available = block["available"] as? NSNumber,
+               CFGetTypeID(available) == CFBooleanGetTypeID(),
+               !available.boolValue { continue }
+            guard let blockRemaining = numericValue(block, keys: ["remaining"]) else { continue }
+            seenBucket = true
+            remaining += blockRemaining
+            let used = numericValue(block, keys: ["used"]) ?? 0
+            total += numericValue(block, keys: ["total", "cap"]) ?? blockRemaining + used
+        }
+        guard seenBucket else { return nil }
         return QoderCredits(remaining: remaining, total: total)
     }
 
