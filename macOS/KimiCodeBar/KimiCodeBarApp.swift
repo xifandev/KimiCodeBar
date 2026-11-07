@@ -1902,13 +1902,15 @@ private struct ProviderFoldCard: View {
                     )
                 }
                 .frame(height: min(max(contentHeight, 1), listMaxHeight))
+                // 展开区独立凹陷底色：卡头「封面」恒定保持实心卡片色，
+                // 展开动画只发生在卡头下方，不会扫过封面
+                .background(Color.kimiPanelBackground)
                 .onPreferenceChange(FoldListHeightKey.self) { contentHeight = $0 }
                 .animation(.easeOut(duration: 0.2), value: contentHeight)
-                .transition(.opacity.combined(with: .move(edge: .top)))
+                .transition(.opacity)
             }
         }
-        // 展开时容器降一档透明度作底色，让内部现有账号卡片仍保持自己的卡片层次
-        .background(isOpen ? Color.kimiCardBackground.opacity(0.45) : Color.kimiCardBackground)
+        .background(Color.kimiCardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
@@ -1919,7 +1921,13 @@ private struct ProviderFoldCard: View {
 
     private var header: some View {
         Button {
-            expandedProvider = isOpen ? nil : provider
+            if isOpen {
+                expandedProvider = nil
+            } else {
+                // 先清零实测高度：展开时高度从 0 像抽屉一样生长，避免整段高度瞬间弹出
+                contentHeight = 0
+                expandedProvider = provider
+            }
         } label: {
             HStack(spacing: 10) {
                 Image(provider.logoImageName)
