@@ -320,6 +320,9 @@ private struct AddAccountSheet: View {
     @State private var apiKeyAlias = ""
     @State private var isAddingApiKey = false
     @State private var apiKeyError: String?
+    @State private var isReadingQoder = false
+    @State private var isHoveredQoderRead = false
+    @State private var isHoveredQoderCancel = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -329,10 +332,7 @@ private struct AddAccountSheet: View {
                     RoundedRectangle(cornerRadius: 8)
                         .fill(providerBadgeBackground)
 
-                    Image(selectedProvider.logoImageName)
-                        .resizable()
-                        .interpolation(.high)
-                        .aspectRatio(contentMode: .fit)
+                    providerLogo(selectedProvider)
                         .padding(5)
                 }
                 .frame(width: 28, height: 28)
@@ -399,6 +399,8 @@ private struct AddAccountSheet: View {
 
                 if selectedProvider == .workbuddy {
                     workBuddyAddEntry
+                } else if selectedProvider == .qoderCN {
+                    qoderAddEntry
                 } else if selectedProvider == .deepseek {
                     apiKeyInputArea
                 } else if selectedProvider == .antigravity {
@@ -450,10 +452,7 @@ private struct AddAccountSheet: View {
             apiKeyError = nil
         }) {
             HStack(spacing: 10) {
-                Image(provider.logoImageName)
-                    .resizable()
-                    .interpolation(.high)
-                    .aspectRatio(contentMode: .fit)
+                providerLogo(provider)
                     .frame(width: 22, height: 22)
                     .padding(3)
                     .background(
@@ -488,6 +487,21 @@ private struct AddAccountSheet: View {
         }
         .buttonStyle(.plain)
         .cursor(.pointingHand)
+    }
+
+    @ViewBuilder
+    private func providerLogo(_ provider: AccountProvider) -> some View {
+        if provider == .qoderCN {
+            Image(systemName: "q.circle.fill")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .foregroundStyle(Color(red: 0.30, green: 0.52, blue: 0.91))
+        } else {
+            Image(provider.logoImageName)
+                .resizable()
+                .interpolation(.high)
+                .aspectRatio(contentMode: .fit)
+        }
     }
 
     // MARK: Kimi 方式处理
@@ -528,6 +542,8 @@ private struct AddAccountSheet: View {
             return Color(red: 0.42, green: 0.30, blue: 1.00).opacity(0.10)
         case .antigravity:
             return Color(red: 0.20, green: 0.60, blue: 0.86).opacity(0.10)
+        case .qoderCN:
+            return Color(red: 0.30, green: 0.52, blue: 0.91).opacity(0.10)
         }
     }
 
@@ -538,6 +554,7 @@ private struct AddAccountSheet: View {
         case .workbuddy: return languageManager.tr("选择登录方式")
         case .antigravity: return languageManager.tr("登录 Google 账号")
         case .kimi: return languageManager.tr("选择登录方式")
+        case .qoderCN: return languageManager.tr("读取 Qoder CN 本机登录态")
         }
     }
 
@@ -614,6 +631,55 @@ private struct AddAccountSheet: View {
             } else {
                 onDismiss()
             }
+        }
+    }
+
+    private var qoderAddEntry: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            LText("需先在 Qoder CN 客户端登录目标账号，再读取本机加密登录态。令牌只在内存中用于查询积分和签到。")
+                .font(.system(size: 11))
+                .foregroundStyle(.kimiTextTertiary)
+
+            HStack(spacing: 10) {
+                Button(action: submitQoderAdd) {
+                    Text(isReadingQoder ? languageManager.tr("读取中…") : languageManager.tr("读取本机"))
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(isHoveredQoderRead ? Color.kimiTextPrimary : Color.kimiTextSecondary)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
+                        .background(Color.kimiTextPrimary.opacity(isHoveredQoderRead ? 0.14 : 0.06))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+                .buttonStyle(.plain)
+                .onHover { isHoveredQoderRead = $0 }
+                .cursor(isReadingQoder ? .arrow : .pointingHand)
+                .disabled(isReadingQoder)
+
+                if isReadingQoder { ProgressView().controlSize(.small) }
+                Spacer()
+                Button(action: onDismiss) {
+                    Text(languageManager.tr("取消"))
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(isHoveredQoderCancel ? Color.kimiTextPrimary : Color.kimiTextSecondary)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
+                        .background(Color.kimiTextPrimary.opacity(isHoveredQoderCancel ? 0.14 : 0.06))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+                .buttonStyle(.plain)
+                .onHover { isHoveredQoderCancel = $0 }
+                .cursor(isReadingQoder ? .arrow : .pointingHand)
+                .disabled(isReadingQoder)
+            }
+        }
+    }
+
+    private func submitQoderAdd() {
+        isReadingQoder = true
+        Task {
+            let error = await KimiCodeBarModel.shared.addQoderCNAccount()
+            isReadingQoder = false
+            if let error { apiKeyError = error } else { onDismiss() }
         }
     }
 
@@ -801,11 +867,19 @@ private struct AccountRow: View {
             RoundedRectangle(cornerRadius: 8)
                 .fill(avatarBackground)
 
-            Image(provider.logoImageName)
-                .resizable()
-                .interpolation(.high)
-                .aspectRatio(contentMode: .fit)
-                .padding(5)
+            if provider == .qoderCN {
+                Image(systemName: "q.circle.fill")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .foregroundStyle(Color(red: 0.30, green: 0.52, blue: 0.91))
+                    .padding(5)
+            } else {
+                Image(provider.logoImageName)
+                    .resizable()
+                    .interpolation(.high)
+                    .aspectRatio(contentMode: .fit)
+                    .padding(5)
+            }
         }
         .frame(width: 28, height: 28)
     }
@@ -820,6 +894,8 @@ private struct AccountRow: View {
             return Color(red: 0.42, green: 0.30, blue: 1.00).opacity(0.10)
         case .antigravity:
             return Color(red: 0.20, green: 0.60, blue: 0.86).opacity(0.10)
+        case .qoderCN:
+            return Color(red: 0.30, green: 0.52, blue: 0.91).opacity(0.10)
         }
     }
 
@@ -921,7 +997,7 @@ private struct AccountRow: View {
                             disabled: reauthorizeDisabled,
                             action: onReauthorize
                         )
-                    } else if provider != .workbuddy {
+                    } else if provider != .workbuddy && provider != .qoderCN {
                         AccountActionButton(
                             title: languageManager.tr("修改 Key"),
                             color: .kimiBlue,

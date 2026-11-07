@@ -14,6 +14,7 @@ enum AccountProvider: String, Codable, CaseIterable, Identifiable {
     case deepseek
     case workbuddy
     case antigravity
+    case qoderCN = "qoder-cn"
 
     var id: String { rawValue }
 
@@ -24,6 +25,7 @@ enum AccountProvider: String, Codable, CaseIterable, Identifiable {
         case .deepseek: return "DeepSeek"
         case .workbuddy: return "WorkBuddy"
         case .antigravity: return "Antigravity"
+        case .qoderCN: return "Qoder CN"
         }
     }
 
@@ -33,6 +35,7 @@ enum AccountProvider: String, Codable, CaseIterable, Identifiable {
         case .deepseek: return "d.circle"
         case .workbuddy: return "w.circle"
         case .antigravity: return "a.circle"
+        case .qoderCN: return "q.circle"
         }
     }
 
@@ -47,6 +50,7 @@ enum AccountProvider: String, Codable, CaseIterable, Identifiable {
         case .deepseek: return "deepseek-logo"
         case .workbuddy: return "workbuddy-logo"
         case .antigravity: return "antigravity-logo"
+        case .qoderCN: return "q.circle"
         }
     }
 
@@ -57,6 +61,7 @@ enum AccountProvider: String, Codable, CaseIterable, Identifiable {
         case .deepseek: return [.apiKey]
         case .workbuddy: return [.localRead]
         case .antigravity: return [.oauth]
+        case .qoderCN: return [.localRead]
         }
     }
 }
@@ -76,6 +81,7 @@ enum AccountFetchResult: Sendable {
     case deepseek(DeepSeekBalance)
     case workbuddy(WorkBuddyCredits)
     case antigravity(AntigravityQuota)
+    case qoderCN(QoderCredits)
 }
 
 // MARK: - 账号凭证
@@ -86,6 +92,7 @@ enum AccountCredential: Codable, Equatable {
     case apiKey(String)
     case workbuddy(WorkBuddyCredential)
     case antigravity(AntigravityCredential)
+    case qoderCN(QoderCredential)
 }
 
 /// WorkBuddy 账号凭证：token 对 + 快照 + 签到日期。
@@ -107,6 +114,14 @@ struct WorkBuddyCredential: Codable, Equatable {
 
     var isApiKeyMode: Bool { accessToken.hasPrefix("ck_") }
     var hasSnapshot: Bool { accountSnapshot != nil && authSnapshot != nil }
+}
+
+/// Qoder CN 账号：仅保存客户端原始 safeStorage 密文快照，不把解密 token 落盘。
+struct QoderCredential: Codable, Equatable {
+    var uid: String
+    var authSnapshot: Data
+    var profileOverlaySnapshot: Data?
+    var lastCheckinDate: String?
 }
 
 // MARK: - 账号模型
@@ -138,6 +153,11 @@ struct KimiAccount: Codable, Equatable, Identifiable {
     /// Antigravity 凭证便捷访问
     var antigravityCredential: AntigravityCredential? {
         if case .antigravity(let cred) = credential { return cred }
+        return nil
+    }
+
+    var qoderCredential: QoderCredential? {
+        if case .qoderCN(let cred) = credential { return cred }
         return nil
     }
 
@@ -301,6 +321,13 @@ final class KimiAccountStore {
         }
     }
 
+    func updateQoderCredential(id: UUID, credential: QoderCredential) {
+        mutate { format in
+            guard let index = format.accounts.firstIndex(where: { $0.id == id }) else { return }
+            format.accounts[index].credential = .qoderCN(credential)
+        }
+    }
+
     /// 更新 WorkBuddy 账号的签到日期
     func updateWorkBuddyCheckinDate(id: UUID, date: String) {
         mutate { format in
@@ -308,6 +335,15 @@ final class KimiAccountStore {
                   case .workbuddy(var cred) = format.accounts[index].credential else { return }
             cred.lastCheckinDate = date
             format.accounts[index].credential = .workbuddy(cred)
+        }
+    }
+
+    func updateQoderCheckinDate(id: UUID, date: String) {
+        mutate { format in
+            guard let index = format.accounts.firstIndex(where: { $0.id == id }),
+                  case .qoderCN(var cred) = format.accounts[index].credential else { return }
+            cred.lastCheckinDate = date
+            format.accounts[index].credential = .qoderCN(cred)
         }
     }
 

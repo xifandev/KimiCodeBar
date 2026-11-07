@@ -200,6 +200,15 @@ struct KimiLabel: View {
                     .font(.system(size: 12, weight: .medium, design: .rounded))
                     .monospacedDigit()
             }
+        } else if model.primaryAccount?.provider == .qoderCN {
+            if let primary = model.primaryAccount,
+               let credits = QoderAccountManager.shared.credits[primary.id] {
+                Image(nsImage: MenuBarTextRenderer.workBuddyImage(creditsText: credits.remainingText))
+            } else {
+                Text(model.text)
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .monospacedDigit()
+            }
         } else if model.primaryAccount?.provider == .deepseek {
             // DeepSeek 主账号：鲸鱼图标 + 余额数字
             if let primary = model.primaryAccount,
@@ -1077,6 +1086,15 @@ struct KimiMenu: View {
                     NSWorkspace.shared.open(WorkBuddyService.consoleURL)
                 }
             )
+        case .qoderCN:
+            ActionButton(
+                title: languageManager.tr("控制台"),
+                textIcon: "Q",
+                action: {
+                    dismissMenuBarPanel()
+                    NSWorkspace.shared.open(QoderService.consoleURL)
+                }
+            )
         default:
             // Kimi 主账号 / 未配置账号：保持现状，打开 Kimi 控制台
             ActionButton(
@@ -1705,6 +1723,8 @@ struct AccountQuotaListView: View {
                     DeepSeekBalanceCard(account: account)
                 } else if account.provider == .workbuddy {
                     WorkBuddyCard(account: account)
+                } else if account.provider == .qoderCN {
+                    QoderCNCard(account: account)
                 } else if account.provider == .antigravity {
                     AntigravityQuotaCard(account: account)
                 } else {
@@ -1718,6 +1738,8 @@ struct AccountQuotaListView: View {
                             DeepSeekBalanceCard(account: account)
                         } else if account.provider == .workbuddy {
                             WorkBuddyCard(account: account)
+                        } else if account.provider == .qoderCN {
+                            QoderCNCard(account: account)
                         } else if account.provider == .antigravity {
                             AntigravityQuotaCard(account: account, isPrimary: isPrimary)
                         } else {
@@ -2049,6 +2071,73 @@ private struct WorkBuddyCard: View {
             .padding(.vertical, 1)
             .background(color.opacity(0.12))
             .clipShape(RoundedRectangle(cornerRadius: 4))
+    }
+}
+
+// MARK: - Qoder CN 积分卡片
+
+private struct QoderCNCard: View {
+    let account: KimiAccount
+
+    @StateObject private var manager = QoderAccountManager.shared
+    @StateObject private var model = KimiCodeBarModel.shared
+    @StateObject private var languageManager = LanguageManager.shared
+
+    private var credits: QoderCredits? { manager.credits[account.id] }
+    private var error: String? { manager.errors[account.id] }
+    private var checkinError: String? { manager.checkinErrors[account.id] }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "q.circle.fill")
+                .font(.system(size: 16))
+                .foregroundStyle(Color(red: 0.30, green: 0.52, blue: 0.91))
+
+            Text(model.displayName(for: account))
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.kimiTextSecondary)
+                .lineLimit(1)
+                .layoutPriority(1)
+
+            if let checkinError {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.orange)
+                    .help(languageManager.tr("签到失败：%@", arguments: [checkinError]))
+            }
+
+            Spacer(minLength: 8)
+
+            if manager.loadingIDs.contains(account.id) && credits == nil {
+                LoadingRing().frame(width: 12, height: 12)
+            } else if let credits {
+                HStack(spacing: 4) {
+                    Image(systemName: "sparkle")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.kimiTextSecondary)
+                    Text(credits.remainingText)
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(.kimiTextPrimary)
+                    LText("积分")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.kimiTextSecondary)
+                }
+            } else if let error {
+                Text("--")
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.kimiTextTertiary)
+                    .help(error)
+            } else {
+                Text("--")
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.kimiTextTertiary)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(Color.kimiCardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
 
@@ -5889,6 +5978,7 @@ final class KimiCodeBarModel: ObservableObject {
 
     /// 解析单个 OAuth 账号当前可用的 access token。
     /// 过期前自动用 refresh_token 换新；刷新前再读一次磁盘，防御其他 Bar 实例刚刷新过；
+        QoderAccountManager.shared.refresh()
     /// 授权被吊销（unauthorized）时返回 nil，由调用方把账号标记为「登录失效」——
     /// 凭证保留在列表中等待用户重新授权，不删除。
     private func resolveAccessToken(for accountID: UUID) async -> String? {
@@ -6026,8 +6116,8 @@ final class KimiCodeBarModel: ObservableObject {
         accountCheckinDates = accountCheckinDates.filter { validIDs.contains($0.key) }
         accountCheckinErrors = accountCheckinErrors.filter { validIDs.contains($0.key) }
 
-        for account in snapshot.accounts where account.provider != .workbuddy {
-            // WorkBuddy 账号的 loading / 结果态由 refreshWorkBuddyAccounts() 独立维护
+        for account in snapshot.accounts where account.provider != .workbuddy && account.provider != .qoderCN {
+            // WorkBuddy 与 Qoder CN 的 loading / 结果态由各自独立轨道维护
             accountStates[account.id] = .loading
         }
 
@@ -6046,7 +6136,7 @@ final class KimiCodeBarModel: ObservableObject {
                                 token = await self.resolveAccessToken(for: account.id)
                             case .apiKey(let key):
                                 token = key
-                            case .workbuddy, .antigravity:
+                            case .workbuddy, .antigravity, .qoderCN:
                                 token = nil
                             }
                             guard let accessToken = token else {
@@ -6090,8 +6180,8 @@ final class KimiCodeBarModel: ObservableObject {
                                 }
                                 return (account.id, nil, error)
                             }
-                        case .workbuddy:
-                            // WorkBuddy 账号由 refreshWorkBuddyAccounts() 独立处理积分，此处跳过
+                        case .workbuddy, .qoderCN:
+                            // WorkBuddy 与 Qoder CN 账号由各自独立刷新轨道处理
                             return (account.id, nil, nil)
                         }
                     }
@@ -6105,7 +6195,8 @@ final class KimiCodeBarModel: ObservableObject {
                 for (id, result, error) in results {
                     // WorkBuddy 账号由 refreshWorkBuddyAccounts() 独立处理积分和状态，
                     // 此处跳过避免 (nil, nil) 被误判为 unauthorized（"登录失效"）
-                    if let account = self.accounts.first(where: { $0.id == id }), account.provider == .workbuddy {
+                    if let account = self.accounts.first(where: { $0.id == id }),
+                       account.provider == .workbuddy || account.provider == .qoderCN {
                         continue
                     }
                     if let result {
@@ -6131,6 +6222,8 @@ final class KimiCodeBarModel: ObservableObject {
                         self.accountStates[id] = .loaded
                     } else if let error {
                         self.accountStates[id] = .failed(self.errorDescription(error))
+                        case .qoderCN:
+                            break // Qoder CN 由 QoderAccountManager 独立刷新
                     } else {
                         self.accountStates[id] = .unauthorized
                     }
@@ -6212,6 +6305,13 @@ final class KimiCodeBarModel: ObservableObject {
         switch accountStates[primaryID] {
         case .failed(let message):
             errorMessage = message
+        case .qoderCN:
+            quota = nil
+            if let credits = QoderAccountManager.shared.credits[primaryID] {
+                text = credits.remainingText
+            } else {
+                text = "--"
+            }
         case .unauthorized:
             errorMessage = LanguageManager.tr("授权已失效，请重新登录")
         default:
@@ -6496,6 +6596,8 @@ final class KimiCodeBarModel: ObservableObject {
     }
 
     /// 修改 API Key 账号的密钥（「登录失效」后的恢复入口）：验证通过才落盘。
+        case .qoderCN:
+            return LanguageManager.tr("Qoder CN 账号请使用读取本机方式添加")
     /// 按账号 provider 走对应验证服务。返回 nil 表示成功；否则返回面向用户的错误文案。
     @discardableResult
     func updateApiKey(for id: UUID, key: String) async -> String? {
@@ -6543,6 +6645,8 @@ final class KimiCodeBarModel: ObservableObject {
     }
 
     // MARK: - CLI 账号切换
+        case .qoderCN:
+            return LanguageManager.tr("Qoder CN 凭据由客户端管理，请重新读取本机登录态")
 
     /// 重算 CLI 活跃账号：读 CLI 凭证文件并与账号列表比对 token。
     /// 账号列表展示「CLI 使用中」标签前调用；CLI 轮换 token 后匹配失效，标签自然消失。
@@ -6793,6 +6897,36 @@ final class KimiCodeBarModel: ObservableObject {
         dismissMenuBarPanel()
 
         // 若已有实例在跑，避免重复打开 Terminal 造成端口冲突
+    /// 从 Qoder CN 客户端导入当前登录账号。只持久化其加密 auth 快照。
+    func addQoderCNAccount() async -> String? {
+        do {
+            let imported = try await QoderService.shared.importCurrentAccount()
+            let store = KimiAccountStore.shared
+            if let existing = store.snapshot.accounts.first(where: {
+                $0.provider == .qoderCN && $0.accountIdentifier == imported.profile.uid
+            }) {
+                store.updateQoderCredential(id: existing.id, credential: imported.credential)
+                store.setAlias(id: existing.id, alias: imported.profile.displayName)
+            } else {
+                store.addAccount(KimiAccount(
+                    id: UUID(),
+                    alias: imported.profile.displayName,
+                    provider: .qoderCN,
+                    credential: .qoderCN(imported.credential),
+                    accountIdentifier: imported.profile.uid
+                ))
+            }
+            store.ensurePrimaryAccount()
+            let snapshot = store.snapshot
+            accounts = snapshot.accounts
+            primaryAccountID = snapshot.primaryAccountID
+            refresh(showsLoading: false)
+            return nil
+        } catch {
+            return error.localizedDescription
+        }
+    }
+
         let currentState = await detectKimiServerState()
         guard currentState.status != .running else {
             await refreshKimiServerState()

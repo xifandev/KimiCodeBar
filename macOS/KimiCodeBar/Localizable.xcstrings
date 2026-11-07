@@ -3614,6 +3614,63 @@
           }
         }
       }
+    },
+    "读取 Qoder CN 本机登录态" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Read Qoder CN local session" } } }
+    },
+    "需先在 Qoder CN 客户端登录目标账号，再读取本机加密登录态。令牌只在内存中用于查询积分和签到。" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Sign in to the target account in Qoder CN first, then read its encrypted local session. The token stays in memory for credit queries and check-in." } } }
+    },
+    "Qoder CN 账号请使用读取本机方式添加" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Add Qoder CN accounts by reading the local session" } } }
+    },
+    "Qoder CN 凭据由客户端管理，请重新读取本机登录态" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Qoder CN credentials are managed by the client; read the local session again" } } }
+    },
+    "积分" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "credits" } } }
+    },
+    "未检测到 Qoder CN 本地登录态" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "No Qoder CN local session was found" } } }
+    },
+    "无法访问 Qoder CN 的 macOS 安全存储项" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Could not access the Qoder CN macOS secure-storage item" } } }
+    },
+    "Qoder CN 登录文件无效或过大" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "The Qoder CN session file is invalid or too large" } } }
+    },
+    "Qoder CN 登录文件正在变化，请稍后重试" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "The Qoder CN session file is changing; try again shortly" } } }
+    },
+    "Qoder CN 登录文件格式暂不兼容" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "This Qoder CN session-file format is not supported yet" } } }
+    },
+    "Qoder CN 登录态中未找到访问凭据" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "No access credential was found in the Qoder CN session" } } }
+    },
+    "Qoder CN 登录凭据已失效，请在客户端重新登录后再读取" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "The Qoder CN credential has expired; sign in again in the client and reread it" } } }
+    },
+    "无法从 Qoder CN 账号资料接口识别用户" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Could not identify the user from the Qoder CN profile API" } } }
+    },
+    "Qoder CN 用量接口返回了未识别的积分结构" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "The Qoder CN usage API returned an unrecognized credit structure" } } }
+    },
+    "Qoder CN 接口响应格式异常" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "The Qoder CN API response had an unexpected format" } } }
+    },
+    "Qoder CN 接口返回 HTTP %@" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "The Qoder CN API returned HTTP %@" } } }
+    },
+    "Qoder CN 账号快照缺失" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "The Qoder CN account snapshot is missing" } } }
+    },
+    "网络请求失败" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Network request failed" } } }
+    },
+    "读取本机" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Read local session" } } }
     }
   },
   "version" : "1.0"
