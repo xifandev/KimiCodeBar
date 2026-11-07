@@ -224,6 +224,7 @@ final class QoderService {
         let candidates: [(service: String, account: String?)] = [
             (service: " Safe Storage", account: nil),
             (service: " Safe Storage", account: "Qoder CN"),
+            (service: "Qoder CN Safe Storage", account: "Qoder CN Key"),
             (service: "Safe Storage", account: "Qoder CN"),
             (service: "Qoder CN Safe Storage", account: "Qoder CN"),
             (service: "Chromium Safe Storage", account: "Qoder CN")
