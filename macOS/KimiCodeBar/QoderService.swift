@@ -370,19 +370,18 @@ final class QoderService {
     private func keychainPasswords() -> [Data] {
         var passwords: [Data] = []
         for service in Self.keychainServices {
+            // 注意：不能用 kSecMatchLimitAll —— 在本机实测会让 SecItemCopyMatching
+            // 返回 -50 errSecParam（且不弹授权），导致全部 service 都拿不到密码。
+            // Qoder 每个 service 只有一个 item，默认单结果即可。
             let query: [String: Any] = [
                 kSecClass as String: kSecClassGenericPassword,
                 kSecAttrService as String: service,
-                kSecReturnData as String: true,
-                kSecMatchLimit as String: kSecMatchLimitAll
+                kSecReturnData as String: true
             ]
             var result: CFTypeRef?
-            guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess else { continue }
-            if let one = result as? Data {
-                passwords.append(one)
-            } else if let many = result as? [Data] {
-                passwords.append(contentsOf: many)
-            }
+            guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
+                  let password = result as? Data else { continue }
+            passwords.append(password)
         }
         var seen = Set<Data>()
         return passwords.filter { seen.insert($0).inserted }
