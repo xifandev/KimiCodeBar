@@ -109,6 +109,7 @@
       }
     },
     "%d 个异常" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -119,6 +120,7 @@
       }
     },
     "%d 个账号" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1411,17 +1413,6 @@
         }
       }
     },
-    "启动 WorkBuddy" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Launch WorkBuddy"
-          }
-        }
-      }
-    },
     "启动 Qoder CN" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1429,6 +1420,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Launch Qoder CN"
+          }
+        }
+      }
+    },
+    "启动 WorkBuddy" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Launch WorkBuddy"
           }
         }
       }
