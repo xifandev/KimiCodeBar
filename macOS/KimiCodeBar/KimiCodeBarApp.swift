@@ -1950,11 +1950,20 @@ private struct ProviderFoldCard: View {
             }
         } label: {
             HStack(spacing: 10) {
-                Image(provider.logoImageName)
-                    .resizable()
-                    .interpolation(.high)
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 20, height: 20)
+                // Qoder CN 无 asset logo（logoImageName 返回 SF Symbol 名），与设置页头像保持同一特判
+                if provider == .qoderCN {
+                    Image(systemName: "q.circle.fill")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .foregroundStyle(Color(red: 0.30, green: 0.52, blue: 0.91))
+                        .frame(width: 20, height: 20)
+                } else {
+                    Image(provider.logoImageName)
+                        .resizable()
+                        .interpolation(.high)
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 20, height: 20)
+                }
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(provider.displayName)
@@ -1992,7 +2001,7 @@ private struct ProviderFoldCard: View {
         .buttonStyle(.plain)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color.kimiTextPrimary.opacity(isHoveredHeader ? 0.06 : 0))
+                .fill(Color.kimiTextPrimary.opacity((isHoveredHeader || isOpen) ? 0.06 : 0))
                 // 悬停高亮层盖在按钮上方，必须放行点击，否则卡头点不动
                 .allowsHitTesting(false)
         )
@@ -2329,6 +2338,8 @@ private struct QoderCNCard: View {
     @StateObject private var languageManager = LanguageManager.shared
 
     @State private var isHoveredLaunch = false
+    /// 复制手机号的轻提示（由卡片级 overlay 渲染，避免被卡片圆角裁剪）
+    @State private var showCopiedToast = false
 
     private var credits: QoderCredits? { manager.credits[account.id] }
     private var error: String? { manager.errors[account.id] }
@@ -2366,6 +2377,11 @@ private struct QoderCNCard: View {
                     .font(.system(size: 11))
                     .foregroundStyle(.orange)
                     .help(languageManager.tr("签到失败：%@", arguments: [checkinError]))
+            }
+
+            // 备注手机号：手机图标，点击复制并弹轻提示（与 WorkBuddy 卡一致）
+            if let phone = account.phone?.trimmingCharacters(in: .whitespacesAndNewlines), !phone.isEmpty {
+                PhoneCopyIcon(phone: phone, copiedToast: $showCopiedToast)
             }
 
             // 标签：仅展示「当前」
@@ -2422,6 +2438,20 @@ private struct QoderCNCard: View {
         .padding(.vertical, 12)
         .background(Color.kimiCardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 12))
+        // 复制轻提示：渲染在卡片级 overlay（位于 clipShape 之外，不会被圆角裁掉），1.2 秒自动消失
+        .overlay(alignment: .trailing) {
+            if showCopiedToast {
+                Text(languageManager.tr("已复制到剪贴板"))
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.black.opacity(0.85))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .padding(.trailing, 44)
+                    .transition(.opacity.combined(with: .move(edge: .trailing)))
+            }
+        }
     }
 }
 
@@ -6740,7 +6770,7 @@ final class KimiCodeBarModel: ObservableObject {
         accounts = KimiAccountStore.shared.snapshot.accounts
     }
 
-    /// 设置 WorkBuddy 账号的备注手机号（面板昵称旁展示、点击复制）；传 nil 或空白清除
+    /// 设置账号的备注手机号（面板昵称旁展示手机图标、点击复制）；传 nil 或空白清除
     func setAccountPhone(_ id: UUID, phone: String?) {
         let trimmed = phone?.trimmingCharacters(in: .whitespacesAndNewlines)
         KimiAccountStore.shared.setPhone(id: id, phone: (trimmed?.isEmpty == false) ? trimmed : nil)

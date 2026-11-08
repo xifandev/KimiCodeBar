@@ -40,6 +40,135 @@ struct AccountsSettingsView: View {
     // 拖拽排序状态：正在拖拽的账号 ID（用于被拖卡片降透明度 + 落点重置）
     @State private var draggingAccountID: UUID?
 
+    // 分组折叠状态：多账号服务商默认折叠，点卡头展开（仅会话内记忆，不落盘）
+    @State private var expandedProviders: Set<AccountProvider> = []
+    @State private var hoveredProviderHeader: AccountProvider?
+
+    /// 按服务商分组（保持账号原始顺序），多账号的组渲染成折叠卡，单账号平铺
+    private var providerSections: [(provider: AccountProvider, accounts: [KimiAccount])] {
+        var order: [AccountProvider] = []
+        var grouped: [AccountProvider: [KimiAccount]] = [:]
+        for account in model.accounts {
+            if grouped[account.provider] == nil { order.append(account.provider) }
+            grouped[account.provider, default: []].append(account)
+        }
+        return order.map { ($0, grouped[$0] ?? []) }
+    }
+
+    /// 单个账号行（平铺与折叠组内共用）：含拖拽透明度与放置目标
+    @ViewBuilder
+    private func accountRowView(_ account: KimiAccount) -> some View {
+        AccountRow(
+            accountID: account.id,
+            draggingAccountID: $draggingAccountID,
+            displayName: model.displayName(for: account),
+            provider: account.provider,
+            phone: account.phone,
+            credential: account.credential,
+            isPrimary: account.id == model.primaryAccountID,
+            isCliActive: account.id == model.cliActiveAccountID,
+            state: model.accountStates[account.id] ?? .idle,
+            membershipLevel: model.accountQuotas[account.id]?.membershipLevel,
+            reauthorizeDisabled: model.oauthLoginInProgress,
+            onSwitchCli: { requestCliSwitch(account) },
+            onRename: {
+                renamingAccount = account
+                renamePhoneText = account.phone ?? ""
+                if let alias = account.alias?.trimmingCharacters(in: .whitespacesAndNewlines), !alias.isEmpty {
+                    renameText = alias
+                } else {
+                    renameText = model.displayName(for: account)
+                }
+                showRenameAlert = true
+            },
+            onDelete: {
+                accountPendingDeletion = account
+                showDeleteConfirm = true
+            },
+            onReauthorize: { model.reauthorizeAccount(account.id) },
+            onEditKey: {
+                editingKeyAccount = account
+                editKeyInput = ""
+                showEditKeyAlert = true
+            }
+        )
+        // 拖拽中的源卡片降低透明度，突出「被抓走」的感觉
+        .opacity(draggingAccountID == account.id ? 0.35 : 1)
+        // 每张卡片都是放置目标：拖入时实时把被拖账号挪到目标卡片位置
+        .onDrop(of: [.text], delegate: AccountReorderDropDelegate(
+            targetID: account.id,
+            model: model,
+            draggingAccountID: $draggingAccountID
+        ))
+    }
+
+    /// 折叠组卡头：服务商 logo + 名称 + 账号数（异常数）+ 展开箭头
+    private func providerGroupHeader(_ section: (provider: AccountProvider, accounts: [KimiAccount])) -> some View {
+        let isExpanded = expandedProviders.contains(section.provider)
+        let isHovered = hoveredProviderHeader == section.provider
+        let unauthorizedCount = section.accounts.filter {
+            if case .unauthorized = model.accountStates[$0.id] ?? .idle { return true }
+            return false
+        }.count
+
+        return Button {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                if isExpanded {
+                    expandedProviders.remove(section.provider)
+                } else {
+                    expandedProviders.insert(section.provider)
+                }
+            }
+        } label: {
+            HStack(spacing: 10) {
+                // Qoder CN 无 asset logo，与账号行头像保持同一特判
+                if section.provider == .qoderCN {
+                    Image(systemName: "q.circle.fill")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .foregroundStyle(Color(red: 0.30, green: 0.52, blue: 0.91))
+                        .frame(width: 20, height: 20)
+                } else {
+                    Image(section.provider.logoImageName)
+                        .resizable()
+                        .interpolation(.high)
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 20, height: 20)
+                }
+
+                Text(section.provider.displayName)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.kimiTextPrimary)
+
+                LText("%d 个账号", section.accounts.count)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.kimiTextTertiary)
+
+                if unauthorizedCount > 0 {
+                    LText("%d 个异常", unauthorizedCount)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.red)
+                }
+
+                Spacer(minLength: 8)
+
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(isExpanded ? Color.kimiBlue : Color.kimiTextTertiary)
+                    .rotationEffect(.degrees(isExpanded ? 180 : 0))
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .background(Color.kimiTextPrimary.opacity((isHovered || isExpanded) ? 0.05 : 0))
+        .cursor(.pointingHand)
+        .onHover { hovering in
+            hoveredProviderHeader = hovering ? section.provider : nil
+        }
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -74,58 +203,32 @@ struct AccountsSettingsView: View {
                     }
                 }
 
-                // 账号列表：Kimi / DeepSeek / WorkBuddy 不分组，每个账号一张独立卡片
+                // 账号列表：按服务商分组，多账号服务商收进折叠卡，单账号平铺
                 if model.accounts.isEmpty {
                     SettingsCard {
                         emptyState
                     }
                 } else {
                     LazyVStack(alignment: .leading, spacing: 12) {
-                        ForEach(model.accounts) { account in
-                            SettingsCard {
-                                AccountRow(
-                                    accountID: account.id,
-                                    draggingAccountID: $draggingAccountID,
-                                    displayName: model.displayName(for: account),
-                                    provider: account.provider,
-                                    phone: account.phone,
-                                    credential: account.credential,
-                                    isPrimary: account.id == model.primaryAccountID,
-                                    isCliActive: account.id == model.cliActiveAccountID,
-                                    state: model.accountStates[account.id] ?? .idle,
-                                    membershipLevel: model.accountQuotas[account.id]?.membershipLevel,
-                                    reauthorizeDisabled: model.oauthLoginInProgress,
-                                    onSwitchCli: { requestCliSwitch(account) },
-                                    onRename: {
-                                        renamingAccount = account
-                                        renamePhoneText = account.phone ?? ""
-                                        if let alias = account.alias?.trimmingCharacters(in: .whitespacesAndNewlines), !alias.isEmpty {
-                                            renameText = alias
-                                        } else {
-                                            renameText = model.displayName(for: account)
+                        ForEach(providerSections, id: \.provider) { section in
+                            if section.accounts.count > 1 {
+                                SettingsCard {
+                                    VStack(spacing: 0) {
+                                        providerGroupHeader(section)
+
+                                        if expandedProviders.contains(section.provider) {
+                                            ForEach(section.accounts) { account in
+                                                SettingsCardDivider()
+                                                accountRowView(account)
+                                            }
                                         }
-                                        showRenameAlert = true
-                                    },
-                                    onDelete: {
-                                        accountPendingDeletion = account
-                                        showDeleteConfirm = true
-                                    },
-                                    onReauthorize: { model.reauthorizeAccount(account.id) },
-                                    onEditKey: {
-                                        editingKeyAccount = account
-                                        editKeyInput = ""
-                                        showEditKeyAlert = true
                                     }
-                                )
+                                }
+                            } else if let account = section.accounts.first {
+                                SettingsCard {
+                                    accountRowView(account)
+                                }
                             }
-                            // 拖拽中的源卡片降低透明度，突出「被抓走」的感觉
-                            .opacity(draggingAccountID == account.id ? 0.35 : 1)
-                            // 每张卡片都是放置目标：拖入时实时把被拖账号挪到目标卡片位置
-                            .onDrop(of: [.text], delegate: AccountReorderDropDelegate(
-                                targetID: account.id,
-                                model: model,
-                                draggingAccountID: $draggingAccountID
-                            ))
                         }
                     }
                     // 兜底放置区：落在卡片间隙时也正常结束拖拽、重置拖拽状态
@@ -155,20 +258,20 @@ struct AccountsSettingsView: View {
         }
         .alert(LanguageManager.tr("重命名账号"), isPresented: $showRenameAlert) {
             TextField(LanguageManager.tr("别名"), text: $renameText)
-            if renamingAccount?.provider == .workbuddy {
+            if renamingAccount?.supportsPhoneNote == true {
                 TextField(LanguageManager.tr("手机号"), text: $renamePhoneText)
             }
             Button(LanguageManager.tr("保存")) {
                 if let account = renamingAccount {
                     model.renameAccount(account.id, alias: renameText)
-                    if account.provider == .workbuddy {
+                    if account.supportsPhoneNote {
                         model.setAccountPhone(account.id, phone: renamePhoneText)
                     }
                 }
             }
             Button(LanguageManager.tr("取消"), role: .cancel) {}
         } message: {
-            if renamingAccount?.provider == .workbuddy {
+            if renamingAccount?.supportsPhoneNote == true {
                 Text(LanguageManager.tr("为该账号设置便于区分的别名和备注手机号，手机号可留空。"))
             } else {
                 Text(LanguageManager.tr("为该账号设置一个便于区分的别名，留空则恢复默认名称。"))
@@ -949,8 +1052,8 @@ private struct AccountRow: View {
                     .foregroundStyle(.kimiTextPrimary)
                     .lineLimit(1)
 
-                // WorkBuddy 账号：昵称后显示完整备注手机号，便于快速核对当前配置
-                if provider == .workbuddy,
+                // WorkBuddy / Qoder CN 账号：昵称后显示完整备注手机号，便于快速核对当前配置
+                if provider == .workbuddy || provider == .qoderCN,
                    let trimmed = phone?.trimmingCharacters(in: .whitespacesAndNewlines),
                    !trimmed.isEmpty {
                     Text(trimmed)

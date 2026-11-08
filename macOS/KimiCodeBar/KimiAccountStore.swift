@@ -132,12 +132,18 @@ struct KimiAccount: Codable, Equatable, Identifiable {
     var id: UUID
     /// 用户自定义别名；为空时界面回退显示「账号 N」
     var alias: String?
-    /// 仅 WorkBuddy 使用：用户备注的手机号（面板昵称旁展示、点击复制，便于区分多账号是谁的）
+    /// 用户备注的手机号（面板昵称旁手机图标、点击复制，便于区分多账号是谁的）；
+    /// 是否可设置由 supportsPhoneNote 决定（目前 WorkBuddy / Qoder CN）
     var phone: String?
     var provider: AccountProvider
     var credential: AccountCredential
     /// 账号唯一标识（来自 usages 接口 user 对象，如 id/phone/email；取不到为 nil，仅做尽力去重）
     var accountIdentifier: String?
+
+    /// 是否支持备注手机号（设置页重命名弹窗出现手机号输入框、面板展示复制图标）
+    var supportsPhoneNote: Bool {
+        provider == .workbuddy || provider == .qoderCN
+    }
 
     /// CLI 切换等只认 OAuth token 对的场景使用；API Key 账号为 nil
     var oauthToken: KimiOAuthToken? {
