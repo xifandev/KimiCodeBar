@@ -5188,10 +5188,10 @@ struct PanelCustomSettingsView: View {
                         SettingsCardDivider()
 
                         SettingsCardRow(
-                            title: languageManager.tr("WorkBuddy积分自动排序"),
-                            subtitle: languageManager.tr("积分刷新完成后，按剩余积分从高到低排列 WorkBuddy 账号")
+                            title: languageManager.tr("自动按积分排序"),
+                            subtitle: languageManager.tr("积分刷新完成后，按剩余积分从高到低排列账号")
                         ) {
-                            Toggle("", isOn: $model.workBuddyAutoSort)
+                            Toggle("", isOn: $model.creditsAutoSort)
                                 .labelsHidden()
                                 .toggleStyle(.switch)
                                 .cursor(.pointingHand)
@@ -6124,8 +6124,8 @@ final class KimiCodeBarModel: ObservableObject {
     @AppStorage("showLocalUsageCard") var showLocalUsageCard: Bool = true
     @AppStorage("showKimiVersionRow") var showKimiVersionRow: Bool = false
     @AppStorage("showAppUpdateRow") var showAppUpdateRow: Bool = false
-    /// WorkBuddy 积分自动排序：开启后每次 WorkBuddy 积分刷新完成，按剩余积分降序重排 WorkBuddy 卡片
-    @AppStorage("workBuddyAutoSort") var workBuddyAutoSort: Bool = false
+    /// 积分刷新完成后，在各服务商分组内按剩余积分降序排列账号
+    @AppStorage("creditsAutoSort") var creditsAutoSort: Bool = true
 
     // MARK: - 多账号卡片显示风格
     @AppStorage("multiAccountCardStyle") var multiAccountCardStyle: MultiAccountCardStyle = .classic
@@ -6777,17 +6777,6 @@ final class KimiCodeBarModel: ObservableObject {
         accounts = KimiAccountStore.shared.snapshot.accounts
     }
 
-    /// 拖拽排序：把 sourceIndex 处的账号移动到 destinationIndex（目标卡片当前所在位置）。
-    /// 数组顺序即展示顺序（设置页与菜单栏面板共用），移动后立即落盘。
-    func moveAccount(from sourceIndex: Int, to destinationIndex: Int) {
-        guard sourceIndex != destinationIndex, accounts.indices.contains(sourceIndex) else { return }
-        var reordered = accounts
-        let account = reordered.remove(at: sourceIndex)
-        reordered.insert(account, at: min(destinationIndex, reordered.count))
-        KimiAccountStore.shared.setAccountsOrder(reordered)
-        accounts = reordered
-    }
-
     /// 设置主账号：菜单栏文字/图形与兼容属性只展示主账号用量
     func setPrimaryAccount(_ id: UUID) {
         guard accounts.contains(where: { $0.id == id }) else { return }
@@ -7093,8 +7082,7 @@ final class KimiCodeBarModel: ObservableObject {
             }
             await MainActor.run {
                 self.isRefreshingWorkBuddy = false
-                // 全部 WorkBuddy 账号积分刷新完成后，按设置开关执行积分自动排序
-                self.applyWorkBuddyAutoSort(succeeded: succeededIDs)
+                self.applyCreditsAutoSort(for: .workbuddy, succeeded: succeededIDs)
             }
         }
     }
@@ -7143,52 +7131,51 @@ final class KimiCodeBarModel: ObservableObject {
         }
     }
 
-    /// WorkBuddy 积分自动排序（由「WorkBuddy积分自动排序」开关控制，默认关闭）：
-    /// 仅在 WorkBuddy 账号内部按剩余积分降序重排，Kimi / DeepSeek / Antigravity 等其他平台
-    /// 账号的位置保持不变。顺序复用拖拽排序的 setAccountsOrder 通道落盘，避免被下一次
-    /// 刷新的磁盘快照覆盖。本轮刷新未成功的账号（登录失效 / 刷新失败 / 未加载）排在
-    /// WorkBuddy 组末尾；积分相同或均无积分时按原相对顺序（下标作决胜项，保证稳定）。
-    /// - Parameter succeeded: 本轮刷新真正拉取成功的账号 ID 集合，只有这些账号的积分参与排序，
-    ///   防止失败账号拿字典里残留的旧积分排在中间。
-    @MainActor
-    private func applyWorkBuddyAutoSort(succeeded: Set<UUID>) {
-        guard workBuddyAutoSort else { return }
-        // 以磁盘最新账号为准：刷新过程中 token / 签到日期可能已更新落盘，
-        // 用内存旧账号整体回写会把这些更新覆盖掉
+    /// 在指定服务商分组内按本轮成功刷新的剩余积分降序排列，其他账号位置保持不变。
+    /// 刷新失败的账号排在组内末尾；积分相同或均无积分时保持原相对顺序。
+    func applyCreditsAutoSort(for provider: AccountProvider, succeeded: Set<UUID>) {
+        guard creditsAutoSort else { return }
+        // 以磁盘最新账号为准，避免整体回写覆盖刷新期间更新的 token / 签到日期
         var result = KimiAccountStore.shared.freshAccounts()
-        let wbIndices = result.indices.filter { result[$0].provider == .workbuddy }
-        guard wbIndices.count > 1 else { return }
+        let providerIndices = result.indices.filter { result[$0].provider == provider }
+        guard providerIndices.count > 1 else { return }
 
-        let wbAccounts = wbIndices.map { result[$0] }
-        // 装饰排序：比较平手时按下标决胜，确保积分相同（或均无积分）的账号保持原相对顺序
-        let sorted = wbAccounts.enumerated()
+        let providerAccounts = providerIndices.map { result[$0] }
+        let sorted = providerAccounts.enumerated()
             .sorted { lhs, rhs in
-                let lhsCredits = succeeded.contains(lhs.element.id)
-                    ? accountWorkBuddyCredits[lhs.element.id]?.remaining
-                    : nil
-                let rhsCredits = succeeded.contains(rhs.element.id)
-                    ? accountWorkBuddyCredits[rhs.element.id]?.remaining
-                    : nil
+                let lhsCredits = remainingCredits(for: lhs.element, succeeded: succeeded)
+                let rhsCredits = remainingCredits(for: rhs.element, succeeded: succeeded)
                 switch (lhsCredits, rhsCredits) {
                 case (.some(let l), .some(let r)):
-                    return l > r
+                    return l == r ? lhs.offset < rhs.offset : l > r
                 case (.some, .none):
-                    return true   // 有积分的排前面
+                    return true
                 case (.none, .some):
-                    return false  // 无积分（登录失效 / 刷新失败）排末尾
+                    return false
                 default:
-                    return lhs.offset < rhs.offset  // 双方均无积分，按原下标保持相对顺序
+                    return lhs.offset < rhs.offset
                 }
             }
             .map(\.element)
 
-        // 顺序无变化时不落盘，避免多余的磁盘写入
-        guard sorted.map(\.id) != wbAccounts.map(\.id) else { return }
-        for (slot, index) in wbIndices.enumerated() {
+        guard sorted.map(\.id) != providerAccounts.map(\.id) else { return }
+        for (slot, index) in providerIndices.enumerated() {
             result[index] = sorted[slot]
         }
         KimiAccountStore.shared.setAccountsOrder(result)
         accounts = result
+    }
+
+    private func remainingCredits(for account: KimiAccount, succeeded: Set<UUID>) -> Double? {
+        guard succeeded.contains(account.id) else { return nil }
+        switch account.provider {
+        case .workbuddy:
+            return accountWorkBuddyCredits[account.id]?.remaining
+        case .qoderCN:
+            return QoderAccountManager.shared.credits[account.id]?.remaining
+        default:
+            return nil
+        }
     }
 
     /// 从本地 auth 文件添加当前 WorkBuddy 登录账号。

@@ -731,13 +731,13 @@
         }
       }
     },
-    "WorkBuddy积分自动排序" : {
+    "自动按积分排序" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Auto-sort WorkBuddy by credits"
+            "value" : "Auto-sort by credits"
           }
         }
       }
@@ -2029,17 +2029,6 @@
         }
       }
     },
-    "按住拖动排序" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Drag to reorder"
-          }
-        }
-      }
-    },
     "授权中…" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -3099,13 +3088,13 @@
         }
       }
     },
-    "积分刷新完成后，按剩余积分从高到低排列 WorkBuddy 账号" : {
+    "积分刷新完成后，按剩余积分从高到低排列账号" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "After credits refresh, sort WorkBuddy accounts by remaining credits (high to low)"
+            "value" : "After credits refresh, sort accounts by remaining credits (high to low)"
           }
         }
       }

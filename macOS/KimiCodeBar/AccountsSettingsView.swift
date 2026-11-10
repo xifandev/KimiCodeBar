@@ -1,5 +1,4 @@
 import SwiftUI
-import UniformTypeIdentifiers
 
 // MARK: - 账号设置页
 
@@ -37,9 +36,6 @@ struct AccountsSettingsView: View {
     @State private var showEditKeyAlert = false
     @State private var editKeyError: String?
 
-    // 拖拽排序状态：正在拖拽的账号 ID（用于被拖卡片降透明度 + 落点重置）
-    @State private var draggingAccountID: UUID?
-
     // 分组折叠状态：多账号服务商默认折叠，点卡头展开（仅会话内记忆，不落盘）
     @State private var expandedProviders: Set<AccountProvider> = []
     @State private var hoveredProviderHeader: AccountProvider?
@@ -55,12 +51,9 @@ struct AccountsSettingsView: View {
         return order.map { ($0, grouped[$0] ?? []) }
     }
 
-    /// 单个账号行（平铺与折叠组内共用）：含拖拽透明度与放置目标
-    @ViewBuilder
+    /// 单个账号行（平铺与折叠组内共用）
     private func accountRowView(_ account: KimiAccount) -> some View {
         AccountRow(
-            accountID: account.id,
-            draggingAccountID: $draggingAccountID,
             displayName: model.displayName(for: account),
             provider: account.provider,
             phone: account.phone,
@@ -92,14 +85,6 @@ struct AccountsSettingsView: View {
                 showEditKeyAlert = true
             }
         )
-        // 拖拽中的源卡片降低透明度，突出「被抓走」的感觉
-        .opacity(draggingAccountID == account.id ? 0.35 : 1)
-        // 每张卡片都是放置目标：拖入时实时把被拖账号挪到目标卡片位置
-        .onDrop(of: [.text], delegate: AccountReorderDropDelegate(
-            targetID: account.id,
-            model: model,
-            draggingAccountID: $draggingAccountID
-        ))
     }
 
     /// 折叠组卡头：服务商 logo + 名称 + 账号数（异常数）+ 展开箭头
@@ -231,12 +216,6 @@ struct AccountsSettingsView: View {
                             }
                         }
                     }
-                    // 兜底放置区：落在卡片间隙时也正常结束拖拽、重置拖拽状态
-                    .onDrop(of: [.text], delegate: AccountReorderDropDelegate(
-                        targetID: nil,
-                        model: model,
-                        draggingAccountID: $draggingAccountID
-                    ))
                 }
             }
             .padding(.horizontal, 24)
@@ -926,8 +905,6 @@ private struct AddAccountSheet: View {
 // MARK: - 账号行
 
 private struct AccountRow: View {
-    let accountID: UUID
-    @Binding var draggingAccountID: UUID?
     let displayName: String
     let provider: AccountProvider
     /// 备注手机号（仅 WorkBuddy 账号使用）：非空时紧跟昵称显示完整号码，便于快速核对
@@ -945,7 +922,6 @@ private struct AccountRow: View {
     let onEditKey: () -> Void
 
     @StateObject private var languageManager = LanguageManager.shared
-    @State private var isHoveredGrip = false
 
     /// 是否走 OAuth 流程（可重新授权）：Kimi OAuth、Antigravity OAuth 属于此类。
     /// WorkBuddy 也按 OAuth 展示会员等级标签，但不提供重新授权按钮（仅支持本地读取）。
@@ -1006,43 +982,8 @@ private struct AccountRow: View {
         }
     }
 
-    /// 拖拽抓手：悬停显示抓住光标并提亮，按住即可上下拖动排序。
-    /// 拖拽只从抓手发起，卡片内按钮的点击/悬停不受影响。
-    private var gripHandle: some View {
-        Image(systemName: "line.3.horizontal")
-            .font(.system(size: 11, weight: .bold))
-            .foregroundStyle(isHoveredGrip ? Color.kimiTextPrimary : Color.kimiTextTertiary)
-            .frame(width: 14, height: 28)
-            .contentShape(Rectangle())
-            .onHover { isHoveredGrip = $0 }
-            .cursor(.openHand)
-            .help(languageManager.tr("按住拖动排序"))
-            .onDrag {
-                draggingAccountID = accountID
-                return NSItemProvider(object: accountID.uuidString as NSString)
-            } preview: {
-                // 拖拽预览：跟随鼠标的迷你卡片（平台 logo + 显示名）
-                HStack(spacing: 8) {
-                    avatar
-                    Text(displayName)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.kimiTextPrimary)
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(Color.kimiCardBackground)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.kimiTextPrimary.opacity(0.12), lineWidth: 1)
-                )
-            }
-    }
-
     var body: some View {
         HStack(spacing: 12) {
-            gripHandle
-
             avatar
 
             // 单行：名称 + 脱敏 Key + 状态标签
@@ -1130,40 +1071,6 @@ private struct AccountRow: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-    }
-}
-
-// MARK: - 账号拖拽排序
-
-/// 账号卡片放置代理：拖入目标卡片时实时把被拖账号挪到目标位置（带动画），
-/// 放下时落盘完成排序。targetID 为 nil 时是卡片间隙的兜底放置区，只负责结束拖拽。
-private struct AccountReorderDropDelegate: DropDelegate {
-    let targetID: UUID?
-    let model: KimiCodeBarModel
-    @Binding var draggingAccountID: UUID?
-
-    func validateDrop(info: DropInfo) -> Bool {
-        info.hasItemsConforming(to: [.text])
-    }
-
-    func dropEntered(info: DropInfo) {
-        guard let targetID,
-              let draggingID = draggingAccountID,
-              draggingID != targetID,
-              let from = model.accounts.firstIndex(where: { $0.id == draggingID }),
-              let to = model.accounts.firstIndex(where: { $0.id == targetID }) else { return }
-        withAnimation(.easeInOut(duration: 0.2)) {
-            model.moveAccount(from: from, to: to)
-        }
-    }
-
-    func dropUpdated(info: DropInfo) -> DropProposal? {
-        DropProposal(operation: .move)
-    }
-
-    func performDrop(info: DropInfo) -> Bool {
-        draggingAccountID = nil
-        return true
     }
 }
 

@@ -620,6 +620,7 @@ final class QoderAccountManager: ObservableObject {
                 isRefreshing = false
                 startCheckinChain()
             }
+            var succeededIDs = Set<UUID>()
             for (index, account) in qoderAccounts.enumerated() {
                 loadingIDs.insert(account.id)
                 do {
@@ -628,6 +629,7 @@ final class QoderAccountManager: ObservableObject {
                     }
                     let value = try await QoderService.shared.fetchCredits(credential: credential)
                     credits[account.id] = value
+                    succeededIDs.insert(account.id)
                     errors.removeValue(forKey: account.id)
                 } catch {
                     errors[account.id] = error.localizedDescription
@@ -638,6 +640,7 @@ final class QoderAccountManager: ObservableObject {
                     try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
                 }
             }
+            KimiCodeBarModel.shared.applyCreditsAutoSort(for: .qoderCN, succeeded: succeededIDs)
         }
     }
 

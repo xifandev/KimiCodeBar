@@ -270,7 +270,7 @@ final class KimiAccountStore {
     }
 
     /// 读磁盘上最新的账号列表（一次落盘读取，不触碰内存状态），
-    /// 用于需要以最新落盘数据为准的操作（如 WorkBuddy 积分自动排序）。
+    /// 用于需要以最新落盘数据为准的操作（如积分自动排序）。
     func freshAccounts() -> [KimiAccount] {
         Self.loadFromDisk()?.accounts ?? snapshot.accounts
     }
@@ -291,7 +291,7 @@ final class KimiAccountStore {
         }
     }
 
-    /// 整体替换账号顺序（拖拽排序后落盘；数组顺序即展示顺序与落盘顺序）
+    /// 整体替换账号顺序（自动排序后落盘；数组顺序即展示顺序与落盘顺序）
     func setAccountsOrder(_ accounts: [KimiAccount]) {
         mutate { $0.accounts = accounts }
     }
