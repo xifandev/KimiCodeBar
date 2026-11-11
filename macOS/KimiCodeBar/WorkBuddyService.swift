@@ -205,7 +205,8 @@ final class WorkBuddyService {
         }
 
         let nickname = decryptField(accountInfo["nickname"]) ?? "Unknown"
-        let domain = (authInfo["domain"] as? String) ?? "www.codebuddy.cn"
+        // 品牌 CodeBuddy→WorkBuddy 迁移后兜底同步（2026-11）；正常路径从 auth 文件读 domain，走不到兜底
+        let domain = (authInfo["domain"] as? String) ?? "www.workbuddy.cn"
         let accountSnapshot = try? JSONSerialization.data(withJSONObject: accountInfo, options: [.sortedKeys])
         let authSnapshot = try? JSONSerialization.data(withJSONObject: authInfo, options: [.sortedKeys])
 
@@ -456,7 +457,7 @@ final class WorkBuddyService {
               let info = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
               let version = info["CFBundleShortVersionString"] as? String,
               !version.isEmpty else {
-            return "5.8.3"
+            return "5.11.0"  // 兜底版本随 WorkBuddy 当前大版本跟进（2026-11）；正常路径读本机 Info.plist 走不到兜底
         }
         return version
     }()
