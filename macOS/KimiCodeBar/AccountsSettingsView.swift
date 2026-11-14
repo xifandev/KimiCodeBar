@@ -113,6 +113,12 @@ struct AccountsSettingsView: View {
                         .aspectRatio(contentMode: .fit)
                         .foregroundStyle(Color(red: 0.30, green: 0.52, blue: 0.91))
                         .frame(width: 20, height: 20)
+                } else if section.provider == .doubaoWork {
+                    Image(systemName: "d.square.fill")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .foregroundStyle(Color(red: 0.20, green: 0.45, blue: 0.95))
+                        .frame(width: 20, height: 20)
                 } else {
                     Image(section.provider.logoImageName)
                         .resizable()
@@ -483,6 +489,8 @@ private struct AddAccountSheet: View {
                     workBuddyAddEntry
                 } else if selectedProvider == .qoderCN {
                     qoderAddEntry
+                } else if selectedProvider == .doubaoWork {
+                    doubaoAddEntry
                 } else if selectedProvider == .deepseek {
                     apiKeyInputArea
                 } else if selectedProvider == .antigravity {
@@ -578,6 +586,11 @@ private struct AddAccountSheet: View {
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .foregroundStyle(Color(red: 0.30, green: 0.52, blue: 0.91))
+        } else if provider == .doubaoWork {
+            Image(systemName: "d.square.fill")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .foregroundStyle(Color(red: 0.20, green: 0.45, blue: 0.95))
         } else {
             Image(provider.logoImageName)
                 .resizable()
@@ -626,6 +639,8 @@ private struct AddAccountSheet: View {
             return Color(red: 0.20, green: 0.60, blue: 0.86).opacity(0.10)
         case .qoderCN:
             return Color(red: 0.30, green: 0.52, blue: 0.91).opacity(0.10)
+        case .doubaoWork:
+            return Color(red: 0.20, green: 0.45, blue: 0.95).opacity(0.10)
         }
     }
 
@@ -637,6 +652,7 @@ private struct AddAccountSheet: View {
         case .antigravity: return languageManager.tr("登录 Google 账号")
         case .kimi: return languageManager.tr("选择登录方式")
         case .qoderCN: return languageManager.tr("选择添加方式")
+        case .doubaoWork: return languageManager.tr("选择添加方式")
         }
     }
 
@@ -765,6 +781,65 @@ private struct AddAccountSheet: View {
         Task {
             let error = await KimiCodeBarModel.shared.addQoderCNAccount()
             isReadingQoder = false
+            if let error { apiKeyError = error } else { onDismiss() }
+        }
+    }
+
+    // MARK: 豆包添加入口
+
+    @State private var isReadingDoubao = false
+    @State private var isHoveredDoubaoRead = false
+    @State private var isHoveredDoubaoCancel = false
+
+    private var doubaoAddEntry: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            LText("从本机客户端读取")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.kimiTextSecondary)
+
+            LText("需先在豆包工作客户端登录目标账号，再读取本机加密登录态。令牌只在内存中用于查询额度和签到。")
+                .font(.system(size: 11))
+                .foregroundStyle(.kimiTextTertiary)
+
+            HStack(spacing: 10) {
+                Button(action: submitDoubaoAdd) {
+                    Text(isReadingDoubao ? languageManager.tr("读取中…") : languageManager.tr("读取本机"))
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(isHoveredDoubaoRead ? Color.kimiTextPrimary : Color.kimiTextSecondary)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
+                        .background(Color.kimiTextPrimary.opacity(isHoveredDoubaoRead ? 0.14 : 0.06))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+                .buttonStyle(.plain)
+                .onHover { isHoveredDoubaoRead = $0 }
+                .cursor(isReadingDoubao ? .arrow : .pointingHand)
+                .disabled(isReadingDoubao)
+
+                if isReadingDoubao { ProgressView().controlSize(.small) }
+                Spacer()
+                Button(action: onDismiss) {
+                    Text(languageManager.tr("取消"))
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(isHoveredDoubaoCancel ? Color.kimiTextPrimary : Color.kimiTextSecondary)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
+                        .background(Color.kimiTextPrimary.opacity(isHoveredDoubaoCancel ? 0.14 : 0.06))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+                .buttonStyle(.plain)
+                .onHover { isHoveredDoubaoCancel = $0 }
+                .cursor(isReadingDoubao ? .arrow : .pointingHand)
+                .disabled(isReadingDoubao)
+            }
+        }
+    }
+
+    private func submitDoubaoAdd() {
+        isReadingDoubao = true
+        Task {
+            let error = await KimiCodeBarModel.shared.addDoubaoAccount()
+            isReadingDoubao = false
             if let error { apiKeyError = error } else { onDismiss() }
         }
     }
@@ -956,6 +1031,12 @@ private struct AccountRow: View {
                     .aspectRatio(contentMode: .fit)
                     .foregroundStyle(Color(red: 0.30, green: 0.52, blue: 0.91))
                     .padding(5)
+            } else if provider == .doubaoWork {
+                Image(systemName: "d.square.fill")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .foregroundStyle(Color(red: 0.20, green: 0.45, blue: 0.95))
+                    .padding(5)
             } else {
                 Image(provider.logoImageName)
                     .resizable()
@@ -979,6 +1060,8 @@ private struct AccountRow: View {
             return Color(red: 0.20, green: 0.60, blue: 0.86).opacity(0.10)
         case .qoderCN:
             return Color(red: 0.30, green: 0.52, blue: 0.91).opacity(0.10)
+        case .doubaoWork:
+            return Color(red: 0.20, green: 0.45, blue: 0.95).opacity(0.10)
         }
     }
 
@@ -993,8 +1076,8 @@ private struct AccountRow: View {
                     .foregroundStyle(.kimiTextPrimary)
                     .lineLimit(1)
 
-                // WorkBuddy / Qoder CN 账号：昵称后显示完整备注手机号，便于快速核对当前配置
-                if provider == .workbuddy || provider == .qoderCN,
+                // WorkBuddy / Qoder CN / 豆包账号：昵称后显示完整备注手机号，便于快速核对当前配置
+                if provider == .workbuddy || provider == .qoderCN || provider == .doubaoWork,
                    let trimmed = phone?.trimmingCharacters(in: .whitespacesAndNewlines),
                    !trimmed.isEmpty {
                     Text(trimmed)
@@ -1045,7 +1128,7 @@ private struct AccountRow: View {
                             disabled: reauthorizeDisabled,
                             action: onReauthorize
                         )
-                    } else if provider != .workbuddy && provider != .qoderCN {
+                    } else if provider != .workbuddy && provider != .qoderCN && provider != .doubaoWork {
                         AccountActionButton(
                             title: languageManager.tr("修改 Key"),
                             color: .kimiBlue,
