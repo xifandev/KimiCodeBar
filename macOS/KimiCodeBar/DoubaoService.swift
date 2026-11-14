@@ -117,9 +117,22 @@ final class DoubaoService {
         }
         let tempURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("kimicodebar-doubao-cookies-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: tempURL) }
+        defer {
+            try? FileManager.default.removeItem(at: tempURL)
+            for suffix in ["-wal", "-shm"] {
+                try? FileManager.default.removeItem(at: URL(fileURLWithPath: tempURL.path + suffix))
+            }
+        }
         do {
             try FileManager.default.copyItem(at: source, to: tempURL)
+            // 若客户端使用 WAL 模式，最近写入可能仍在 sidecar 中，必须一并复制，
+            // 否则快照会漏掉刚登录/刚刷新的会话 cookie。
+            for suffix in ["-wal", "-shm"] {
+                let sidecar = URL(fileURLWithPath: source.path + suffix)
+                if FileManager.default.fileExists(atPath: sidecar.path) {
+                    try FileManager.default.copyItem(at: sidecar, to: URL(fileURLWithPath: tempURL.path + suffix))
+                }
+            }
         } catch {
             throw DoubaoError.cookieReadFailed
         }
@@ -351,19 +364,26 @@ final class DoubaoService {
         var ok = sqlite3_exec(db, "DELETE FROM cookies WHERE host_key LIKE '%doubao.com%'", nil, nil, nil) == SQLITE_OK
         if ok {
             var stmt: OpaquePointer?
-            let sql = "INSERT INTO cookies (creation_utc, host_key, top_frame_site_key, name, value, encrypted_value, path, expires_utc, is_secure, is_httponly, last_access_utc, has_expires, is_persistent, priority, samesite, source_scheme, source_port, last_update_utc, source_type, has_cross_site_ancestor) VALUES (0, ?, '', ?, '', ?, ?, ?, ?, ?, 0, 1, 1, 1, 0, -1, -1, 0, 0, 0)"
+            // 占位符顺序必须严格对应列顺序：host(1) → name(2) → encrypted(3)
+            // → path(4) → expires(5) → secure(6) → httponly(7) → has_expires(8)
+            // → is_persistent(9)。会话 cookie（expires_utc=0）不能写成 persistent，
+            // 否则会被 Chromium 当作已过期条目处理。
+            let sql = "INSERT INTO cookies (creation_utc, host_key, top_frame_site_key, name, value, encrypted_value, path, expires_utc, is_secure, is_httponly, last_access_utc, has_expires, is_persistent, priority, samesite, source_scheme, source_port, last_update_utc, source_type, has_cross_site_ancestor) VALUES (0, ?, '', ?, '', ?, ?, ?, ?, ?, 0, ?, ?, 1, 0, -1, -1, 0, 0, 0)"
             ok = sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK
             if ok {
                 for row in rows {
+                    let hasExpiry = row.expiresUTC != 0
                     sqlite3_bind_text(stmt, 1, row.host, -1, SQLITE_TRANSIENT)
                     sqlite3_bind_text(stmt, 2, row.name, -1, SQLITE_TRANSIENT)
-                    sqlite3_bind_text(stmt, 3, row.path, -1, SQLITE_TRANSIENT)
                     _ = row.encryptedValue.withUnsafeBytes { bytes in
-                        sqlite3_bind_blob(stmt, 4, bytes.baseAddress, Int32(row.encryptedValue.count), SQLITE_TRANSIENT)
+                        sqlite3_bind_blob(stmt, 3, bytes.baseAddress, Int32(row.encryptedValue.count), SQLITE_TRANSIENT)
                     }
+                    sqlite3_bind_text(stmt, 4, row.path, -1, SQLITE_TRANSIENT)
                     sqlite3_bind_int64(stmt, 5, row.expiresUTC)
                     sqlite3_bind_int(stmt, 6, row.isSecure ? 1 : 0)
                     sqlite3_bind_int(stmt, 7, row.isHTTPOnly ? 1 : 0)
+                    sqlite3_bind_int(stmt, 8, hasExpiry ? 1 : 0)
+                    sqlite3_bind_int(stmt, 9, hasExpiry ? 1 : 0)
                     if sqlite3_step(stmt) != SQLITE_DONE { ok = false; break }
                     sqlite3_reset(stmt)
                 }
@@ -382,13 +402,16 @@ final class DoubaoService {
         }
     }
 
-    func restartDoubao(completion: (@MainActor () -> Void)? = nil) {
+    /// 重启客户端。cookie 库写回必须放在进程退出之后，因此提供 beforeLaunch
+    /// 钩子：终止 → 等待退出 → 写快照 → 再启动，避免运行中的 Chromium 持锁或回写覆盖。
+    func restartDoubao(beforeLaunch: (() -> Void)? = nil, completion: (@MainActor () -> Void)? = nil) {
         let apps = NSWorkspace.shared.runningApplications.filter {
             $0.bundleIdentifier == "com.work.pc.doubao" || $0.bundleURL?.lastPathComponent == "DoubaoWork.app"
         }
         for app in apps { app.terminate() }
         Task {
             try? await Task.sleep(nanoseconds: 1_500_000_000)
+            beforeLaunch?()
             let url = URL(fileURLWithPath: "/Applications/DoubaoWork.app")
             _ = try? await NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
             try? await Task.sleep(nanoseconds: 500_000_000)

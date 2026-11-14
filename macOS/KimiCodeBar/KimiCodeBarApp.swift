@@ -7439,11 +7439,12 @@ final class KimiCodeBarModel: ObservableObject {
     }
 
     /// 切换到指定豆包账号并重启客户端。
-    /// 先把该账号的 cookie 密文快照写回 Cookies 库（使豆包工作启动后使用该账号），
-    /// 再终止旧进程并重新启动。机制与 Qoder 切换一致，快照为密文原样写回。
+    /// 先终止旧进程，再把该账号的 cookie 密文快照写回 Cookies 库，最后启动客户端。
+    /// 与 Qoder 的文件快照不同，SQLite 写回不能在客户端持库运行时进行。
     func launchDoubao(account: KimiAccount) {
-        DoubaoService.shared.switchTo(account: account)
-        DoubaoService.shared.restartDoubao { [weak self] in
+        DoubaoService.shared.restartDoubao(beforeLaunch: {
+            DoubaoService.shared.switchTo(account: account)
+        }) { [weak self] in
             self?.doubaoActiveUID = DoubaoService.shared.currentActiveUID()
         }
     }
