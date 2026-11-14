@@ -212,7 +212,7 @@ struct KimiLabel: View {
         } else if model.primaryAccount?.provider == .doubaoWork {
             if let primary = model.primaryAccount,
                let credits = DoubaoAccountManager.shared.credits[primary.id] {
-                Image(nsImage: MenuBarTextRenderer.workBuddyImage(creditsText: credits.totalText))
+                Image(nsImage: MenuBarTextRenderer.workBuddyImage(creditsText: credits.displayText))
             } else {
                 Text(model.text)
                     .font(.system(size: 12, weight: .medium, design: .rounded))
@@ -2049,7 +2049,7 @@ private struct ProviderFoldCard: View {
             let total = accounts.reduce(0.0) { $0 + (QoderAccountManager.shared.credits[$1.id]?.remaining ?? 0) }
             summaryLabel(icon: "sparkle", text: "\(Int(floor(total)))")
         case .doubaoWork:
-            let total = accounts.reduce(0) { $0 + (DoubaoAccountManager.shared.credits[$1.id]?.totalAmount ?? 0) }
+            let total = accounts.reduce(0) { $0 + (DoubaoAccountManager.shared.credits[$1.id]?.displayAmount ?? 0) }
             summaryLabel(icon: "sparkle", text: "\(total)")
         case .deepseek:
             let balances = accounts.compactMap { model.accountBalances[$0.id] }
@@ -2488,7 +2488,8 @@ private struct QoderCNCard: View {
 
 // MARK: - 豆包工作积分卡片
 
-/// 豆包账号卡片：布局与 QoderCNCard 一致，额度数字展示活动累计额度，
+/// 豆包账号卡片：布局与 QoderCNCard 一致，额度数字优先展示实时可用额度
+/// （quota/summary 口径，与客户端设置页一致；接口不可用时回退累计获得），
 /// 附今日签到状态（已签 ✓ + 连签天数 / 待签到提示）。
 private struct DoubaoCard: View {
     let account: KimiAccount
@@ -2517,6 +2518,26 @@ private struct DoubaoCard: View {
             .padding(.vertical, 1)
             .background(color.opacity(0.12))
             .clipShape(RoundedRectangle(cornerRadius: 4))
+    }
+
+    private static let quotaExpiryFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
+
+    /// 额度明细悬浮提示：实时口径时给出 已用/累计 与赠送过期时间；
+    /// 回退口径（接口不可用）提示当前数字是累计获得而非可用余额。
+    private func quotaTooltip(for credits: DoubaoCredits) -> Text {
+        guard let used = credits.quotaUsed, let total = credits.quotaTotal else {
+            return Text(languageManager.tr("接口不可用，当前显示为活动累计获得额度"))
+        }
+        var tip = languageManager.tr("已用 %1$@ / 累计 %2$@", arguments: ["\(used)", "\(total)"])
+        if let expires = credits.incentiveExpiresAt {
+            let date = Date(timeIntervalSince1970: TimeInterval(expires) / 1000)
+            tip += "\n" + languageManager.tr("赠送额度 %@ 到期", arguments: [Self.quotaExpiryFormatter.string(from: date)])
+        }
+        return Text(tip)
     }
 
     var body: some View {
@@ -2554,14 +2575,15 @@ private struct DoubaoCard: View {
                     Image(systemName: "sparkle")
                         .font(.system(size: 10))
                         .foregroundStyle(.kimiTextSecondary)
-                    Text(credits.totalText)
+                    Text(credits.displayText)
                         .font(.system(size: 15, weight: .semibold, design: .rounded))
                         .monospacedDigit()
                         .foregroundStyle(.kimiTextPrimary)
-                    LText("额度")
+                    LText(credits.hasLiveQuota ? "可用额度" : "额度")
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.kimiTextSecondary)
                 }
+                .help(quotaTooltip(for: credits))
 
                 // 启动按钮：设为主账号 → 写该账号 cookie 快照回库 → 重启豆包工作（切换 + 启动）
                 Button(action: {
@@ -6793,7 +6815,7 @@ final class KimiCodeBarModel: ObservableObject {
         case .doubaoWork:
             quota = nil
             if let credits = DoubaoAccountManager.shared.credits[primaryID] {
-                text = credits.totalText
+                text = credits.displayText
             } else {
                 text = "--"
             }
@@ -7346,7 +7368,7 @@ final class KimiCodeBarModel: ObservableObject {
         case .qoderCN:
             return QoderAccountManager.shared.credits[account.id]?.remaining
         case .doubaoWork:
-            return DoubaoAccountManager.shared.credits[account.id].map { Double($0.totalAmount) }
+            return DoubaoAccountManager.shared.credits[account.id].map { Double($0.displayAmount) }
         default:
             return nil
         }

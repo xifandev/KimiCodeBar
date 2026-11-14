@@ -4055,6 +4055,50 @@
           }
         }
       }
+    },
+    "可用额度" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "available"
+          }
+        }
+      }
+    },
+    "已用 %1$@ / 累计 %2$@" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Used %1$@ / Total %2$@"
+          }
+        }
+      }
+    },
+    "赠送额度 %@ 到期" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bonus credits expire %@"
+          }
+        }
+      }
+    },
+    "接口不可用，当前显示为活动累计获得额度" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Live quota unavailable; showing total credits earned"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

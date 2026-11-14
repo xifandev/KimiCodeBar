@@ -9,18 +9,31 @@ import SQLite3
 
 // MARK: - 豆包工作积分
 
-/// 豆包工作签到面板读数（detail 接口一次拿全）。
-/// remaining 展示「累计获得额度」（progress.total_amount）——豆包活动面板
-/// 没有独立余额字段，签到奖励直接进账号额度池。
+/// 豆包工作签到面板读数 + 实时可用额度。
+/// 签到状态来自活动 detail 接口；可用额度来自 quota/summary 接口
+/// （与客户端设置页「额度」同源，总量-已用），取不到时回退展示累计获得。
 struct DoubaoCredits: Equatable, Sendable {
-    /// 累计获得的活动额度
+    /// 累计获得的活动额度（progress.total_amount，仅作兜底展示）
     let totalAmount: Int
     let checkedInToday: Bool
     let continuousDays: Int
     /// 今日签到奖励额度（未签时为待领额度）
     let rewardAmount: Int
+    /// 实时可用额度：quota/summary 各额度窗口（总量-已用）求和；nil = 接口未返回
+    let remainingAmount: Int?
+    /// 实时口径的已用 / 总量（与 remainingAmount 同源）
+    let quotaUsed: Int?
+    let quotaTotal: Int?
+    /// 活动赠送额度的过期时间（毫秒 epoch），nil 表示无赠送窗口或字段缺失
+    let incentiveExpiresAt: Int64?
+    /// 订阅套餐短名（如 免费体验 / 标准套餐）
+    let planName: String?
 
     var totalText: String { "\(totalAmount)" }
+    /// 卡片主数字：优先实时可用额度，否则回退累计获得
+    var displayAmount: Int { remainingAmount ?? totalAmount }
+    var displayText: String { "\(displayAmount)" }
+    var hasLiveQuota: Bool { remainingAmount != nil }
 }
 
 enum DoubaoCheckinOutcome: Equatable {
@@ -495,12 +508,90 @@ final class DoubaoService {
         let checkin = signin?["daily_checkin"] as? [String: Any]
         let reward = checkin?["reward"] as? [String: Any]
         let progress = data["progress"] as? [String: Any]
+        // 实时可用额度：失败不影响签到面板读数，仅回退为累计口径
+        let quota = try? await fetchQuotaSummary(credential: credential)
         return DoubaoCredits(
             totalAmount: intValue(progress, keys: ["total_amount"]) ?? 0,
             checkedInToday: (checkin?["checked_in_today"] as? Bool) ?? false,
             continuousDays: intValue(checkin, keys: ["continuous_days"]) ?? 0,
-            rewardAmount: intValue(reward, keys: ["reward_amount"]) ?? 0
+            rewardAmount: intValue(reward, keys: ["reward_amount"]) ?? 0,
+            remainingAmount: quota?.remaining,
+            quotaUsed: quota?.used,
+            quotaTotal: quota?.total,
+            incentiveExpiresAt: quota?.incentiveExpiresAt,
+            planName: quota?.planName
         )
+    }
+
+    /// 实时额度读数（quota/summary 解析结果）
+    private struct QuotaSummary {
+        let remaining: Int
+        let used: Int
+        let total: Int
+        let incentiveExpiresAt: Int64?
+        let planName: String?
+    }
+
+    /// 拉取实时额度（与豆包客户端设置页「额度」同源，2026-11-15 本机实测 code 0）：
+    ///   POST /alice/commerce/sale/subscription/quota/summary/   body: {"product_line":"membership"}
+    /// 响应各 section（window_limit_section / enterprise_window_limit_section /
+    /// incentive_quota_section）的 window_limits 带 total_amount / used_amount
+    /// （"2,900" 千分位字符串）与 used_percent；window_type 1=5小时窗口、2=每周、
+    /// 3=活动赠送（在 incentive_quota_section，end_time 为赠送过期时间）。
+    /// 口径参考 dsh-connect-doubao（MIT）：可用 = Σ(窗口总量 - 已用)。
+    private func fetchQuotaSummary(credential: DoubaoCredential) async throws -> QuotaSummary {
+        let payload = try await postCampaign(
+            path: "/alice/commerce/sale/subscription/quota/summary/",
+            body: ["product_line": "membership"],
+            credential: credential
+        )
+        guard (payload["code"] as? Int) == 0,
+              let data = payload["data"] as? [String: Any] else {
+            throw DoubaoError.invalidResponse
+        }
+        var total = 0
+        var used = 0
+        var found = false
+        var incentiveExpires: Int64 = 0
+        for sectionKey in ["window_limit_section", "enterprise_window_limit_section", "incentive_quota_section"] {
+            let section = data[sectionKey] as? [String: Any]
+            let groups = section?["window_limit_groups"] as? [[String: Any]] ?? []
+            for group in groups {
+                let limits = group["window_limits"] as? [[String: Any]] ?? []
+                for limit in limits {
+                    guard let amount = amountValue(limit["total_amount"]),
+                          let consumed = amountValue(limit["used_amount"]) else { continue }
+                    total += amount
+                    used += consumed
+                    found = true
+                    if sectionKey == "incentive_quota_section",
+                       let end = (limit["end_time"] as? NSNumber)?.int64Value, end > 0 {
+                        incentiveExpires = max(incentiveExpires, end)
+                    }
+                }
+            }
+        }
+        guard found else { throw DoubaoError.invalidResponse }
+        let subscription = data["current_subscription"] as? [String: Any]
+        let display = subscription?["display"] as? [String: Any]
+        return QuotaSummary(
+            remaining: max(0, total - used),
+            used: used,
+            total: total,
+            incentiveExpiresAt: incentiveExpires > 0 ? incentiveExpires : nil,
+            planName: display?["short_name"] as? String
+        )
+    }
+
+    /// 解析额度字段：数字直接取，千分位字符串（"2,900"）去非数字字符后转 Int。
+    private func amountValue(_ value: Any?) -> Int? {
+        if let number = value as? NSNumber,
+           CFGetTypeID(number) != CFBooleanGetTypeID() { return number.intValue }
+        if let text = value as? String {
+            let digits = text.filter(\.isNumber)
+            return digits.isEmpty ? nil : Int(digits)
+        }
+        return nil
     }
 
     /// 每日签到：先查状态，未签才 claim。服务端幂等：重复领 code 0 + idempotent:true。
