@@ -4088,6 +4088,17 @@
           }
         }
       }
+    },
+    "读取时会弹出钥匙串授权，建议点「始终允许」" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS will ask for Keychain access — choose \"Always Allow\""
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

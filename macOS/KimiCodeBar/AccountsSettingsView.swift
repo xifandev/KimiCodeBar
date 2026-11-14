@@ -742,6 +742,8 @@ private struct AddAccountSheet: View {
                 .font(.system(size: 11))
                 .foregroundStyle(.kimiTextTertiary)
 
+            keychainNotice
+
             HStack(spacing: 10) {
                 Button(action: submitQoderAdd) {
                     Text(isReadingQoder ? languageManager.tr("读取中…") : languageManager.tr("读取本机"))
@@ -785,6 +787,24 @@ private struct AddAccountSheet: View {
         }
     }
 
+    /// 钥匙串授权提醒：Qoder / 豆包走本机加密登录态读取，macOS 会弹授权窗。
+    /// 提前告知并建议「始终允许」（一次授权永久生效，避免每次启动重复索要密码）。
+    private var keychainNotice: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "key.fill")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(.orange)
+            LText("读取时会弹出钥匙串授权，建议点「始终允许」")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(.kimiTextPrimary)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.orange.opacity(0.10))
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+    }
+
     // MARK: 豆包添加入口
 
     @State private var isReadingDoubao = false
@@ -800,6 +820,8 @@ private struct AddAccountSheet: View {
             LText("需先在豆包工作客户端登录目标账号，再读取本机加密登录态。令牌只在内存中用于查询额度和签到。")
                 .font(.system(size: 11))
                 .foregroundStyle(.kimiTextTertiary)
+
+            keychainNotice
 
             HStack(spacing: 10) {
                 Button(action: submitDoubaoAdd) {
