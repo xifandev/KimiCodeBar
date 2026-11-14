@@ -4056,17 +4056,6 @@
         }
       }
     },
-    "可用额度" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "available"
-          }
-        }
-      }
-    },
     "已用 %1$@ / 累计 %2$@" : {
       "extractionState" : "stale",
       "localizations" : {

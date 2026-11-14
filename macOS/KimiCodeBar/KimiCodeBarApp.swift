@@ -2579,7 +2579,7 @@ private struct DoubaoCard: View {
                         .font(.system(size: 15, weight: .semibold, design: .rounded))
                         .monospacedDigit()
                         .foregroundStyle(.kimiTextPrimary)
-                    LText(credits.hasLiveQuota ? "可用额度" : "额度")
+                    LText("额度")
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.kimiTextSecondary)
                 }
@@ -6473,10 +6473,22 @@ final class KimiCodeBarModel: ObservableObject {
         refreshCliActiveAccount()
         refreshAllAccounts(showsLoading: showsLoading)
         refreshWorkBuddyAccounts()
+        // 「当前账号」探测要解密客户端本地登录态（触发钥匙串授权弹窗），
+        // 只在用户已托管该服务商账号时才做——否则装了 Qoder/豆包但没添加的
+        // 用户一打开面板就会被索要 Mac 密码。
+        let hostedProviders = Set(KimiAccountStore.shared.freshAccounts().map(\.provider))
         QoderAccountManager.shared.refresh()
-        qoderActiveUID = QoderService.shared.currentActiveUID()
+        if hostedProviders.contains(.qoderCN) {
+            qoderActiveUID = QoderService.shared.currentActiveUID()
+        } else {
+            qoderActiveUID = nil
+        }
         DoubaoAccountManager.shared.refresh()
-        doubaoActiveUID = DoubaoService.shared.currentActiveUID()
+        if hostedProviders.contains(.doubaoWork) {
+            doubaoActiveUID = DoubaoService.shared.currentActiveUID()
+        } else {
+            doubaoActiveUID = nil
+        }
     }
 
     /// 解析单个 OAuth 账号当前可用的 access token。
