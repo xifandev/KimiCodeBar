@@ -2579,7 +2579,7 @@ private struct DoubaoCard: View {
                         .font(.system(size: 15, weight: .semibold, design: .rounded))
                         .monospacedDigit()
                         .foregroundStyle(.kimiTextPrimary)
-                    LText("额度")
+                    LText("积分")
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.kimiTextSecondary)
                 }
