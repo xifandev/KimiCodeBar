@@ -2545,10 +2545,6 @@ private struct DoubaoCard: View {
             if isActive {
                 tagPill(languageManager.tr("当前"), color: .kimiBlue)
             }
-            if let credits, credits.continuousDays > 0 {
-                tagPill(languageManager.tr("连签 %d 天", arguments: [credits.continuousDays]), color: .kimiTextSecondary)
-            }
-
             Spacer(minLength: 8)
 
             if manager.loadingIDs.contains(account.id) && credits == nil {

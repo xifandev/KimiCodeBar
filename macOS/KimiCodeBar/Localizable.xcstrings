@@ -4001,17 +4001,6 @@
         }
       }
     },
-    "连签 %d 天" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%d-day streak"
-          }
-        }
-      }
-    },
     "额度" : {
       "extractionState" : "stale",
       "localizations" : {
