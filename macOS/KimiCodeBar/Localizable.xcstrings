@@ -3176,6 +3176,61 @@
         }
       }
     },
+    "查看异常详情" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "View issue details"
+          }
+        }
+      }
+    },
+    "重试签到" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retry check-in"
+          }
+        }
+      }
+    },
+    "正在重试签到" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retrying check-in…"
+          }
+        }
+      }
+    },
+    "积分刷新失败：%@" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Credit refresh failed: %@"
+          }
+        }
+      }
+    },
+    "实时额度刷新失败：%@" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Live quota refresh failed: %@"
+          }
+        }
+      }
+    },
     "签到失败：%@" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -3227,6 +3282,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Cache Hit Rate"
+          }
+        }
+      }
+    },
+    "网络请求失败：%1$@（URLError %2$@）" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Network request failed: %1$@ (URLError %2$@)"
           }
         }
       }
@@ -3880,112 +3946,24 @@
         }
       }
     },
-    "读取豆包登录凭据需要访问钥匙串" : {
+    "未知错误码" : {
       "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Access to the keychain is required to read Doubao credentials"
+            "value" : "Unknown error code"
           }
         }
       }
     },
-    "未检测到豆包工作本地登录态" : {
+    "服务端未返回错误消息" : {
       "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No local Doubao Work sign-in detected"
-          }
-        }
-      }
-    },
-    "无法访问豆包工作的 macOS 安全存储项" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unable to access Doubao Work's macOS Safe Storage item"
-          }
-        }
-      }
-    },
-    "豆包工作登录文件读取失败" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Failed to read Doubao Work login file"
-          }
-        }
-      }
-    },
-    "豆包工作登录文件格式暂不兼容" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Doubao Work login file format is not supported yet"
-          }
-        }
-      }
-    },
-    "无法从豆包工作登录态识别用户" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unable to identify user from Doubao Work sign-in state"
-          }
-        }
-      }
-    },
-    "豆包工作账号快照缺失" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Doubao Work account snapshot is missing"
-          }
-        }
-      }
-    },
-    "豆包工作登录凭据已失效，请在客户端重新登录后再读取" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Doubao Work credentials expired; please sign in again in the client and re-import"
-          }
-        }
-      }
-    },
-    "豆包工作接口响应格式异常" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Doubao Work API returned an unexpected response"
-          }
-        }
-      }
-    },
-    "豆包工作接口返回 HTTP %@" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Doubao Work API returned HTTP %@"
+            "value" : "The server did not return an error message"
           }
         }
       }
@@ -4008,50 +3986,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "credits"
-          }
-        }
-      }
-    },
-    "启动豆包工作" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Launch Doubao Work"
-          }
-        }
-      }
-    },
-    "豆包账号请使用读取本机方式添加" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add a Doubao account via local read"
-          }
-        }
-      }
-    },
-    "豆包凭据由客户端管理，请重新读取本机登录态" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Doubao credentials are managed by the client; please re-import local sign-in"
-          }
-        }
-      }
-    },
-    "需先在豆包工作客户端登录目标账号，再读取本机加密登录态。令牌只在内存中用于查询额度和签到。" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sign in to the target account in the Doubao Work client first, then import the encrypted local session. The token stays in memory and is only used for credits and check-in."
           }
         }
       }

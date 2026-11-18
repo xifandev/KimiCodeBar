@@ -15,7 +15,6 @@ enum AccountProvider: String, Codable, CaseIterable, Identifiable {
     case workbuddy
     case antigravity
     case qoderCN = "qoder-cn"
-    case doubaoWork = "doubao-work"
 
     var id: String { rawValue }
 
@@ -27,7 +26,6 @@ enum AccountProvider: String, Codable, CaseIterable, Identifiable {
         case .workbuddy: return "WorkBuddy"
         case .antigravity: return "Antigravity"
         case .qoderCN: return "Qoder CN"
-        case .doubaoWork: return "豆包"
         }
     }
 
@@ -38,7 +36,6 @@ enum AccountProvider: String, Codable, CaseIterable, Identifiable {
         case .workbuddy: return "w.circle"
         case .antigravity: return "a.circle"
         case .qoderCN: return "q.circle"
-        case .doubaoWork: return "d.square"
         }
     }
 
@@ -54,7 +51,6 @@ enum AccountProvider: String, Codable, CaseIterable, Identifiable {
         case .workbuddy: return "workbuddy-logo"
         case .antigravity: return "antigravity-logo"
         case .qoderCN: return "q.circle"
-        case .doubaoWork: return "d.square"
         }
     }
 
@@ -66,7 +62,6 @@ enum AccountProvider: String, Codable, CaseIterable, Identifiable {
         case .workbuddy: return [.localRead]
         case .antigravity: return [.oauth]
         case .qoderCN: return [.localRead]
-        case .doubaoWork: return [.localRead]
         }
     }
 }
@@ -87,7 +82,6 @@ enum AccountFetchResult: Sendable {
     case workbuddy(WorkBuddyCredits)
     case antigravity(AntigravityQuota)
     case qoderCN(QoderCredits)
-    case doubaoWork(DoubaoCredits)
 }
 
 // MARK: - 账号凭证
@@ -99,7 +93,6 @@ enum AccountCredential: Codable, Equatable {
     case workbuddy(WorkBuddyCredential)
     case antigravity(AntigravityCredential)
     case qoderCN(QoderCredential)
-    case doubaoWork(DoubaoCredential)
 }
 
 /// WorkBuddy 账号凭证：token 对 + 快照 + 签到日期。
@@ -132,18 +125,6 @@ struct QoderCredential: Codable, Equatable {
     var lastCheckinDate: String?
 }
 
-/// 豆包工作账号：保存客户端 Chromium cookie 快照（解密后的会话 cookie 不落盘）。
-/// 与 Qoder 同策略——只持久化密文快照，切账号时原样写回 cookie 库。
-struct DoubaoCredential: Codable, Equatable {
-    var uid: String
-    /// 客户端昵称（从客户端本地存储读取，取不到时回退显示「账号 N」）
-    var nickname: String
-    /// doubao.com 相关 cookie 行密文快照（JSON 编码的行数组，含 host/name/encrypted_value/expires）
-    var cookiesSnapshot: Data
-    /// 最近签到日期（北京时间 yyyy-MM-dd），nil 表示今日未签到
-    var lastCheckinDate: String?
-}
-
 // MARK: - 账号模型
 
 /// 一个受监控账号：平台 + 凭证 + 用户别名 + 可选的账号唯一标识（添加时去重用）。
@@ -161,7 +142,7 @@ struct KimiAccount: Codable, Equatable, Identifiable {
 
     /// 是否支持备注手机号（设置页重命名弹窗出现手机号输入框、面板展示复制图标）
     var supportsPhoneNote: Bool {
-        provider == .workbuddy || provider == .qoderCN || provider == .doubaoWork
+        provider == .workbuddy || provider == .qoderCN
     }
 
     /// CLI 切换等只认 OAuth token 对的场景使用；API Key 账号为 nil
@@ -184,11 +165,6 @@ struct KimiAccount: Codable, Equatable, Identifiable {
 
     var qoderCredential: QoderCredential? {
         if case .qoderCN(let cred) = credential { return cred }
-        return nil
-    }
-
-    var doubaoCredential: DoubaoCredential? {
-        if case .doubaoWork(let cred) = credential { return cred }
         return nil
     }
 
@@ -378,23 +354,6 @@ final class KimiAccountStore {
         }
     }
 
-    /// 更新豆包账号的凭证（cookie 快照刷新后落盘）
-    func updateDoubaoCredential(id: UUID, credential: DoubaoCredential) {
-        mutate { format in
-            guard let index = format.accounts.firstIndex(where: { $0.id == id }) else { return }
-            format.accounts[index].credential = .doubaoWork(credential)
-        }
-    }
-
-    func updateDoubaoCheckinDate(id: UUID, date: String) {
-        mutate { format in
-            guard let index = format.accounts.firstIndex(where: { $0.id == id }),
-                  case .doubaoWork(var cred) = format.accounts[index].credential else { return }
-            cred.lastCheckinDate = date
-            format.accounts[index].credential = .doubaoWork(cred)
-        }
-    }
-
     func updateAccountIdentifier(id: UUID, identifier: String?) {
         mutate { format in
             guard let index = format.accounts.firstIndex(where: { $0.id == id }) else { return }
@@ -452,10 +411,26 @@ final class KimiAccountStore {
     }
 
     /// 从磁盘加载。返回 nil 表示文件不存在或格式不是当前版本（旧格式按无账号处理）。
+    /// 加载时顺带做一次迁移：provider 为已下架渠道（如 doubao-work）的账号整条剔除，
+    /// 否则单个账号解码失败会导致整个账号列表解码失败（按无账号处理，用户其余账号全丢）。
     private static func loadFromDisk() -> FileFormat? {
         let url = credentialsFileURL()
         guard let data = try? Data(contentsOf: url) else { return nil }
-        return try? JSONDecoder().decode(FileFormat.self, from: data)
+        var dataToDecode = data
+        if var object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           var accounts = object["accounts"] as? [[String: Any]] {
+            let before = accounts.count
+            accounts.removeAll { ($0["provider"] as? String) == "doubao-work" }
+            if accounts.count != before {
+                object["accounts"] = accounts
+                if let migrated = try? JSONSerialization.data(withJSONObject: object) {
+                    dataToDecode = migrated
+                    // 迁移结果直接落盘，下次启动不再重复剔除
+                    try? migrated.write(to: url, options: .atomic)
+                }
+            }
+        }
+        return try? JSONDecoder().decode(FileFormat.self, from: dataToDecode)
     }
 
     /// 原子写入：目录 0700，文件 0600。调用前必须已持有 lock（init 除外）。

@@ -209,15 +209,6 @@ struct KimiLabel: View {
                     .font(.system(size: 12, weight: .medium, design: .rounded))
                     .monospacedDigit()
             }
-        } else if model.primaryAccount?.provider == .doubaoWork {
-            if let primary = model.primaryAccount,
-               let credits = DoubaoAccountManager.shared.credits[primary.id] {
-                Image(nsImage: MenuBarTextRenderer.workBuddyImage(creditsText: credits.displayText))
-            } else {
-                Text(model.text)
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
-                    .monospacedDigit()
-            }
         } else if model.primaryAccount?.provider == .deepseek {
             // DeepSeek 主账号：鲸鱼图标 + 余额数字
             if let primary = model.primaryAccount,
@@ -1104,15 +1095,6 @@ struct KimiMenu: View {
                     NSWorkspace.shared.open(QoderService.consoleURL)
                 }
             )
-        case .doubaoWork:
-            ActionButton(
-                title: languageManager.tr("控制台"),
-                textIcon: "豆",
-                action: {
-                    dismissMenuBarPanel()
-                    NSWorkspace.shared.open(DoubaoService.consoleURL)
-                }
-            )
         default:
             // Kimi 主账号 / 未配置账号：保持现状，打开 Kimi 控制台
             ActionButton(
@@ -1758,8 +1740,6 @@ struct AccountQuotaListView: View {
                     WorkBuddyCard(account: account)
                 } else if account.provider == .qoderCN {
                     QoderCNCard(account: account)
-                } else if account.provider == .doubaoWork {
-                    DoubaoCard(account: account)
                 } else if account.provider == .antigravity {
                     AntigravityQuotaCard(account: account)
                 } else {
@@ -1847,8 +1827,6 @@ private struct ProviderAccountCard: View {
             WorkBuddyCard(account: account)
         } else if account.provider == .qoderCN {
             QoderCNCard(account: account)
-        } else if account.provider == .doubaoWork {
-            DoubaoCard(account: account)
         } else if account.provider == .antigravity {
             AntigravityQuotaCard(account: account, isPrimary: isPrimary)
         } else {
@@ -1979,12 +1957,6 @@ private struct ProviderFoldCard: View {
                         .aspectRatio(contentMode: .fit)
                         .foregroundStyle(Color(red: 0.30, green: 0.52, blue: 0.91))
                         .frame(width: 20, height: 20)
-                } else if provider == .doubaoWork {
-                    Image(systemName: "d.square.fill")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .foregroundStyle(Color(red: 0.20, green: 0.45, blue: 0.95))
-                        .frame(width: 20, height: 20)
                 } else {
                     Image(provider.logoImageName)
                         .resizable()
@@ -2048,9 +2020,6 @@ private struct ProviderFoldCard: View {
         case .qoderCN:
             let total = accounts.reduce(0.0) { $0 + (QoderAccountManager.shared.credits[$1.id]?.remaining ?? 0) }
             summaryLabel(icon: "sparkle", text: "\(Int(floor(total)))")
-        case .doubaoWork:
-            let total = accounts.reduce(0) { $0 + (DoubaoAccountManager.shared.credits[$1.id]?.displayAmount ?? 0) }
-            summaryLabel(icon: "sparkle", text: "\(total)")
         case .deepseek:
             let balances = accounts.compactMap { model.accountBalances[$0.id] }
             let total = balances.reduce(0.0) { $0 + $1.totalBalance }
@@ -2470,152 +2439,6 @@ private struct QoderCNCard: View {
         .background(Color.kimiCardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         // 复制轻提示：渲染在卡片级 overlay（位于 clipShape 之外，不会被圆角裁掉），1.2 秒自动消失
-        .overlay(alignment: .trailing) {
-            if showCopiedToast {
-                Text(languageManager.tr("已复制到剪贴板"))
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.black.opacity(0.85))
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-                    .padding(.trailing, 44)
-                    .transition(.opacity.combined(with: .move(edge: .trailing)))
-            }
-        }
-    }
-}
-
-// MARK: - 豆包工作积分卡片
-
-/// 豆包账号卡片：布局与 QoderCNCard 一致，额度数字优先展示实时可用额度
-/// （quota/summary 口径，与客户端设置页一致；接口不可用时回退累计获得），
-/// 附今日签到状态（已签 ✓ + 连签天数 / 待签到提示）。
-private struct DoubaoCard: View {
-    let account: KimiAccount
-
-    @StateObject private var manager = DoubaoAccountManager.shared
-    @StateObject private var model = KimiCodeBarModel.shared
-    @StateObject private var languageManager = LanguageManager.shared
-
-    @State private var isHoveredLaunch = false
-    @State private var showCopiedToast = false
-
-    private var credits: DoubaoCredits? { manager.credits[account.id] }
-    private var error: String? { manager.errors[account.id] }
-    private var checkinError: String? { manager.checkinErrors[account.id] }
-
-    /// 该账号是否是当前豆包工作客户端登录的账号
-    private var isActive: Bool {
-        model.doubaoActiveUID == account.doubaoCredential?.uid
-    }
-
-    private func tagPill(_ text: String, color: Color) -> some View {
-        Text(text)
-            .font(.system(size: 9, weight: .medium))
-            .foregroundStyle(color)
-            .padding(.horizontal, 5)
-            .padding(.vertical, 1)
-            .background(color.opacity(0.12))
-            .clipShape(RoundedRectangle(cornerRadius: 4))
-    }
-
-    private static let quotaExpiryFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter
-    }()
-
-    /// 额度明细悬浮提示：实时口径时给出 已用/累计 与赠送过期时间；
-    /// 回退口径（接口不可用）提示当前数字是累计获得而非可用余额。
-    private func quotaTooltip(for credits: DoubaoCredits) -> Text {
-        guard let used = credits.quotaUsed, let total = credits.quotaTotal else {
-            return Text(languageManager.tr("接口不可用，当前显示为活动累计获得额度"))
-        }
-        var tip = languageManager.tr("已用 %1$@ / 累计 %2$@", arguments: ["\(used)", "\(total)"])
-        if let expires = credits.incentiveExpiresAt {
-            let date = Date(timeIntervalSince1970: TimeInterval(expires) / 1000)
-            tip += "\n" + languageManager.tr("赠送额度 %@ 到期", arguments: [Self.quotaExpiryFormatter.string(from: date)])
-        }
-        return Text(tip)
-    }
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "d.square.fill")
-                .font(.system(size: 16))
-                .foregroundStyle(Color(red: 0.20, green: 0.45, blue: 0.95))
-
-            Text(model.displayName(for: account))
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.kimiTextSecondary)
-                .lineLimit(1)
-                .layoutPriority(1)
-
-            if let checkinError {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.orange)
-                    .help(languageManager.tr("签到失败：%@", arguments: [checkinError]))
-            }
-
-            if let phone = account.phone?.trimmingCharacters(in: .whitespacesAndNewlines), !phone.isEmpty {
-                PhoneCopyIcon(phone: phone, copiedToast: $showCopiedToast)
-            }
-
-            if isActive {
-                tagPill(languageManager.tr("当前"), color: .kimiBlue)
-            }
-            Spacer(minLength: 8)
-
-            if manager.loadingIDs.contains(account.id) && credits == nil {
-                LoadingRing().frame(width: 12, height: 12)
-            } else if let credits {
-                HStack(spacing: 4) {
-                    Image(systemName: "sparkle")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.kimiTextSecondary)
-                    Text(credits.displayText)
-                        .font(.system(size: 15, weight: .semibold, design: .rounded))
-                        .monospacedDigit()
-                        .foregroundStyle(.kimiTextPrimary)
-                    LText("积分")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.kimiTextSecondary)
-                }
-                .help(quotaTooltip(for: credits))
-
-                // 启动按钮：设为主账号 → 写该账号 cookie 快照回库 → 重启豆包工作（切换 + 启动）
-                Button(action: {
-                    model.setPrimaryAccount(account.id)
-                    model.launchDoubao(account: account)
-                }) {
-                    Image(systemName: "play.fill")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(isHoveredLaunch ? .kimiTextPrimary : .kimiTextSecondary)
-                        .frame(width: 22, height: 22)
-                        .background(isHoveredLaunch ? Color.kimiTextPrimary.opacity(0.14) : Color.kimiTextPrimary.opacity(0.08))
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                }
-                .buttonStyle(.plain)
-                .cursor(.pointingHand)
-                .onHover { isHoveredLaunch = $0 }
-                .help(languageManager.tr("启动豆包工作"))
-            } else if let error {
-                Text("--")
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.kimiTextTertiary)
-                    .help(error)
-            } else {
-                Text("--")
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.kimiTextTertiary)
-            }
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .background(Color.kimiCardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(alignment: .trailing) {
             if showCopiedToast {
                 Text(languageManager.tr("已复制到剪贴板"))
@@ -6320,8 +6143,6 @@ final class KimiCodeBarModel: ObservableObject {
     @Published var workBuddyActiveUID: String?
     /// 当前在 Qoder CN 中登录的账号 uid（解密 auth.v1.dat 得到）
     @Published var qoderActiveUID: String?
-    /// 当前在豆包工作中登录的账号 uid（解密客户端 cookie 得到）
-    @Published var doubaoActiveUID: String?
 
     @Published var text = "-- · --"
     @Published var quota: KimiQuota?
@@ -6474,7 +6295,7 @@ final class KimiCodeBarModel: ObservableObject {
         refreshAllAccounts(showsLoading: showsLoading)
         refreshWorkBuddyAccounts()
         // 「当前账号」探测要解密客户端本地登录态（触发钥匙串授权弹窗），
-        // 只在用户已托管该服务商账号时才做——否则装了 Qoder/豆包但没添加的
+        // 只在用户已托管该服务商账号时才做——否则装了 Qoder 但没添加的
         // 用户一打开面板就会被索要 Mac 密码。
         let hostedProviders = Set(KimiAccountStore.shared.freshAccounts().map(\.provider))
         QoderAccountManager.shared.refresh()
@@ -6482,12 +6303,6 @@ final class KimiCodeBarModel: ObservableObject {
             qoderActiveUID = QoderService.shared.currentActiveUID()
         } else {
             qoderActiveUID = nil
-        }
-        DoubaoAccountManager.shared.refresh()
-        if hostedProviders.contains(.doubaoWork) {
-            doubaoActiveUID = DoubaoService.shared.currentActiveUID()
-        } else {
-            doubaoActiveUID = nil
         }
     }
 
@@ -6630,8 +6445,8 @@ final class KimiCodeBarModel: ObservableObject {
         accountCheckinDates = accountCheckinDates.filter { validIDs.contains($0.key) }
         accountCheckinErrors = accountCheckinErrors.filter { validIDs.contains($0.key) }
 
-        for account in snapshot.accounts where account.provider != .workbuddy && account.provider != .qoderCN && account.provider != .doubaoWork {
-            // WorkBuddy / Qoder CN / 豆包的 loading / 结果态由各自独立轨道维护
+        for account in snapshot.accounts where account.provider != .workbuddy && account.provider != .qoderCN {
+            // WorkBuddy / Qoder CN 的 loading / 结果态由各自独立轨道维护
             accountStates[account.id] = .loading
         }
 
@@ -6650,7 +6465,7 @@ final class KimiCodeBarModel: ObservableObject {
                                 token = await self.resolveAccessToken(for: account.id)
                             case .apiKey(let key):
                                 token = key
-                            case .workbuddy, .antigravity, .qoderCN, .doubaoWork:
+                            case .workbuddy, .antigravity, .qoderCN:
                                 token = nil
                             }
                             guard let accessToken = token else {
@@ -6694,8 +6509,8 @@ final class KimiCodeBarModel: ObservableObject {
                                 }
                                 return (account.id, nil, error)
                             }
-                        case .workbuddy, .qoderCN, .doubaoWork:
-                            // WorkBuddy / Qoder CN / 豆包账号由各自独立刷新轨道处理
+                        case .workbuddy, .qoderCN:
+                            // WorkBuddy / Qoder CN 账号由各自独立刷新轨道处理
                             return (account.id, nil, nil)
                         }
                     }
@@ -6710,7 +6525,7 @@ final class KimiCodeBarModel: ObservableObject {
                     // WorkBuddy 账号由 refreshWorkBuddyAccounts() 独立处理积分和状态，
                     // 此处跳过避免 (nil, nil) 被误判为 unauthorized（"登录失效"）
                     if let account = self.accounts.first(where: { $0.id == id }),
-                       account.provider == .workbuddy || account.provider == .qoderCN || account.provider == .doubaoWork {
+                       account.provider == .workbuddy || account.provider == .qoderCN {
                         continue
                     }
                     if let result {
@@ -6734,8 +6549,6 @@ final class KimiCodeBarModel: ObservableObject {
                             }
                         case .qoderCN:
                             break // Qoder CN 由 QoderAccountManager 独立刷新
-                        case .doubaoWork:
-                            break // 豆包由 DoubaoAccountManager 独立刷新
                         }
                         self.accountStates[id] = .loaded
                     } else if let error {
@@ -6821,13 +6634,6 @@ final class KimiCodeBarModel: ObservableObject {
             quota = nil
             if let credits = QoderAccountManager.shared.credits[primaryID] {
                 text = credits.remainingText
-            } else {
-                text = "--"
-            }
-        case .doubaoWork:
-            quota = nil
-            if let credits = DoubaoAccountManager.shared.credits[primaryID] {
-                text = credits.displayText
             } else {
                 text = "--"
             }
@@ -7106,8 +6912,6 @@ final class KimiCodeBarModel: ObservableObject {
             return LanguageManager.tr("Antigravity 账号请使用 Google 授权登录")
         case .qoderCN:
             return LanguageManager.tr("Qoder CN 账号请使用读取本机方式添加")
-        case .doubaoWork:
-            return LanguageManager.tr("豆包账号请使用读取本机方式添加")
         }
     }
 
@@ -7157,8 +6961,6 @@ final class KimiCodeBarModel: ObservableObject {
             return LanguageManager.tr("Antigravity 账号请使用重新授权")
         case .qoderCN:
             return LanguageManager.tr("Qoder CN 凭据由客户端管理，请重新读取本机登录态")
-        case .doubaoWork:
-            return LanguageManager.tr("豆包凭据由客户端管理，请重新读取本机登录态")
         }
     }
 
@@ -7379,8 +7181,6 @@ final class KimiCodeBarModel: ObservableObject {
             return accountWorkBuddyCredits[account.id]?.remaining
         case .qoderCN:
             return QoderAccountManager.shared.credits[account.id]?.remaining
-        case .doubaoWork:
-            return DoubaoAccountManager.shared.credits[account.id].map { Double($0.displayAmount) }
         default:
             return nil
         }
@@ -7436,46 +7236,6 @@ final class KimiCodeBarModel: ObservableObject {
             return nil
         } catch {
             return error.localizedDescription
-        }
-    }
-
-    /// 从豆包工作客户端导入当前登录账号（只持久化 cookie 密文快照）。
-    func addDoubaoAccount() async -> String? {
-        do {
-            let imported = try await DoubaoService.shared.importCurrentAccount()
-            let store = KimiAccountStore.shared
-            if let existing = store.snapshot.accounts.first(where: {
-                $0.provider == .doubaoWork && $0.accountIdentifier == imported.credential.uid
-            }) {
-                store.updateDoubaoCredential(id: existing.id, credential: imported.credential)
-            } else {
-                store.addAccount(KimiAccount(
-                    id: UUID(),
-                    alias: imported.displayName,
-                    provider: .doubaoWork,
-                    credential: .doubaoWork(imported.credential),
-                    accountIdentifier: imported.credential.uid
-                ))
-            }
-            store.ensurePrimaryAccount()
-            let snapshot = store.snapshot
-            accounts = snapshot.accounts
-            primaryAccountID = snapshot.primaryAccountID
-            refresh(showsLoading: false)
-            return nil
-        } catch {
-            return error.localizedDescription
-        }
-    }
-
-    /// 切换到指定豆包账号并重启客户端。
-    /// 先终止旧进程，再把该账号的 cookie 密文快照写回 Cookies 库，最后启动客户端。
-    /// 与 Qoder 的文件快照不同，SQLite 写回不能在客户端持库运行时进行。
-    func launchDoubao(account: KimiAccount) {
-        DoubaoService.shared.restartDoubao(beforeLaunch: {
-            DoubaoService.shared.switchTo(account: account)
-        }) { [weak self] in
-            self?.doubaoActiveUID = DoubaoService.shared.currentActiveUID()
         }
     }
 
