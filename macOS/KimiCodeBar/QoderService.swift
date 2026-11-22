@@ -101,9 +101,12 @@ final class QoderService {
         guard FileManager.default.fileExists(atPath: authFileURL.path),
               let snapshot = try? readStableFile(authFileURL),
               let uid = uid(from: snapshot) else { return nil }
-        let overlay = FileManager.default.fileExists(atPath: profileOverlayURL.path)
-            ? try? readStableFile(profileOverlayURL)
-            : nil
+        var overlay: Data?
+        if FileManager.default.fileExists(atPath: profileOverlayURL.path) {
+            // overlay 正在被客户端写入时跳过本轮同步，避免把库里的有效快照清成空
+            guard let data = try? readStableFile(profileOverlayURL) else { return nil }
+            overlay = data
+        }
         return (uid, snapshot, overlay)
     }
 
@@ -464,9 +467,11 @@ final class QoderService {
 
     /// Cosy-Version 跟随本机客户端实际版本，避免客户端升级后请求头落后；
     /// 未安装 / 读取失败时回退到已验证可用的版本。
+    /// 直接读 plist 而不走 Bundle(url:)：后者有缓存，客户端原地升级后会一直返回旧版本。
     private static func clientVersion() -> String {
         if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.qodercn.app"),
-           let version = Bundle(url: url)?.infoDictionary?["CFBundleShortVersionString"] as? String,
+           let info = NSDictionary(contentsOf: url.appendingPathComponent("Contents/Info.plist")),
+           let version = info["CFBundleShortVersionString"] as? String,
            !version.isEmpty {
             return version
         }
@@ -630,13 +635,15 @@ final class QoderAccountManager: ObservableObject {
 
     func refresh() {
         guard !isRefreshing else { return }
-        syncActiveAccountSnapshot()
         let qoderAccounts = KimiAccountStore.shared.freshAccounts().filter { $0.provider == .qoderCN }
         let ids = Set(qoderAccounts.map(\.id))
         credits = credits.filter { ids.contains($0.key) }
         errors = errors.filter { ids.contains($0.key) }
         checkinErrors = checkinErrors.filter { ids.contains($0.key) }
         guard !qoderAccounts.isEmpty else { return }
+        // 快照同步要解密本地登录态（可能触发钥匙串授权），
+        // 与「当前账号」探测一样只在已托管 Qoder 账号时才做。
+        syncActiveAccountSnapshot()
         isRefreshing = true
 
         Task { @MainActor in
