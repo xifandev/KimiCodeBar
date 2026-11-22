@@ -95,6 +95,18 @@ final class QoderService {
         return uid(from: snapshot)
     }
 
+    /// 本机当前登录态的密文快照 + UID（不联网），供托管账号自动跟随更新。
+    /// 文件不存在 / 正在写入 / 解密失败时返回 nil。
+    func liveAuthSnapshot() -> (uid: String, auth: Data, overlay: Data?)? {
+        guard FileManager.default.fileExists(atPath: authFileURL.path),
+              let snapshot = try? readStableFile(authFileURL),
+              let uid = uid(from: snapshot) else { return nil }
+        let overlay = FileManager.default.fileExists(atPath: profileOverlayURL.path)
+            ? try? readStableFile(profileOverlayURL)
+            : nil
+        return (uid, snapshot, overlay)
+    }
+
     /// 将指定账号的加密快照原样写回 auth 文件 + profile overlay，使下次启动 Qoder CN
     /// 使用该账号。快照是 safeStorage 密文，写回不碰密钥、不重加密。
     /// 账号无 auth 快照时返回 false。
@@ -450,6 +462,17 @@ final class QoderService {
 
     // MARK: - API
 
+    /// Cosy-Version 跟随本机客户端实际版本，避免客户端升级后请求头落后；
+    /// 未安装 / 读取失败时回退到已验证可用的版本。
+    private static func clientVersion() -> String {
+        if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.qodercn.app"),
+           let version = Bundle(url: url)?.infoDictionary?["CFBundleShortVersionString"] as? String,
+           !version.isEmpty {
+            return version
+        }
+        return "0.5.6"
+    }
+
     private func fetchProfile(token: String) async throws -> QoderAccountProfile {
         let payload = try await requestJSON(path: "/api/v1/userinfo", token: token)
         let uid = stringValue(payload, keys: ["uid", "userId", "user_id", "id"])
@@ -474,7 +497,7 @@ final class QoderService {
         request.timeoutInterval = 20
         if let token { request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
         request.setValue(clientType, forHTTPHeaderField: "Cosy-ClientType")
-        request.setValue("0.5.6", forHTTPHeaderField: "Cosy-Version")
+        request.setValue(Self.clientVersion(), forHTTPHeaderField: "Cosy-Version")
         request.setValue("macos", forHTTPHeaderField: "Cosy-MachineOS")
         request.setValue("Qoder", forHTTPHeaderField: "User-Agent")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
@@ -607,6 +630,7 @@ final class QoderAccountManager: ObservableObject {
 
     func refresh() {
         guard !isRefreshing else { return }
+        syncActiveAccountSnapshot()
         let qoderAccounts = KimiAccountStore.shared.freshAccounts().filter { $0.provider == .qoderCN }
         let ids = Set(qoderAccounts.map(\.id))
         credits = credits.filter { ids.contains($0.key) }
@@ -642,6 +666,22 @@ final class QoderAccountManager: ObservableObject {
             }
             KimiCodeBarModel.shared.applyCreditsAutoSort(for: .qoderCN, succeeded: succeededIDs)
         }
+    }
+
+    /// 客户端会持续重写 auth.v1.dat（token 轮换 / 版本升级），托管快照若停留在
+    /// 导入时刻就会逐渐失效。这里把与本机当前 UID 匹配的账号快照自动跟随更新，
+    /// 保留签到日期；其余账号在切换登录后的下一轮刷新中同样会被收编。
+    private func syncActiveAccountSnapshot() {
+        guard let live = QoderService.shared.liveAuthSnapshot() else { return }
+        let store = KimiAccountStore.shared
+        guard let account = store.freshAccounts().first(where: {
+            $0.provider == .qoderCN && $0.qoderCredential?.uid == live.uid
+        }), var credential = account.qoderCredential else { return }
+        guard credential.authSnapshot != live.auth
+            || credential.profileOverlaySnapshot != live.overlay else { return }
+        credential.authSnapshot = live.auth
+        credential.profileOverlaySnapshot = live.overlay
+        store.updateQoderCredential(id: account.id, credential: credential)
     }
 
     private func startCheckinChain() {
